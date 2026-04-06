@@ -1,0 +1,99 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AuthService = void 0;
+const common_1 = require("@nestjs/common");
+const jwt_1 = require("@nestjs/jwt");
+const auth_types_1 = require("./auth.types");
+let AuthService = class AuthService {
+    constructor(jwtService) {
+        this.jwtService = jwtService;
+        this.users = [
+            {
+                id: 'usr_super_1',
+                email: 'super@azenda.dev',
+                password: 'azenda123',
+                role: auth_types_1.UserRole.SUPER_ADMIN,
+                tenantId: null,
+                systems: [auth_types_1.AppSystem.SUPER_ADMIN, auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING],
+                status: 'ACTIVE',
+            },
+            {
+                id: 'usr_admin_spa',
+                email: 'admin-spa@azenda.dev',
+                password: 'azenda123',
+                role: auth_types_1.UserRole.ADMIN,
+                tenantId: 'tenant_spa',
+                systems: [auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING],
+                status: 'ACTIVE',
+            },
+            {
+                id: 'usr_admin_clinica',
+                email: 'admin-clinica@azenda.dev',
+                password: 'azenda123',
+                role: auth_types_1.UserRole.ADMIN,
+                tenantId: 'tenant_clinica',
+                systems: [auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING],
+                status: 'PAUSED',
+            },
+            {
+                id: 'usr_employee_1',
+                email: 'empleado@azenda.dev',
+                password: 'azenda123',
+                role: auth_types_1.UserRole.EMPLEADO,
+                tenantId: 'tenant_barberia',
+                systems: [auth_types_1.AppSystem.TENANT],
+                status: 'ACTIVE',
+            },
+        ];
+    }
+    login(dto) {
+        const user = this.users.find((candidate) => candidate.email === dto.email && candidate.password === dto.password);
+        if (!user) {
+            throw new common_1.UnauthorizedException('Credenciales invalidas');
+        }
+        if (user.status !== 'ACTIVE') {
+            throw new common_1.UnauthorizedException('Usuario no activo');
+        }
+        const payload = {
+            sub: user.id,
+            email: user.email,
+            role: user.role,
+            tenantId: user.tenantId,
+            systems: user.systems,
+        };
+        return {
+            accessToken: this.jwtService.sign(payload),
+            tokenType: 'Bearer',
+            user: this.toSafeUser(user),
+        };
+    }
+    me(userId) {
+        const user = this.findById(userId);
+        if (!user) {
+            throw new common_1.UnauthorizedException('Usuario no encontrado');
+        }
+        return this.toSafeUser(user);
+    }
+    findById(userId) {
+        return this.users.find((user) => user.id === userId);
+    }
+    toSafeUser(user) {
+        const { password, ...safeUser } = user;
+        return safeUser;
+    }
+};
+exports.AuthService = AuthService;
+exports.AuthService = AuthService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [jwt_1.JwtService])
+], AuthService);
+//# sourceMappingURL=auth.service.js.map
