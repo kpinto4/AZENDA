@@ -1,0 +1,81 @@
+<div class="booking">
+  <header class="top">
+    <a routerLink="/" class="brand">Azenda</a>
+    <span class="slug">/{{ slug() }}</span>
+  </header>
+
+  @if (done()) {
+    <div class="az-card panel success">
+      <h1>¡Listo!</h1>
+      <p>Reserva simulada añadida a la lista de citas del mock (revisa el panel cliente).</p>
+      <a routerLink="/app/citas" class="az-btn az-btn-primary">Ver citas en panel demo</a>
+      <a routerLink="/" class="az-btn az-btn-secondary">Volver al inicio</a>
+    </div>
+  } @else {
+    <div class="az-card panel">
+      <div class="steps">
+        <span [class.on]="step() >= 1">1 · Servicio</span>
+        <span [class.on]="step() >= 2">2 · Fecha</span>
+        <span [class.on]="step() >= 3">3 · Hora</span>
+        <span [class.on]="step() >= 4">4 · Datos</span>
+      </div>
+
+      @if (step() === 1) {
+        <h1>Elige un servicio</h1>
+        <p class="muted">Negocio: <strong>{{ slug() }}</strong></p>
+        <div class="options">
+          @for (s of services; track s) {
+            <button type="button" class="opt" (click)="pickService(s)">{{ s }}</button>
+          }
+        </div>
+      }
+
+      @if (step() === 2) {
+        <h1>Elige fecha</h1>
+        <label class="az-label" for="d">Día</label>
+        <input
+          id="d"
+          class="az-input wide"
+          type="date"
+          [value]="selectedDate()"
+          (input)="updateDate(($any($event.target).value))"
+        />
+        <div class="row-btns">
+          <button type="button" class="az-btn az-btn-ghost" (click)="back()">Atrás</button>
+          <button type="button" class="az-btn az-btn-primary" (click)="continueFromDate()">Continuar</button>
+        </div>
+      }
+
+      @if (step() === 3) {
+        <h1>Horarios disponibles (mock)</h1>
+        <p class="muted">La disponibilidad real vendrá del motor de agenda en servidor.</p>
+        <div class="slots">
+          @for (t of slots; track t) {
+            <button type="button" class="slot" [class.pick]="t === selectedSlot()" (click)="pickSlot(t)">
+              {{ t }}
+            </button>
+          }
+        </div>
+        <button type="button" class="az-btn az-btn-ghost" (click)="back()">Atrás</button>
+      }
+
+      @if (step() === 4) {
+        <h1>Tus datos</h1>
+        <form [formGroup]="confirmForm" (ngSubmit)="confirm()">
+          <label class="az-label" for="name">Nombre</label>
+          <input id="name" class="az-input wide" formControlName="name" />
+          <label class="az-label" for="phone">Teléfono</label>
+          <input id="phone" class="az-input wide" formControlName="phone" />
+          <div class="summary">
+            <div><span>Servicio</span><strong>{{ selectedService() }}</strong></div>
+            <div><span>Fecha</span><strong>{{ selectedDate() }} {{ selectedSlot() }}</strong></div>
+          </div>
+          <div class="row-btns">
+            <button type="button" class="az-btn az-btn-ghost" (click)="back()">Atrás</button>
+            <button type="submit" class="az-btn az-btn-primary">Confirmar</button>
+          </div>
+        </form>
+      }
+    </div>
+  }
+</div>

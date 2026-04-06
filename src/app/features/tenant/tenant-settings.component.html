@@ -1,0 +1,41 @@
+<div class="az-container az-page">
+  <div class="az-page-head">
+    <div>
+      <h1 class="az-page-title">Configuración</h1>
+      <p class="az-page-sub">Horarios, servicios, WhatsApp y branding: persistencia en API más adelante.</p>
+    </div>
+    <button type="button" class="az-btn az-btn-secondary" (click)="toggleDark()">
+      {{ dark ? 'Modo claro' : 'Modo oscuro (preview)' }}
+    </button>
+  </div>
+
+  <div class="az-grid cols-2">
+    <div class="az-card">
+      <h3>Horario del negocio (mock)</h3>
+      <form [formGroup]="form">
+        <label class="az-label">Apertura</label>
+        <input class="az-input wide" type="time" formControlName="openTime" />
+        <label class="az-label">Cierre</label>
+        <input class="az-input wide" type="time" formControlName="closeTime" />
+      </form>
+    </div>
+    <div class="az-card">
+      <h3>WhatsApp</h3>
+      <form [formGroup]="form">
+        <label class="az-label">Teléfono (E.164)</label>
+        <input class="az-input wide" formControlName="waPhone" />
+        <label class="az-label">Mensaje base</label>
+        <input class="az-input wide" formControlName="waMessage" />
+      </form>
+      <a class="az-btn az-btn-primary mt" [href]="whatsappHref()" target="_blank" rel="noopener">Probar enlace</a>
+    </div>
+  </div>
+
+  <div class="az-card mt">
+    <h3>Branding</h3>
+    <form [formGroup]="form">
+      <label class="az-label">Color primario (solo preview local)</label>
+      <input class="az-input wide" type="color" formControlName="brandColor" />
+    </form>
+  </div>
+</div>

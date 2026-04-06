@@ -1,0 +1,44 @@
+<div class="az-container az-page">
+  <div class="az-page-head">
+    <div>
+      <h1 class="az-page-title">Estadísticas</h1>
+      <p class="az-page-sub">Cifras calculadas en vivo desde el mock compartido (misma sesión del navegador).</p>
+    </div>
+  </div>
+
+  <div class="az-grid cols-3 kpis">
+    <div class="az-card">
+      <div class="az-kpi-label">Tenants</div>
+      <div class="az-kpi">{{ summary().tenants }}</div>
+    </div>
+    <div class="az-card">
+      <div class="az-kpi-label">Activos</div>
+      <div class="az-kpi">{{ summary().active }}</div>
+    </div>
+    <div class="az-card">
+      <div class="az-kpi-label">Citas (mock)</div>
+      <div class="az-kpi">{{ summary().appt }}</div>
+    </div>
+    <div class="az-card">
+      <div class="az-kpi-label">Ventas registradas</div>
+      <div class="az-kpi">{{ summary().salesCount }}</div>
+    </div>
+    <div class="az-card">
+      <div class="az-kpi-label">Suma importes ventas (€)</div>
+      <div class="az-kpi">{{ summary().salesSum }}</div>
+    </div>
+    <div class="az-card">
+      <div class="az-kpi-label">Movimientos stock</div>
+      <div class="az-kpi">{{ summary().movements }}</div>
+    </div>
+  </div>
+
+  <div class="az-card chart">
+    <p class="muted">Volumen relativo (decorativo, derivado del mock)</p>
+    <div class="bars">
+      @for (h of barHeights(); track $index) {
+        <div class="bar" [style.height.%]="h"></div>
+      }
+    </div>
+  </div>
+</div>

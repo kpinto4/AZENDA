@@ -1,0 +1,24 @@
+.below {
+  margin-top: 1.25rem;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.9rem;
+}
+
+.muted {
+  font-size: 0.8rem;
+  color: var(--az-muted);
+}

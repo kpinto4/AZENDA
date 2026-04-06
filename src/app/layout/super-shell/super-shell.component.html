@@ -1,0 +1,20 @@
+<div class="super-shell">
+  <aside class="super-sidebar">
+    <div class="brand">Azenda <span>Super Admin</span></div>
+    <nav>
+      <a routerLink="/super/panel" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Dashboard</a>
+      <a routerLink="/super/tenants" routerLinkActive="active">Tenants</a>
+      <a routerLink="/super/modulos" routerLinkActive="active">Módulos</a>
+      <a routerLink="/super/usuarios" routerLinkActive="active">Usuarios</a>
+      <a routerLink="/super/estadisticas" routerLinkActive="active">Estadísticas</a>
+    </nav>
+    <div class="foot">
+      <span>{{ session.userName() }}</span>
+      <a routerLink="/" class="link-home">Ir a landing</a>
+      <button type="button" class="btn-out" (click)="logout()">Salir</button>
+    </div>
+  </aside>
+  <main class="super-main">
+    <router-outlet />
+  </main>
+</div>

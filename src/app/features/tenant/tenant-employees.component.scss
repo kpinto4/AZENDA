@@ -1,0 +1,27 @@
+.form-card h3 {
+  margin-top: 0;
+}
+
+.emp-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.az-input.wide {
+  max-width: 200px;
+}
+
+.grow .az-input.wide {
+  max-width: min(360px, 100%);
+}
+
+.grow {
+  flex: 1;
+  min-width: 200px;
+}
+
+.mt {
+  margin-top: 1rem;
+}

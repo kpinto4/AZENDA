@@ -1,0 +1,27 @@
+<div class="az-container az-page">
+  <div class="az-page-head">
+    <div>
+      <h1 class="az-page-title">Módulos del catálogo</h1>
+      <p class="az-page-sub">
+        Simulación de interruptores globales (solo afecta a esta vista y al estado mock). Los menús del panel cliente
+        siguen el <strong>tenant</strong> en Tenants.
+      </p>
+    </div>
+  </div>
+  <div class="az-grid cols-3">
+    @for (m of data.platformModuleCatalog(); track m.key) {
+      <div class="az-card">
+        <div class="row">
+          <h3>{{ m.name }}</h3>
+          <span class="az-badge" [class.success]="m.enabled" [class.warn]="!m.enabled">{{
+            m.enabled ? 'Activo' : 'Off'
+          }}</span>
+        </div>
+        <p class="muted">{{ m.desc }}</p>
+        <button type="button" class="az-btn az-btn-secondary" (click)="data.toggleCatalogModule(m.key)">
+          Alternar estado
+        </button>
+      </div>
+    }
+  </div>
+</div>

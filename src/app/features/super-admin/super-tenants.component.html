@@ -1,0 +1,82 @@
+<div class="az-container az-page">
+  <div class="az-page-head">
+    <div>
+      <h1 class="az-page-title">Tenants</h1>
+      <p class="az-page-sub">
+        Simulación: alta, plan, pausa y módulos actualizan el mock. Si tienes abierto ese tenant en el panel, el menú se
+        sincroniza al volver.
+      </p>
+    </div>
+  </div>
+
+  <div class="az-card add-card">
+    <h3>Nuevo tenant (simulado)</h3>
+    <form [formGroup]="addForm" (ngSubmit)="addTenant()" class="add-row">
+      <input class="az-input grow" type="text" formControlName="name" placeholder="Nombre del negocio" />
+      <select class="az-select plan-sel" formControlName="plan">
+        @for (p of plans; track p) {
+          <option [value]="p">{{ p }}</option>
+        }
+      </select>
+      <button type="submit" class="az-btn az-btn-primary">Añadir</button>
+    </form>
+  </div>
+
+  <div class="az-table-wrap mt">
+    <table class="az-table tenants-table">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Plan</th>
+          <th>Estado</th>
+          <th>Módulos</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (t of data.tenants(); track t.id) {
+          <tr>
+            <td><strong>{{ t.name }}</strong><br /><span class="id-hint">{{ t.id }}</span></td>
+            <td>
+              <select
+                class="az-select inline"
+                [value]="t.plan"
+                (change)="data.setTenantPlan(t.id, $any($event.target).value)"
+              >
+                @for (p of plans; track p) {
+                  <option [value]="p">{{ p }}</option>
+                }
+              </select>
+            </td>
+            <td>
+              @if (t.active) {
+                <span class="az-badge success">Activo</span>
+              } @else {
+                <span class="az-badge warn">Pausado</span>
+              }
+            </td>
+            <td>
+              <div class="mods">
+                @for (key of moduleKeys; track key) {
+                  <label class="mod-label">
+                    <input
+                      type="checkbox"
+                      [checked]="t.modules.includes(key)"
+                      (change)="data.setTenantModule(t.id, key, $any($event.target).checked)"
+                    />
+                    {{ key }}
+                  </label>
+                }
+              </div>
+            </td>
+            <td>
+              <button type="button" class="az-btn az-btn-secondary small" (click)="data.setTenantActive(t.id, !t.active)">
+                {{ t.active ? 'Pausar' : 'Activar' }}
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

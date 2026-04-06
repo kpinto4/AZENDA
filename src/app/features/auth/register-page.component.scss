@@ -1,0 +1,57 @@
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+  background: radial-gradient(800px 400px at 50% -20%, rgb(6 182 212 / 0.12), transparent);
+}
+
+.auth-card {
+  width: min(440px, 100%);
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: var(--az-muted);
+  text-decoration: none;
+}
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: var(--az-muted);
+  margin: 0 0 1.25rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.az-input {
+  max-width: none;
+  margin-bottom: 0.5rem;
+}
+
+.az-btn.full {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.success p {
+  color: var(--az-muted);
+  margin: 0 0 1rem;
+}
+
+.footer {
+  margin: 1.25rem 0 0;
+  font-size: 0.9rem;
+  color: var(--az-muted);
+}

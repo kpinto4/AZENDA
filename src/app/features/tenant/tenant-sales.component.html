@@ -1,0 +1,68 @@
+<div class="az-container az-page">
+  <div class="az-page-head">
+    <div>
+      <h1 class="az-page-title">Ventas</h1>
+      <p class="az-page-sub">POS rápido. En backend: impuestos, series, cierres de caja.</p>
+    </div>
+  </div>
+
+  <div class="az-card form-card">
+    <h3>Registrar venta (mock)</h3>
+    <form [formGroup]="form" (ngSubmit)="add()" class="row">
+      <div>
+        <label class="az-label" for="total">Importe (€)</label>
+        <input id="total" class="az-input" type="number" formControlName="total" />
+      </div>
+      <div>
+        <label class="az-label" for="method">Método</label>
+        <select id="method" class="az-select" formControlName="method">
+          @for (m of methods; track m) {
+            <option [value]="m">{{ m }}</option>
+          }
+        </select>
+      </div>
+      <div class="grow">
+        <label class="az-label" for="linked">ID cita (opcional)</label>
+        <input id="linked" class="az-input wide" formControlName="linked" placeholder="ej. a1" />
+      </div>
+      <div class="grow full-row">
+        <label class="az-label" for="prod">Descontar stock (opcional, simulado)</label>
+        <div class="stock-row">
+          <select id="prod" class="az-select wide" formControlName="productId">
+            <option value="">— Sin descuento —</option>
+            @for (p of data.products(); track p.id) {
+              <option [value]="p.id">{{ p.name }} (stock {{ p.stock }})</option>
+            }
+          </select>
+          <input class="az-input qty" type="number" min="1" formControlName="stockQty" title="Unidades" />
+        </div>
+      </div>
+      <button type="submit" class="az-btn az-btn-primary end full-row-btn">Registrar</button>
+    </form>
+  </div>
+
+  <div class="az-table-wrap mt">
+    <table class="az-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Total</th>
+          <th>Método</th>
+          <th>Cita vinculada</th>
+          <th>Stock (sim.)</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (s of data.sales(); track s.id) {
+          <tr>
+            <td>{{ s.date }}</td>
+            <td>{{ s.total }} €</td>
+            <td>{{ s.method }}</td>
+            <td>{{ s.linkedAppointment || '—' }}</td>
+            <td>{{ s.stockNote || '—' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

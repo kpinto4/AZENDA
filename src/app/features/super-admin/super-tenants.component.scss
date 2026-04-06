@@ -1,0 +1,59 @@
+.az-page {
+  padding-top: 2rem;
+}
+
+.add-card h3 {
+  margin-top: 0;
+}
+
+.add-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.grow {
+  flex: 1;
+  min-width: 180px;
+  max-width: none;
+}
+
+.plan-sel {
+  max-width: 140px;
+}
+
+.mt {
+  margin-top: 1rem;
+}
+
+.id-hint {
+  font-size: 0.7rem;
+  color: var(--az-muted);
+}
+
+.tenants-table .inline {
+  max-width: 130px;
+  font-size: 0.8rem;
+}
+
+.mods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+}
+
+.mod-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--az-muted);
+  cursor: pointer;
+}
+
+.az-btn.small {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}

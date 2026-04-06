@@ -1,0 +1,105 @@
+<div class="az-container az-page">
+  <div class="az-page-head">
+    <div>
+      <h1 class="az-page-title">Citas</h1>
+      <p class="az-page-sub">Calendario completo y disponibilidad real llegarán con el API.</p>
+    </div>
+  </div>
+
+  <div class="az-grid cols-2 layout layout-citas">
+    <div class="az-card">
+      <h3>Nueva cita (simulada)</h3>
+      <form [formGroup]="form" (ngSubmit)="add()">
+        <label class="az-label" for="customer">Cliente</label>
+        <input id="customer" class="az-input wide" formControlName="customer" />
+        <label class="az-label" for="service">Servicio</label>
+        <input id="service" class="az-input wide" formControlName="service" />
+        <label class="az-label" for="when">Fecha y hora</label>
+        <input id="when" class="az-input wide" formControlName="when" />
+        <button type="submit" class="az-btn az-btn-primary">Añadir a la lista</button>
+      </form>
+    </div>
+    <div class="az-card cal-sim-card">
+      <div class="cal-sim-head">
+        <div>
+          <h3>Simulación de agenda</h3>
+          <p class="muted">Vista semana + franjas (solo maqueta; el calendario real vendrá del API).</p>
+        </div>
+        <div class="cal-sim-nav" aria-hidden="true">
+          <span class="cal-nav-btn">‹</span>
+          <span class="cal-week-pill">{{ calSimWeekLabel }}</span>
+          <span class="cal-nav-btn">›</span>
+        </div>
+      </div>
+
+      <div class="cal-sim-body">
+        <div class="cal-time-col">
+          <div class="cal-corner"></div>
+          @for (h of calSimHours; track h) {
+            <div class="cal-hour">{{ h }}</div>
+          }
+        </div>
+        <div class="cal-week-scroll">
+          <div class="cal-week-grid">
+            @for (day of calSimDays; track day.key) {
+              <div class="cal-day">
+                <div class="cal-day-head">
+                  <span class="dow">{{ day.label }}</span>
+                  <span class="dom">{{ day.sub }}</span>
+                </div>
+                <div class="cal-day-body">
+                  <div class="cal-grid-lines">
+                    @for (_ of calSimHours; track $index) {
+                      <div class="cal-line"></div>
+                    }
+                  </div>
+                  <div class="cal-events">
+                    @for (ev of day.events; track ev.id) {
+                      <div class="cal-event" [class.primary]="ev.tone === 'primary'" [class.accent]="ev.tone === 'accent'">
+                        <span class="t">{{ ev.time }}</span>
+                        <span class="n">{{ ev.title }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="az-table-wrap mt">
+    <table class="az-table">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>Servicio</th>
+          <th>Cuándo</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (a of data.appointments(); track a.id) {
+          <tr>
+            <td>{{ a.customer }}</td>
+            <td>{{ a.service }}</td>
+            <td>{{ a.when }}</td>
+            <td>
+              <select
+                class="az-select status-sel"
+                [value]="a.status"
+                (change)="setStatus(a.id, $any($event.target).value)"
+              >
+                <option value="pendiente">pendiente</option>
+                <option value="confirmada">confirmada</option>
+                <option value="cancelada">cancelada</option>
+              </select>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

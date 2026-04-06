@@ -1,0 +1,159 @@
+<div class="az-demo-banner">
+  <span
+    >Todo el sistema es <strong>simulación en memoria</strong> para presentar al equipo. Backend en
+    <code>docs/BACKEND.md</code>.</span
+  >
+  <button type="button" class="banner-reset" (click)="resetDemo()">Restablecer demo</button>
+</div>
+
+<header class="nav">
+  <div class="az-container nav-inner">
+    <span class="logo">Azenda</span>
+    <nav class="nav-links">
+      <a href="#funciones">Funciones</a>
+      <a href="#demo">Demo</a>
+      <a href="#planes">Planes</a>
+      <a routerLink="/auth/iniciar-sesion">Iniciar sesión</a>
+      <a routerLink="/auth/registro" class="az-btn az-btn-primary">Crear cuenta</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="az-container hero-inner">
+    <div class="hero-copy">
+      <p class="eyebrow">SaaS multi-tenant modular</p>
+      <h1>Citas, ventas e inventario en un solo panel</h1>
+      <p class="lead">
+        Azenda combina agenda inteligente, POS ligero y stock para negocios que viven de las reservas.
+        Activa solo los módulos que necesitas.
+      </p>
+      <div class="hero-cta">
+        <a routerLink="/auth/registro" class="az-btn az-btn-primary">Empezar gratis</a>
+        <button type="button" class="az-btn az-btn-secondary" (click)="openBookingDemo()">Ver reserva pública</button>
+      </div>
+      <div class="demo-row">
+        <span>Acceso rápido demo:</span>
+        <button type="button" class="linkish" (click)="enterTenantDemo()">Panel cliente</button>
+        <button type="button" class="linkish" (click)="enterSuperDemo()">Super Admin</button>
+      </div>
+    </div>
+    <div class="hero-card az-card">
+      <h3>Vista del panel</h3>
+      <p class="muted">Calendario, ventas del día y alertas de stock en un solo vistazo.</p>
+      <div class="mock-ui">
+        <div class="mock-bar"></div>
+        <div class="mock-grid">
+          <div class="mock-box"></div>
+          <div class="mock-box wide"></div>
+          <div class="mock-box"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="funciones">
+  <div class="az-container">
+    <h2 class="section-title">Todo lo esencial, sin ruido</h2>
+    <p class="section-sub">Diseñado para barberías, spas, clínicas ligeras y talleres con cita previa.</p>
+    <div class="az-grid cols-3 cards">
+      <article class="az-card feature">
+        <div class="icon">📅</div>
+        <h3>Citas</h3>
+        <p>Agenda visual, estados, duración por servicio y disponibilidad real por empleado.</p>
+      </article>
+      <article class="az-card feature">
+        <div class="icon">💳</div>
+        <h3>Ventas</h3>
+        <p>Registro rápido, métodos de pago e historial vinculable a citas.</p>
+      </article>
+      <article class="az-card feature">
+        <div class="icon">📦</div>
+        <h3>Inventario</h3>
+        <p>Stock, movimientos y alertas cuando un producto se agota.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section alt" id="demo">
+  <div class="az-container demo-block">
+    <div>
+      <h2 class="section-title">Reservas públicas + WhatsApp</h2>
+      <p class="section-sub">
+        Tus clientes eligen servicio, fecha y hora en una página limpia. Integración WhatsApp por niveles (enlace,
+        plantilla, futuro chatbot).
+      </p>
+      <ul class="checks">
+        <li>URL por negocio: <code>/reservar/tu-slug</code></li>
+        <li>Branding por tenant</li>
+        <li>Flujo guiado en pocos pasos</li>
+      </ul>
+    </div>
+    <div class="az-card preview">
+      <header>Paso 2 · Elige hora</header>
+      <div class="slots">
+        @for (t of ['09:00', '09:30', '10:00', '10:30', '11:00']; track t) {
+          <span class="slot">{{ t }}</span>
+        }
+      </div>
+      <p class="hint">Simulación visual — la lógica real vivirá en el API.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="planes">
+  <div class="az-container">
+    <h2 class="section-title">Planes claros</h2>
+    <p class="section-sub">Los límites reales (empleados, citas/mes, módulos) los aplicará el backend.</p>
+    <div class="az-grid cols-3 plans">
+      <article class="az-card plan">
+        <h3>Básico</h3>
+        <p class="price">19 €<span>/mes</span></p>
+        <ul>
+          <li>Citas + reserva pública</li>
+          <li>1 empleado</li>
+          <li>WhatsApp botón</li>
+        </ul>
+        <a routerLink="/auth/registro" class="az-btn az-btn-secondary full">Elegir</a>
+      </article>
+      <article class="az-card plan featured">
+        <div class="ribbon">Popular</div>
+        <h3>Pro</h3>
+        <p class="price">49 €<span>/mes</span></p>
+        <ul>
+          <li>+ Ventas</li>
+          <li>Hasta 10 empleados</li>
+          <li>Mensajes plantilla WA</li>
+        </ul>
+        <a routerLink="/auth/registro" class="az-btn az-btn-primary full">Elegir</a>
+      </article>
+      <article class="az-card plan">
+        <h3>Negocio</h3>
+        <p class="price">99 €<span>/mes</span></p>
+        <ul>
+          <li>+ Inventario</li>
+          <li>Empleados ilimitados (fair use)</li>
+          <li>Soporte prioritario</li>
+        </ul>
+        <a routerLink="/auth/registro" class="az-btn az-btn-secondary full">Elegir</a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="cta-final">
+  <div class="az-container">
+    <h2>Listo para operar tu negocio real</h2>
+    <p>Registro, tenant y módulos serán persistidos cuando conectemos el backend.</p>
+    <a routerLink="/auth/registro" class="az-btn az-btn-primary big">Crear mi espacio</a>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="az-container footer-inner">
+    <span>© {{ 2026 }} Azenda · Demo front-end</span>
+    <a routerLink="/auth/iniciar-sesion">Acceso</a>
+  </div>
+</footer>

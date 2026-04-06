@@ -1,0 +1,131 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--az-surface);
+  border-right: 1px solid var(--az-border);
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem 0;
+}
+
+.brand {
+  padding: 0 1.25rem 1.25rem;
+  border-bottom: 1px solid var(--az-border);
+}
+
+.logo {
+  display: block;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.03em;
+}
+
+.tenant {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--az-muted);
+  margin-top: 0.2rem;
+}
+
+nav {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 0.75rem;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+nav a {
+  padding: 0.55rem 0.85rem;
+  border-radius: var(--az-radius-sm);
+  color: var(--az-muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+nav a:hover {
+  color: var(--az-text);
+  background: color-mix(in srgb, var(--az-border) 45%, transparent);
+  text-decoration: none;
+}
+
+nav a.active {
+  color: var(--az-primary);
+  background: color-mix(in srgb, var(--az-primary) 12%, transparent);
+}
+
+.foot {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--az-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.user {
+  font-size: 0.85rem;
+  color: var(--az-muted);
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  background: var(--az-bg);
+}
+
+.tenant-warn {
+  margin: 0;
+  padding: 0.65rem 1.25rem;
+  background: color-mix(in srgb, var(--az-warning) 18%, var(--az-surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--az-warning) 35%, var(--az-border));
+  font-size: 0.85rem;
+  color: var(--az-text);
+}
+
+.az-btn.small {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  align-self: flex-start;
+}
+
+@media (max-width: 860px) {
+  .shell {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 0.75rem 1rem;
+  }
+
+  .brand {
+    border: none;
+    padding: 0 1rem 0 0;
+  }
+
+  nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex: 1;
+    padding: 0;
+  }
+
+  .foot {
+    border: none;
+    padding: 0;
+    flex-direction: row;
+    align-items: center;
+  }
+}

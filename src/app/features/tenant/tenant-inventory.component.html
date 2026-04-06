@@ -1,0 +1,88 @@
+<div class="az-container az-page">
+  <div class="az-page-head">
+    <div>
+      <h1 class="az-page-title">Inventario</h1>
+      <p class="az-page-sub">
+        Simulación: movimientos actualizan stock y aparecen abajo. Las ventas pueden descontar desde el módulo Ventas.
+      </p>
+    </div>
+  </div>
+
+  <div class="az-card">
+    <h3>Registrar movimiento (mock)</h3>
+    <p class="muted">Usa delta negativo para salida (ej. −3) o positivo para entrada.</p>
+    <form [formGroup]="moveForm" (ngSubmit)="applyMovement()" class="move-row">
+      <div>
+        <label class="az-label" for="pid">Producto</label>
+        <select id="pid" class="az-select wide" formControlName="productId">
+          <option value="" disabled>— Elegir —</option>
+          @for (p of data.products(); track p.id) {
+            <option [value]="p.id">{{ p.name }} ({{ p.stock }})</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label class="az-label" for="delta">Delta</label>
+        <input id="delta" class="az-input narrow" type="number" formControlName="delta" />
+      </div>
+      <div class="grow">
+        <label class="az-label" for="rs">Motivo</label>
+        <input id="rs" class="az-input wide" formControlName="reason" />
+      </div>
+      <button type="submit" class="az-btn az-btn-primary end">Aplicar</button>
+    </form>
+  </div>
+
+  <div class="az-table-wrap mt">
+    <table class="az-table">
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>SKU</th>
+          <th>Stock</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of data.products(); track p.id) {
+          <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.sku }}</td>
+            <td>{{ p.stock }}</td>
+            <td>
+              @if (p.lowStock) {
+                <span class="az-badge warn">Stock bajo</span>
+              } @else {
+                <span class="az-badge success">OK</span>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub-title">Movimientos recientes (simulado)</h2>
+  <div class="az-table-wrap">
+    <table class="az-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Producto</th>
+          <th>Δ</th>
+          <th>Motivo</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of data.stockMovements(); track m.id) {
+          <tr>
+            <td>{{ m.at }}</td>
+            <td>{{ m.productName }}</td>
+            <td [class.neg]="m.delta < 0" [class.pos]="m.delta > 0">{{ m.delta > 0 ? '+' : '' }}{{ m.delta }}</td>
+            <td>{{ m.reason }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

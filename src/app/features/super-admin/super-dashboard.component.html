@@ -1,0 +1,22 @@
+<div class="az-container az-page">
+  <div class="az-page-head">
+    <div>
+      <h1 class="az-page-title">Dashboard plataforma</h1>
+      <p class="az-page-sub">Métricas leídas del mock en memoria (mismos datos que editas en Tenants, Citas, etc.).</p>
+    </div>
+  </div>
+  <div class="az-grid cols-3">
+    <div class="az-card kpi">
+      <div class="az-kpi-label">Tenants activos</div>
+      <div class="az-kpi">{{ activeTenantCount() }}</div>
+    </div>
+    <div class="az-card kpi">
+      <div class="az-kpi-label">Tenants totales</div>
+      <div class="az-kpi">{{ data.tenants().length }}</div>
+    </div>
+    <div class="az-card kpi">
+      <div class="az-kpi-label">MRR (ficticio)</div>
+      <div class="az-kpi">2.4k €</div>
+    </div>
+  </div>
+</div>

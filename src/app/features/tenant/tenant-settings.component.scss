@@ -1,0 +1,23 @@
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.az-input.wide {
+  max-width: none;
+}
+
+h3 {
+  margin-top: 0;
+}
+
+.mt {
+  margin-top: 1rem;
+  display: inline-flex;
+  text-decoration: none;
+}
+
+.mt:hover {
+  text-decoration: none;
+}

@@ -1,0 +1,35 @@
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="logo">Azenda</span>
+      <span class="tenant">{{ session.tenantName() || 'Tu negocio' }}</span>
+    </div>
+    <nav>
+      <a routerLink="/app/panel" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Panel</a>
+      <a routerLink="/app/citas" routerLinkActive="active">Citas</a>
+      @if (session.modules().sales) {
+        <a routerLink="/app/ventas" routerLinkActive="active">Ventas</a>
+      }
+      @if (session.modules().inventory) {
+        <a routerLink="/app/inventario" routerLinkActive="active">Inventario</a>
+      }
+      <a routerLink="/app/empleados" routerLinkActive="active">Empleados</a>
+      <a routerLink="/app/configuracion" routerLinkActive="active">Configuración</a>
+    </nav>
+    <div class="foot">
+      <span class="user">{{ session.userName() }}</span>
+      <button type="button" class="az-btn az-btn-ghost small" (click)="logout()">Salir</button>
+    </div>
+  </aside>
+  <main class="main">
+    @if (currentTenant(); as ct) {
+      @if (!ct.active) {
+        <div class="tenant-warn" role="status">
+          Este negocio está <strong>pausado</strong> en la simulación (como en Super Admin → Tenants). Sigue siendo navegable
+          solo para la demo.
+        </div>
+      }
+    }
+    <router-outlet />
+  </main>
+</div>

@@ -1,0 +1,58 @@
+<div class="az-container az-page">
+  <div class="az-page-head">
+    <div>
+      <h1 class="az-page-title">Usuarios globales</h1>
+      <p class="az-page-sub">Simulación: alta en memoria. En producción: invitaciones, verificación y permisos reales.</p>
+    </div>
+  </div>
+
+  <div class="az-card">
+    <h3>Añadir usuario (mock)</h3>
+    <form [formGroup]="form" (ngSubmit)="add()" class="user-form">
+      <div>
+        <label class="az-label" for="em">Correo</label>
+        <input id="em" class="az-input wide" type="email" formControlName="email" />
+      </div>
+      <div>
+        <label class="az-label" for="role">Rol</label>
+        <select id="role" class="az-select wide" formControlName="role">
+          @for (r of roles; track r) {
+            <option [value]="r">{{ r }}</option>
+          }
+        </select>
+      </div>
+      <div class="grow">
+        <label class="az-label" for="tl">Tenant (etiqueta)</label>
+        <input id="tl" class="az-input wide" formControlName="tenantLabel" />
+      </div>
+      <button type="submit" class="az-btn az-btn-primary end">Añadir</button>
+    </form>
+  </div>
+
+  <div class="az-table-wrap mt">
+    <table class="az-table">
+      <thead>
+        <tr>
+          <th>Correo</th>
+          <th>Rol</th>
+          <th>Tenant</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (u of data.platformUsers(); track u.id) {
+          <tr>
+            <td>{{ u.email }}</td>
+            <td><span class="az-badge">{{ u.role }}</span></td>
+            <td>{{ u.tenantLabel }}</td>
+            <td>
+              <button type="button" class="az-btn az-btn-ghost small" (click)="data.removePlatformUser(u.id)">
+                Quitar
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

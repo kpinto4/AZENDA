@@ -1,0 +1,48 @@
+<div class="az-container az-page">
+  <div class="az-page-head">
+    <div>
+      <h1 class="az-page-title">Empleados</h1>
+      <p class="az-page-sub">Simulación: alta inmediata en la tabla. Horarios y permisos serán del backend.</p>
+    </div>
+  </div>
+
+  <div class="az-card form-card">
+    <h3>Añadir empleado (mock)</h3>
+    <form [formGroup]="form" (ngSubmit)="invite()" class="emp-form">
+      <div>
+        <label class="az-label" for="nm">Nombre</label>
+        <input id="nm" class="az-input wide" formControlName="name" />
+      </div>
+      <div>
+        <label class="az-label" for="rl">Rol</label>
+        <input id="rl" class="az-input wide" formControlName="role" placeholder="ej. Barbero" />
+      </div>
+      <div class="grow">
+        <label class="az-label" for="sv">Servicios (separados por coma)</label>
+        <input id="sv" class="az-input wide" formControlName="services" />
+      </div>
+      <button type="submit" class="az-btn az-btn-primary">Añadir</button>
+    </form>
+  </div>
+
+  <div class="az-table-wrap mt">
+    <table class="az-table">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Rol</th>
+          <th>Servicios</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (e of data.employees(); track e.id) {
+          <tr>
+            <td>{{ e.name }}</td>
+            <td>{{ e.role }}</td>
+            <td>{{ e.services.join(', ') }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

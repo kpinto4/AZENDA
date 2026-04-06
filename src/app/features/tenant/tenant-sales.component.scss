@@ -1,0 +1,53 @@
+.form-card h3 {
+  margin-top: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.full-row {
+  flex-basis: 100%;
+}
+
+.stock-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.az-select.wide {
+  max-width: 280px;
+}
+
+.qty {
+  width: 4.5rem;
+  max-width: none;
+}
+
+.full-row-btn {
+  flex-basis: 100%;
+  justify-self: flex-start;
+  width: auto;
+}
+
+.grow {
+  flex: 1;
+  min-width: 200px;
+}
+
+.az-input.wide {
+  max-width: none;
+}
+
+.end {
+  align-self: flex-end;
+}
+
+.mt {
+  margin-top: 1.25rem;
+}

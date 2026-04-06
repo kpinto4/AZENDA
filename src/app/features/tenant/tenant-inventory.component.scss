@@ -1,0 +1,58 @@
+h3 {
+  margin-top: 0;
+}
+
+.muted {
+  color: var(--az-muted);
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+}
+
+.move-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.az-select.wide {
+  min-width: 200px;
+  max-width: 260px;
+}
+
+.narrow {
+  width: 5rem;
+  max-width: none;
+}
+
+.grow .az-input.wide {
+  max-width: min(320px, 100%);
+}
+
+.grow {
+  flex: 1;
+  min-width: 160px;
+}
+
+.end {
+  align-self: flex-end;
+}
+
+.mt {
+  margin-top: 1.25rem;
+}
+
+.sub-title {
+  font-size: 1.1rem;
+  margin: 2rem 0 0.75rem;
+}
+
+.neg {
+  color: var(--az-danger);
+  font-weight: 700;
+}
+
+.pos {
+  color: var(--az-success);
+  font-weight: 700;
+}
