@@ -2,18 +2,38 @@
   <div class="az-page-head">
     <div>
       <h1 class="az-page-title">Tenants</h1>
-      <p class="az-page-sub">
-        Simulación: alta, plan, pausa y módulos actualizan el mock. Si tienes abierto ese tenant en el panel, el menú se
-        sincroniza al volver.
-      </p>
+      @if (useApiTenants()) {
+        <p class="az-page-sub">
+          Conectado al API: los cambios se guardan en SQLite. Cada negocio tiene un
+          <strong>id único</strong> y un <strong>slug único</strong> de reservas (pueden existir dos nombres iguales si el slug
+          difiere).
+        </p>
+      } @else {
+        <p class="az-page-sub">
+          Simulación en memoria: alta, plan, pausa y módulos solo afectan al mock. Para persistir en base de datos, inicia
+          sesión como super admin con el API activo (<code>super&#64;azenda.dev</code>).
+        </p>
+      }
     </div>
   </div>
 
+  @if (apiError()) {
+    <p class="api-err">{{ apiError() }}</p>
+  }
+
   <div class="az-card add-card">
-    <h3>Nuevo tenant (simulado)</h3>
+    @if (useApiTenants()) {
+      <h3>Nuevo tenant (API)</h3>
+      <p class="muted small">
+        El nombre puede repetirse en otro negocio; el slug de reserva es único. El <strong>plan</strong> define los
+        módulos iniciales (rápido); después puedes afinar con el <strong>checklist</strong> en la tabla.
+      </p>
+    } @else {
+      <h3>Nuevo tenant (simulado)</h3>
+    }
     <form [formGroup]="addForm" (ngSubmit)="addTenant()" class="add-row">
       <input class="az-input grow" type="text" formControlName="name" placeholder="Nombre del negocio" />
-      <select class="az-select plan-sel" formControlName="plan">
+      <select class="az-select plan-sel" formControlName="plan" [title]="useApiTenants() ? 'Plan: módulos iniciales' : ''">
         @for (p of plans; track p) {
           <option [value]="p">{{ p }}</option>
         }
@@ -22,61 +42,166 @@
     </form>
   </div>
 
-  <div class="az-table-wrap mt">
-    <table class="az-table tenants-table">
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Plan</th>
-          <th>Estado</th>
-          <th>Módulos</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (t of data.tenants(); track t.id) {
+  @if (useApiTenants()) {
+    <div class="az-table-wrap mt">
+      <table class="az-table tenants-table">
+        <thead>
           <tr>
-            <td><strong>{{ t.name }}</strong><br /><span class="id-hint">{{ t.id }}</span></td>
-            <td>
-              <select
-                class="az-select inline"
-                [value]="t.plan"
-                (change)="data.setTenantPlan(t.id, $any($event.target).value)"
-              >
-                @for (p of plans; track p) {
-                  <option [value]="p">{{ p }}</option>
-                }
-              </select>
-            </td>
-            <td>
-              @if (t.active) {
-                <span class="az-badge success">Activo</span>
-              } @else {
-                <span class="az-badge warn">Pausado</span>
-              }
-            </td>
-            <td>
-              <div class="mods">
-                @for (key of moduleKeys; track key) {
-                  <label class="mod-label">
-                    <input
-                      type="checkbox"
-                      [checked]="t.modules.includes(key)"
-                      (change)="data.setTenantModule(t.id, key, $any($event.target).checked)"
-                    />
-                    {{ key }}
-                  </label>
-                }
-              </div>
-            </td>
-            <td>
-              <button type="button" class="az-btn az-btn-secondary small" (click)="data.setTenantActive(t.id, !t.active)">
-                {{ t.active ? 'Pausar' : 'Activar' }}
-              </button>
-            </td>
+            <th>Id sistema</th>
+            <th>Nombre</th>
+            <th>Slug reservas (único)</th>
+            <th>Estado</th>
+            <th>Plan</th>
+            <th>Módulos</th>
+            <th>Tienda pública</th>
+            <th>Reserva</th>
+            <th></th>
           </tr>
-        }
-      </tbody>
-    </table>
-  </div>
+        </thead>
+        <tbody>
+          @for (t of apiRows(); track t.id) {
+            <tr>
+              <td><code class="id-code">{{ t.id }}</code></td>
+              <td><strong>{{ t.name }}</strong></td>
+              <td>
+                <code class="slug-code">/{{ t.slug }}</code>
+              </td>
+              <td>
+                @if (t.status === 'ACTIVE') {
+                  <span class="az-badge success">Activo</span>
+                } @else if (t.status === 'PAUSED') {
+                  <span class="az-badge warn">Pausado</span>
+                } @else {
+                  <span class="az-badge">Bloqueado</span>
+                }
+              </td>
+              <td>
+                <select
+                  class="az-select plan-inline"
+                  [value]="t.plan"
+                  (change)="setApiTenantPlan(t, $any($event.target).value)"
+                >
+                  @for (p of plans; track p) {
+                    <option [value]="p">{{ p }}</option>
+                  }
+                </select>
+              </td>
+              <td>
+                <div class="mods">
+                  @for (key of moduleKeys; track key) {
+                    <label class="mod-label">
+                      <input
+                        type="checkbox"
+                        [checked]="
+                          key === 'citas' ? t.modules.citas : key === 'ventas' ? t.modules.ventas : t.modules.inventario
+                        "
+                        (change)="setApiTenantModule(t, key, $any($event.target).checked)"
+                      />
+                      {{ key }}
+                    </label>
+                  }
+                </div>
+              </td>
+              <td>
+                <label class="mod-label nowrap">
+                  <input
+                    type="checkbox"
+                    [checked]="t.storefrontEnabled"
+                    [disabled]="
+                      !t.modules.inventario ||
+                      !t.modules.ventas ||
+                      (t.plan !== 'Pro' && t.plan !== 'Negocio')
+                    "
+                    (change)="setApiTenantStorefront(t, $any($event.target).checked)"
+                  />
+                  Catálogo
+                </label>
+                <p class="muted tiny">Solo Pro / Negocio + ventas + inventario</p>
+              </td>
+              <td class="booking-cell">
+                <a class="az-btn az-btn-secondary small" [routerLink]="['/reservar', t.slug]">Abrir</a>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="az-btn az-btn-secondary small"
+                  (click)="setApiTenantActive(t, t.status !== 'ACTIVE')"
+                >
+                  {{ t.status === 'ACTIVE' ? 'Pausar' : 'Activar' }}
+                </button>
+                <button type="button" class="az-btn az-btn-ghost small danger" (click)="deleteApiTenant(t)">
+                  Eliminar
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <div class="az-table-wrap mt">
+      <table class="az-table tenants-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Reserva pública</th>
+            <th>Plan</th>
+            <th>Estado</th>
+            <th>Módulos</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of data.tenants(); track t.id) {
+            <tr>
+              <td>
+                <strong>{{ t.name }}</strong><br /><span class="id-hint">mock: {{ t.id }}</span>
+              </td>
+              <td class="booking-cell">
+                <code class="slug-code">/{{ t.bookingSlug }}</code>
+                <a class="az-btn az-btn-secondary small" [routerLink]="['/reservar', t.bookingSlug]">Abrir</a>
+              </td>
+              <td>
+                <select
+                  class="az-select inline"
+                  [value]="t.plan"
+                  (change)="data.setTenantPlan(t.id, $any($event.target).value)"
+                >
+                  @for (p of plans; track p) {
+                    <option [value]="p">{{ p }}</option>
+                  }
+                </select>
+              </td>
+              <td>
+                @if (t.active) {
+                  <span class="az-badge success">Activo</span>
+                } @else {
+                  <span class="az-badge warn">Pausado</span>
+                }
+              </td>
+              <td>
+                <div class="mods">
+                  @for (key of moduleKeys; track key) {
+                    <label class="mod-label">
+                      <input
+                        type="checkbox"
+                        [checked]="t.modules.includes(key)"
+                        (change)="data.setTenantModule(t.id, key, $any($event.target).checked)"
+                      />
+                      {{ key }}
+                    </label>
+                  }
+                </div>
+              </td>
+              <td>
+                <button type="button" class="az-btn az-btn-secondary small" (click)="data.setTenantActive(t.id, !t.active)">
+                  {{ t.active ? 'Pausar' : 'Activar' }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
 </div>

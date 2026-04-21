@@ -1,3 +1,10 @@
+.head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .below {
   margin-top: 1.25rem;
 }

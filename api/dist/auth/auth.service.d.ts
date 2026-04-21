@@ -1,30 +1,32 @@
 import { JwtService } from '@nestjs/jwt';
-import { AuthUser, AppSystem, UserRole } from './auth.types';
 import { LoginDto } from './dto/login.dto';
+import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
 export declare class AuthService {
     private readonly jwtService;
-    private readonly users;
-    constructor(jwtService: JwtService);
+    private readonly sqlDbService;
+    constructor(jwtService: JwtService, sqlDbService: SqlDbService);
     login(dto: LoginDto): {
         accessToken: string;
         tokenType: string;
         user: {
             id: string;
             email: string;
-            role: UserRole;
+            password?: string;
+            role: import("./auth.types").UserRole;
             tenantId: string | null;
-            systems: AppSystem[];
+            systems: import("./auth.types").AppSystem[];
             status: import("./auth.types").UserStatus;
         };
     };
     me(userId: string): {
         id: string;
         email: string;
-        role: UserRole;
+        password?: string;
+        role: import("./auth.types").UserRole;
         tenantId: string | null;
-        systems: AppSystem[];
+        systems: import("./auth.types").AppSystem[];
         status: import("./auth.types").UserStatus;
     };
-    findById(userId: string): AuthUser | undefined;
+    findById(userId: string): import("../infrastructure/sql-db/sql-db.types").UserEntity | undefined;
     private toSafeUser;
 }

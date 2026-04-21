@@ -1,0 +1,75 @@
+<div class="az-container az-page">
+  <div class="az-page-head">
+    <div>
+      <h1 class="az-page-title">Catálogo público</h1>
+      <p class="az-page-sub">
+        Orden y fotos que verán tus clientes en el enlace de reservas (pestaña Catálogo). Los productos se crean en
+        <a routerLink="/app/inventario">Inventario</a>.
+        @if (session.publicBookingSlug(); as slug) {
+          <a class="public-link" [routerLink]="['/reservar', slug]" [queryParams]="{ tab: 'catalogo' }" target="_blank" rel="noopener"
+            >Abrir catálogo público</a
+          >.
+        }
+      </p>
+    </div>
+  </div>
+
+  @if (imageHint()) {
+    <p class="field-error">{{ imageHint() }}</p>
+  }
+
+  <div class="az-card">
+    <h3>Orden en la vitrina</h3>
+    <p class="muted">El primero de la lista es el que aparece arriba en el área cliente.</p>
+    @if (tenantProducts().length === 0) {
+      <p class="muted">Aún no hay productos. Añade uno desde Inventario.</p>
+    } @else {
+      <ul class="catalog-admin-list">
+        @for (p of tenantProducts(); track p.id; let i = $index) {
+          <li class="catalog-admin-row">
+            <div class="order-actions">
+              <button
+                type="button"
+                class="az-btn az-btn-ghost small"
+                [disabled]="i === 0"
+                (click)="move(p.id, -1)"
+                aria-label="Subir"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                class="az-btn az-btn-ghost small"
+                [disabled]="i === tenantProducts().length - 1"
+                (click)="move(p.id, 1)"
+                aria-label="Bajar"
+              >
+                ↓
+              </button>
+            </div>
+            <div class="thumb-wrap">
+              @if (p.imageUrl) {
+                <img [src]="p.imageUrl" [alt]="'Foto de ' + p.name" />
+              } @else {
+                <span class="thumb-ph" aria-hidden="true">Sin foto</span>
+              }
+            </div>
+            <div class="meta">
+              <strong>{{ p.name }}</strong>
+              <span class="muted small-block">SKU {{ p.sku }} · stock {{ p.stock }}</span>
+            </div>
+            <div class="img-actions">
+              <label class="az-btn az-btn-secondary small file-label">
+                Subir foto
+                <input type="file" accept="image/*" (change)="onRowImageSelected(p.id, $event)" />
+              </label>
+              @if (p.imageUrl) {
+                <button type="button" class="az-btn az-btn-ghost small" (click)="clearImage(p.id)">Quitar</button>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</div>

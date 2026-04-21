@@ -16,7 +16,7 @@ export type UserStatus = 'ACTIVE' | 'PAUSED' | 'BLOCKED';
 export interface AuthUser {
   id: string;
   email: string;
-  password: string;
+  password?: string;
   role: UserRole;
   tenantId: string | null;
   systems: AppSystem[];

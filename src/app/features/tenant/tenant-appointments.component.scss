@@ -25,6 +25,15 @@ form {
   margin: 0;
 }
 
+.table-hint {
+  margin-bottom: 0.5rem;
+}
+
+.small {
+  font-size: 0.82rem;
+  margin: 0 0 0.5rem;
+}
+
 .cal-sim-card h3 {
   margin-bottom: 0.25rem;
 }
@@ -53,9 +62,16 @@ form {
   border-radius: 8px;
   border: 1px solid var(--az-border);
   background: var(--az-bg);
+  font: inherit;
   font-weight: 700;
   color: var(--az-muted);
   user-select: none;
+  cursor: pointer;
+}
+
+.cal-nav-btn:hover {
+  color: var(--az-text);
+  background: var(--az-surface);
 }
 
 .cal-week-pill {

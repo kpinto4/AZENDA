@@ -1,5 +1,7 @@
-import { Component, computed, effect, inject } from '@angular/core';
+import { Component, computed, effect, inject, untracked } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { environment } from '../../../environments/environment';
+import { ApiAppointmentsService } from '../../core/services/api-appointments.service';
 import { MockDataService } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
 
@@ -13,6 +15,7 @@ export class TenantShellComponent {
   readonly session = inject(MockSessionService);
   private readonly data = inject(MockDataService);
   private readonly router = inject(Router);
+  private readonly apiAppointments = inject(ApiAppointmentsService);
 
   readonly currentTenant = computed(() => {
     const id = this.session.tenantId();
@@ -23,7 +26,39 @@ export class TenantShellComponent {
   });
 
   constructor() {
+    effect((onCleanup) => {
+      if (environment.useLiveAuth && this.session.accessToken() && this.session.isTenantUser()) {
+        const sub = untracked(() =>
+          this.session.refreshTenantModulesFromApi().subscribe({
+            error: () => {},
+          }),
+        );
+        onCleanup(() => sub.unsubscribe());
+      }
+    });
     effect(() => {
+      if (environment.useLiveAuth && this.session.accessToken() && this.session.isTenantUser()) {
+        this.apiAppointments.refresh().subscribe({ error: () => this.apiAppointments.clear() });
+      } else {
+        this.apiAppointments.clear();
+      }
+    });
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (
+          document.visibilityState === 'visible' &&
+          environment.useLiveAuth &&
+          this.session.accessToken() &&
+          this.session.isTenantUser()
+        ) {
+          this.session.refreshTenantModulesFromApi().subscribe({ error: () => {} });
+        }
+      });
+    }
+    effect(() => {
+      if (this.session.accessToken()) {
+        return;
+      }
       const id = this.session.tenantId();
       const tenants = this.data.tenants();
       if (!id) {

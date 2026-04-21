@@ -21,3 +21,60 @@ h3 {
 .mt:hover {
   text-decoration: none;
 }
+
+.mb {
+  margin-bottom: 1rem;
+}
+
+.booking-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.lbl-top {
+  margin-top: 0.85rem;
+  display: block;
+}
+
+.url-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.url-row .az-input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.id-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+}
+
+.id-list li {
+  margin-bottom: 0.35rem;
+}
+
+.id-list .lbl {
+  display: inline-block;
+  min-width: 10rem;
+  color: var(--az-muted);
+}
+
+.services-ta {
+  resize: vertical;
+  min-height: 140px;
+  font-family: inherit;
+}
+
+.services-msg {
+  margin: 0.75rem 0 0;
+  font-size: 0.88rem;
+  color: var(--az-success);
+}

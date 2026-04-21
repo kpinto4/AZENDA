@@ -12,51 +12,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
-const auth_types_1 = require("./auth.types");
+const sql_db_service_1 = require("../infrastructure/sql-db/sql-db.service");
 let AuthService = class AuthService {
-    constructor(jwtService) {
+    constructor(jwtService, sqlDbService) {
         this.jwtService = jwtService;
-        this.users = [
-            {
-                id: 'usr_super_1',
-                email: 'super@azenda.dev',
-                password: 'azenda123',
-                role: auth_types_1.UserRole.SUPER_ADMIN,
-                tenantId: null,
-                systems: [auth_types_1.AppSystem.SUPER_ADMIN, auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING],
-                status: 'ACTIVE',
-            },
-            {
-                id: 'usr_admin_spa',
-                email: 'admin-spa@azenda.dev',
-                password: 'azenda123',
-                role: auth_types_1.UserRole.ADMIN,
-                tenantId: 'tenant_spa',
-                systems: [auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING],
-                status: 'ACTIVE',
-            },
-            {
-                id: 'usr_admin_clinica',
-                email: 'admin-clinica@azenda.dev',
-                password: 'azenda123',
-                role: auth_types_1.UserRole.ADMIN,
-                tenantId: 'tenant_clinica',
-                systems: [auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING],
-                status: 'PAUSED',
-            },
-            {
-                id: 'usr_employee_1',
-                email: 'empleado@azenda.dev',
-                password: 'azenda123',
-                role: auth_types_1.UserRole.EMPLEADO,
-                tenantId: 'tenant_barberia',
-                systems: [auth_types_1.AppSystem.TENANT],
-                status: 'ACTIVE',
-            },
-        ];
+        this.sqlDbService = sqlDbService;
     }
     login(dto) {
-        const user = this.users.find((candidate) => candidate.email === dto.email && candidate.password === dto.password);
+        const user = this.sqlDbService.findUserByCredentials(dto.email, dto.password);
         if (!user) {
             throw new common_1.UnauthorizedException('Credenciales invalidas');
         }
@@ -84,16 +47,18 @@ let AuthService = class AuthService {
         return this.toSafeUser(user);
     }
     findById(userId) {
-        return this.users.find((user) => user.id === userId);
+        return this.sqlDbService.findUserById(userId);
     }
     toSafeUser(user) {
-        const { password, ...safeUser } = user;
+        const safeUser = { ...user };
+        delete safeUser.password;
         return safeUser;
     }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [jwt_1.JwtService])
+    __metadata("design:paramtypes", [jwt_1.JwtService,
+        sql_db_service_1.SqlDbService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

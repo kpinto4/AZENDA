@@ -12,9 +12,19 @@
       }
       @if (session.modules().inventory) {
         <a routerLink="/app/inventario" routerLinkActive="active">Inventario</a>
+        <a routerLink="/app/catalogo" routerLinkActive="active">Catálogo</a>
       }
       <a routerLink="/app/empleados" routerLinkActive="active">Empleados</a>
       <a routerLink="/app/configuracion" routerLinkActive="active">Configuración</a>
+      @if (session.publicBookingSlug()) {
+        <a
+          class="sidebar-booking"
+          [routerLink]="['/reservar', session.publicBookingSlug()]"
+          target="_blank"
+          rel="noopener"
+          >Enlace reservas</a
+        >
+      }
     </nav>
     <div class="foot">
       <span class="user">{{ session.userName() }}</span>

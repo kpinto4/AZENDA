@@ -14,6 +14,7 @@ export declare class AuthController {
         user: {
             id: string;
             email: string;
+            password?: string;
             role: import("./auth.types").UserRole;
             tenantId: string | null;
             systems: import("./auth.types").AppSystem[];
@@ -23,6 +24,7 @@ export declare class AuthController {
     me(req: AuthenticatedRequest): {
         id: string;
         email: string;
+        password?: string;
         role: import("./auth.types").UserRole;
         tenantId: string | null;
         systems: import("./auth.types").AppSystem[];

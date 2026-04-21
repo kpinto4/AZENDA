@@ -26,6 +26,11 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## Azenda backend scope
+
+Project-specific module boundaries and extraction guide are documented in `ARCHITECTURE.md`.
+This API persists demo data in SQLite at `data/azenda.db` using `node:sqlite`.
+
 ## Project setup
 
 ```bash

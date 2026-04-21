@@ -63,6 +63,14 @@ nav a.active {
   background: color-mix(in srgb, var(--az-primary) 12%, transparent);
 }
 
+nav a.sidebar-booking {
+  margin-top: 0.35rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed var(--az-border);
+  font-size: 0.82rem;
+  color: var(--az-accent);
+}
+
 .foot {
   padding: 1rem 1.25rem;
   border-top: 1px solid var(--az-border);

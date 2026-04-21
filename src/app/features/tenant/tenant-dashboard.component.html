@@ -4,13 +4,22 @@
       <h1 class="az-page-title">Panel</h1>
       <p class="az-page-sub">Resumen operativo de {{ session.tenantName() }} (datos simulados en memoria).</p>
     </div>
-    <a class="az-btn az-btn-secondary" routerLink="/reservar/barberia-centro">Abrir reserva pública</a>
+    <div class="head-actions">
+      <a
+        class="az-btn az-btn-secondary"
+        [routerLink]="['/reservar', session.publicBookingSlug()]"
+        >Área cliente</a
+      >
+      @if (session.modules().inventory) {
+        <a class="az-btn az-btn-secondary" routerLink="/app/inventario">Inventario</a>
+      }
+    </div>
   </div>
 
   <div class="az-grid cols-3">
     <div class="az-card">
       <div class="az-kpi-label">Citas hoy (mock)</div>
-      <div class="az-kpi">{{ data.appointments().length }}</div>
+      <div class="az-kpi">{{ myAppointments().length }}</div>
     </div>
     <div class="az-card">
       <div class="az-kpi-label">Ventas recientes</div>
@@ -26,7 +35,7 @@
     <div class="az-card">
       <h3>Próximas citas</h3>
       <ul class="list">
-        @for (a of data.appointments().slice(0, 4); track a.id) {
+        @for (a of myAppointments().slice(0, 4); track a.id) {
           <li>
             <strong>{{ a.customer }}</strong> · {{ a.service }}
             <span class="muted">{{ a.when }}</span>

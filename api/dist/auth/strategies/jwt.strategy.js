@@ -31,7 +31,8 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
         if (user.status !== 'ACTIVE') {
             throw new common_1.UnauthorizedException('Usuario no activo');
         }
-        return user;
+        const { password: _password, ...safeUser } = user;
+        return safeUser;
     }
 };
 exports.JwtStrategy = JwtStrategy;

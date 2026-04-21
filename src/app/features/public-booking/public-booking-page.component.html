@@ -4,12 +4,127 @@
     <span class="slug">/{{ slug() }}</span>
   </header>
 
-  @if (done()) {
+  <nav class="client-tabs" aria-label="Área de cliente">
+    <button type="button" class="tab" [class.active]="clientTab() === 'reserva'" (click)="goTab('reserva')">
+      Reservar cita
+    </button>
+    <button type="button" class="tab" [class.active]="clientTab() === 'asistencia'" (click)="goTab('asistencia')">
+      Confirmar asistencia
+    </button>
+    <button type="button" class="tab" [class.active]="clientTab() === 'tienda'" (click)="goTab('tienda')">
+      Compra / tienda
+    </button>
+    @if (catalogoVisible()) {
+      <button type="button" class="tab" [class.active]="clientTab() === 'catalogo'" (click)="goTab('catalogo')">
+        Catálogo
+      </button>
+    }
+  </nav>
+
+  @if (clientTab() === 'catalogo') {
+    <div class="az-card panel tab-panel">
+      <h1>Catálogo (mini tienda)</h1>
+      <p class="muted">
+        Disponible en planes <strong>Pro</strong> o <strong>Negocio</strong> con inventario, ventas y tienda pública
+        activada por el negocio. El pago y el envío los concretáis fuera de Azenda; aquí dejas el interés.
+      </p>
+      @if (environment.useLiveAuth && publicMeta() && !publicMeta()!.active) {
+        <p class="muted field-error">Este negocio no está activo; el catálogo no está disponible.</p>
+      }
+      <ul class="catalog-list">
+        @for (p of catalogProducts(); track p.id) {
+          <li class="catalog-row">
+            @if (p.imageUrl) {
+              <img class="catalog-thumb" [src]="p.imageUrl" [alt]="p.name" />
+            } @else {
+              <div class="catalog-thumb catalog-thumb-ph" aria-hidden="true"></div>
+            }
+            <div class="catalog-main">
+              <strong>{{ p.name }}</strong>
+              <span class="muted small-block">SKU {{ p.sku }} · stock {{ p.stock }}</span>
+            </div>
+            <button type="button" class="az-btn az-btn-secondary" (click)="solicitarProducto(p.name)">
+              Solicitar
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+  } @else if (clientTab() === 'asistencia') {
+    <div class="az-card panel tab-panel">
+      <h1>Confirmar asistencia</h1>
+      <p class="muted">
+        Cuando ya hayas acudido a tu cita, indica la <strong>referencia</strong> que te mostramos al reservar (o te dio el
+        negocio) y el <strong>mismo nombre</strong> que pusiste en la reserva.
+      </p>
+      @if (attendanceMsg()) {
+        <p class="muted success-line">{{ attendanceMsg() }}</p>
+      }
+      @if (attendanceErr()) {
+        <p class="muted field-error">{{ attendanceErr() }}</p>
+      }
+      <form [formGroup]="attendanceForm" (ngSubmit)="submitAttendance()">
+        <label class="az-label" for="ref">Referencia de la cita</label>
+        <input id="ref" class="az-input wide" formControlName="appointmentId" autocomplete="off" />
+        <label class="az-label" for="aname">Nombre (como en la reserva)</label>
+        <input id="aname" class="az-input wide" formControlName="customer" autocomplete="name" />
+        <div class="row-btns">
+          <button type="submit" class="az-btn az-btn-primary" [disabled]="attendanceSubmitting()">
+            {{ attendanceSubmitting() ? 'Enviando…' : 'Confirmar que asistí' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  } @else if (clientTab() === 'tienda') {
+    <div class="az-card panel tab-panel">
+      <h1>Registro de compra o visita en tienda</h1>
+      <p class="muted">
+        Para equipos de ventas: el cliente puede dejar aquí un breve registro (pedido, recogida, incidencia). El negocio
+        lo revisa en <strong>Ventas</strong> (panel interno).
+      </p>
+      @if (storeMsg()) {
+        <p class="muted success-line">{{ storeMsg() }}</p>
+      }
+      @if (storeErr()) {
+        <p class="muted field-error">{{ storeErr() }}</p>
+      }
+      <form [formGroup]="storeForm" (ngSubmit)="submitStore()">
+        <label class="az-label" for="sname">Tu nombre</label>
+        <input id="sname" class="az-input wide" formControlName="customer" autocomplete="name" />
+        <label class="az-label" for="sdetail">Detalle</label>
+        <textarea
+          id="sdetail"
+          class="az-input wide services-ta"
+          rows="4"
+          formControlName="detail"
+          placeholder="Ej.: Recogí pedido #123, compré champú, reservé segunda visita…"
+        ></textarea>
+        <div class="row-btns">
+          <button type="submit" class="az-btn az-btn-primary" [disabled]="storeSubmitting()">
+            {{ storeSubmitting() ? 'Enviando…' : 'Enviar registro' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  } @else if (done()) {
     <div class="az-card panel success">
       <h1>¡Listo!</h1>
-      <p>Reserva simulada añadida a la lista de citas del mock (revisa el panel cliente).</p>
-      <a routerLink="/app/citas" class="az-btn az-btn-primary">Ver citas en panel demo</a>
-      <a routerLink="/" class="az-btn az-btn-secondary">Volver al inicio</a>
+      @if (bookedWithLiveApi()) {
+        <p>Reserva guardada. El negocio la verá en su panel interno; tú no necesitas iniciar sesión.</p>
+      } @else {
+        <p>Reserva de demostración guardada solo en el navegador (modo sin API).</p>
+      }
+      @if (lastBookingId()) {
+        <p class="muted ref-line">
+          Tu referencia:
+          <code>{{ lastBookingId() }}</code>
+          · guárdala para confirmar asistencia o cualquier consulta con el negocio.
+        </p>
+      }
+      <a routerLink="/" class="az-btn az-btn-primary">Volver al inicio</a>
+      <button type="button" class="az-btn az-btn-secondary" (click)="anotherReservation()">
+        Hacer otra reserva
+      </button>
     </div>
   } @else {
     <div class="az-card panel">
@@ -22,12 +137,16 @@
 
       @if (step() === 1) {
         <h1>Elige un servicio</h1>
-        <p class="muted">Negocio: <strong>{{ slug() }}</strong></p>
-        <div class="options">
-          @for (s of services; track s) {
-            <button type="button" class="opt" (click)="pickService(s)">{{ s }}</button>
-          }
-        </div>
+        <p class="muted">Negocio: <strong>{{ slug() }}</strong> · servicios de este negocio</p>
+        @if (tenantServices().length === 0) {
+          <p class="muted">Este negocio aún no tiene servicios en el catálogo para reservar.</p>
+        } @else {
+          <div class="options">
+            @for (s of tenantServices(); track s) {
+              <button type="button" class="opt" (click)="pickService(s)">{{ s }}</button>
+            }
+          </div>
+        }
       }
 
       @if (step() === 2) {
@@ -40,6 +159,9 @@
           [value]="selectedDate()"
           (input)="updateDate(($any($event.target).value))"
         />
+        @if (dateStepError()) {
+          <p class="muted field-error">{{ dateStepError() }}</p>
+        }
         <div class="row-btns">
           <button type="button" class="az-btn az-btn-ghost" (click)="back()">Atrás</button>
           <button type="button" class="az-btn az-btn-primary" (click)="continueFromDate()">Continuar</button>
@@ -47,8 +169,8 @@
       }
 
       @if (step() === 3) {
-        <h1>Horarios disponibles (mock)</h1>
-        <p class="muted">La disponibilidad real vendrá del motor de agenda en servidor.</p>
+        <h1>Elige hora</h1>
+        <p class="muted">Selecciona una franja. La disponibilidad definitiva la define el negocio.</p>
         <div class="slots">
           @for (t of slots; track t) {
             <button type="button" class="slot" [class.pick]="t === selectedSlot()" (click)="pickSlot(t)">
@@ -61,6 +183,9 @@
 
       @if (step() === 4) {
         <h1>Tus datos</h1>
+        @if (bookingError()) {
+          <p class="muted field-error">{{ bookingError() }}</p>
+        }
         <form [formGroup]="confirmForm" (ngSubmit)="confirm()">
           <label class="az-label" for="name">Nombre</label>
           <input id="name" class="az-input wide" formControlName="name" />
@@ -68,11 +193,16 @@
           <input id="phone" class="az-input wide" formControlName="phone" />
           <div class="summary">
             <div><span>Servicio</span><strong>{{ selectedService() }}</strong></div>
-            <div><span>Fecha</span><strong>{{ selectedDate() }} {{ selectedSlot() }}</strong></div>
+            <div>
+              <span>Fecha</span>
+              <strong>{{ selectedDate() || '—' }} {{ selectedSlot() || '—' }}</strong>
+            </div>
           </div>
           <div class="row-btns">
             <button type="button" class="az-btn az-btn-ghost" (click)="back()">Atrás</button>
-            <button type="submit" class="az-btn az-btn-primary">Confirmar</button>
+            <button type="submit" class="az-btn az-btn-primary" [disabled]="bookingSubmitting()">
+              {{ bookingSubmitting() ? 'Enviando…' : 'Confirmar' }}
+            </button>
           </div>
         </form>
       }

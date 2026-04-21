@@ -23,6 +23,21 @@
   max-width: 140px;
 }
 
+.plan-inline {
+  max-width: 120px;
+  font-size: 0.8rem;
+}
+
+.tiny {
+  font-size: 0.68rem;
+  margin: 0.2rem 0 0;
+  max-width: 140px;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
 .mt {
   margin-top: 1rem;
 }
@@ -56,4 +71,40 @@
   padding: 0.35rem 0.6rem;
   font-size: 0.8rem;
   white-space: nowrap;
+}
+
+.booking-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.slug-code {
+  font-size: 0.8rem;
+  color: var(--az-muted);
+}
+
+.id-code {
+  font-size: 0.75rem;
+  word-break: break-all;
+}
+
+.api-err {
+  color: var(--az-danger);
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+}
+
+.small {
+  font-size: 0.82rem;
+  margin: 0 0 0.75rem;
+}
+
+.az-btn.danger {
+  color: var(--az-danger);
+}
+
+.az-btn-ghost.small.danger {
+  margin-top: 0.25rem;
 }

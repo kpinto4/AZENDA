@@ -1,6 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { environment } from '../../../environments/environment';
+import { ApiAuthService } from '../../core/services/api-auth.service';
 import { MockDataService } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
 
@@ -11,18 +14,22 @@ import { MockSessionService } from '../../core/services/mock-session.service';
   styleUrl: './login-page.component.scss',
 })
 export class LoginPageComponent {
+  protected readonly environment = environment;
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly session = inject(MockSessionService);
   private readonly data = inject(MockDataService);
+  private readonly apiAuth = inject(ApiAuthService);
 
   readonly form = this.fb.nonNullable.group({
-    email: ['demo@azenda.app', [Validators.required, Validators.email]],
+    email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
+    rememberMe: [false],
   });
 
   message = '';
+  readonly passwordVisible = signal(false);
 
   submit(): void {
     if (this.form.invalid) {
@@ -30,6 +37,38 @@ export class LoginPageComponent {
       return;
     }
     const email = this.form.controls.email.getRawValue().toLowerCase();
+    const password = this.form.controls.password.getRawValue();
+
+    if (environment.useLiveAuth) {
+      this.message = '';
+      this.apiAuth.login(email, password).subscribe({
+        next: (res) => {
+          this.session.applyLiveLoginResponse(res).subscribe({
+            next: () => {
+              const remember = this.form.controls.rememberMe.getRawValue();
+              this.session.persistAuthIfRequested(res.accessToken, remember);
+              const fallback =
+                res.user.role === 'SUPER_ADMIN' ? '/super' : '/app';
+              void this.navigateAfterLogin(fallback);
+            },
+            error: () => {
+              this.message =
+                'Error al cargar el contexto del tenant. Revisa que el API este en marcha.';
+            },
+          });
+        },
+        error: (err: unknown) => {
+          if (err instanceof HttpErrorResponse && err.status === 401) {
+            this.message = 'Credenciales invalidas.';
+            return;
+          }
+          this.message =
+            'No se pudo conectar al API. Comprueba que el backend este en http://localhost:3000';
+        },
+      });
+      return;
+    }
+
     if (email.includes('super')) {
       this.session.loginAsSuperAdmin();
       void this.navigateAfterLogin('/super');
@@ -66,5 +105,9 @@ export class LoginPageComponent {
     const redirect = this.route.snapshot.queryParamMap.get('redirect');
     const target = redirect && redirect.startsWith('/') ? redirect : fallback;
     void this.router.navigateByUrl(target);
+  }
+
+  togglePasswordVisible(): void {
+    this.passwordVisible.update((v) => !v);
   }
 }

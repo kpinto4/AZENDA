@@ -1,60 +1,18 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { AuthUser, AppSystem, UserRole } from './auth.types';
+import { AuthUser } from './auth.types';
 import { LoginDto } from './dto/login.dto';
+import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
 
 @Injectable()
 export class AuthService {
-  private readonly users: AuthUser[] = [
-    {
-      id: 'usr_super_1',
-      email: 'super@azenda.dev',
-      password: 'azenda123',
-      role: UserRole.SUPER_ADMIN,
-      tenantId: null,
-      systems: [
-        AppSystem.SUPER_ADMIN,
-        AppSystem.TENANT,
-        AppSystem.PUBLIC_BOOKING,
-      ],
-      status: 'ACTIVE',
-    },
-    {
-      id: 'usr_admin_spa',
-      email: 'admin-spa@azenda.dev',
-      password: 'azenda123',
-      role: UserRole.ADMIN,
-      tenantId: 'tenant_spa',
-      systems: [AppSystem.TENANT, AppSystem.PUBLIC_BOOKING],
-      status: 'ACTIVE',
-    },
-    {
-      id: 'usr_admin_clinica',
-      email: 'admin-clinica@azenda.dev',
-      password: 'azenda123',
-      role: UserRole.ADMIN,
-      tenantId: 'tenant_clinica',
-      systems: [AppSystem.TENANT, AppSystem.PUBLIC_BOOKING],
-      status: 'PAUSED',
-    },
-    {
-      id: 'usr_employee_1',
-      email: 'empleado@azenda.dev',
-      password: 'azenda123',
-      role: UserRole.EMPLEADO,
-      tenantId: 'tenant_barberia',
-      systems: [AppSystem.TENANT],
-      status: 'ACTIVE',
-    },
-  ];
-
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly sqlDbService: SqlDbService,
+  ) {}
 
   login(dto: LoginDto) {
-    const user = this.users.find(
-      (candidate) =>
-        candidate.email === dto.email && candidate.password === dto.password,
-    );
+    const user = this.sqlDbService.findUserByCredentials(dto.email, dto.password);
 
     if (!user) {
       throw new UnauthorizedException('Credenciales invalidas');
@@ -88,7 +46,7 @@ export class AuthService {
   }
 
   findById(userId: string) {
-    return this.users.find((user) => user.id === userId);
+    return this.sqlDbService.findUserById(userId);
   }
 
   private toSafeUser(user: AuthUser) {

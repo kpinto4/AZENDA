@@ -44,6 +44,42 @@ form {
   margin-bottom: 0.5rem;
 }
 
+.password-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+  margin-bottom: 0.5rem;
+}
+
+.password-input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.eye-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.remember-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: var(--az-muted);
+  margin: 0.25rem 0 0.5rem;
+  cursor: pointer;
+}
+
+.remember-row input {
+  width: auto;
+  margin: 0;
+}
+
+.hint.live {
+  margin-top: -0.5rem;
+}
+
 .msg {
   color: var(--az-danger);
   font-size: 0.85rem;

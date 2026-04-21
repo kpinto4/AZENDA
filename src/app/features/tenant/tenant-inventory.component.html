@@ -3,9 +3,45 @@
     <div>
       <h1 class="az-page-title">Inventario</h1>
       <p class="az-page-sub">
-        Simulación: movimientos actualizan stock y aparecen abajo. Las ventas pueden descontar desde el módulo Ventas.
+        Los productos son de <strong>este negocio</strong>; el catálogo público los muestra en el orden que definas en
+        <a routerLink="/app/catalogo">Catálogo</a>.
       </p>
     </div>
+  </div>
+
+  <div class="az-card">
+    <h3>Nuevo producto</h3>
+    <p class="muted">Al guardarlo aparece en inventario, ventas (si aplica) y en el catálogo del enlace público.</p>
+    <form [formGroup]="createForm" (ngSubmit)="createProduct()" class="create-grid">
+      <div>
+        <label class="az-label" for="pname">Nombre</label>
+        <input id="pname" class="az-input wide" type="text" formControlName="name" autocomplete="off" />
+      </div>
+      <div>
+        <label class="az-label" for="psku">SKU</label>
+        <input id="psku" class="az-input wide" type="text" formControlName="sku" autocomplete="off" />
+      </div>
+      <div>
+        <label class="az-label" for="pstock">Stock inicial</label>
+        <input id="pstock" class="az-input narrow" type="number" min="0" formControlName="stock" />
+      </div>
+      <div class="full">
+        <label class="az-label" for="pimg">Foto (opcional)</label>
+        <input id="pimg" type="file" accept="image/*" (change)="onCreateImageSelected($event)" />
+        @if (imageHint()) {
+          <p class="field-error">{{ imageHint() }}</p>
+        }
+        @if (createImageDataUrl(); as src) {
+          <div class="thumb-preview">
+            <img [src]="src" alt="Vista previa" />
+            <button type="button" class="az-btn az-btn-ghost small" (click)="clearCreateImage()">Quitar imagen</button>
+          </div>
+        }
+      </div>
+      <div class="full">
+        <button type="submit" class="az-btn az-btn-primary" [disabled]="createForm.invalid">Añadir producto</button>
+      </div>
+    </form>
   </div>
 
   <div class="az-card">
@@ -16,7 +52,7 @@
         <label class="az-label" for="pid">Producto</label>
         <select id="pid" class="az-select wide" formControlName="productId">
           <option value="" disabled>— Elegir —</option>
-          @for (p of data.products(); track p.id) {
+          @for (p of tenantProducts(); track p.id) {
             <option [value]="p.id">{{ p.name }} ({{ p.stock }})</option>
           }
         </select>
@@ -44,7 +80,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (p of data.products(); track p.id) {
+        @for (p of tenantProducts(); track p.id) {
           <tr>
             <td>{{ p.name }}</td>
             <td>{{ p.sku }}</td>
