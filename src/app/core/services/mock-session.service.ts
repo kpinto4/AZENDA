@@ -52,6 +52,7 @@ export class MockSessionService {
 
   /** Tienda pública tipo catálogo (planes Pro+). */
   readonly tenantStorefront = signal(false);
+  readonly darkMode = signal(false);
 
   readonly isSuperAdmin = computed(() => this.role() === 'SUPER_ADMIN');
   readonly isTenantUser = computed(() => {
@@ -79,6 +80,7 @@ export class MockSessionService {
     this.modules.set({ appointments: false, sales: false, inventory: false });
     this.tenantPlan.set('Trial');
     this.tenantStorefront.set(false);
+    this.darkMode.set(false);
   }
 
   /** Entra como admin del tenant Barbería Centro (t1). */
@@ -332,6 +334,7 @@ export class MockSessionService {
   }
 
   toggleDarkTheme(root: HTMLElement, enabled: boolean): void {
+    this.darkMode.set(enabled);
     if (enabled) {
       root.setAttribute('data-theme', 'dark');
     } else {

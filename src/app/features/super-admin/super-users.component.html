@@ -15,11 +15,14 @@
       </div>
       <div>
         <label class="az-label" for="role">Rol</label>
-        <select id="role" class="az-select wide" formControlName="role">
+        <div id="role" class="role-pills" role="radiogroup" aria-label="Rol">
           @for (r of roles; track r) {
-            <option [value]="r">{{ r }}</option>
+            <label class="role-pill">
+              <input type="radio" formControlName="role" [value]="r" />
+              <span>{{ r }}</span>
+            </label>
           }
-        </select>
+        </div>
       </div>
       <div class="grow">
         <label class="az-label" for="tl">Tenant (etiqueta)</label>

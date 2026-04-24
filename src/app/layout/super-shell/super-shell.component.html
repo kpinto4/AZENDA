@@ -1,12 +1,26 @@
-<div class="super-shell">
-  <aside class="super-sidebar">
+<div class="super-shell" [class.nav-open]="menuOpen()">
+  <div class="super-sidebar-backdrop" (click)="closeMenu()" aria-hidden="true"></div>
+  <aside class="super-sidebar" id="super-nav-drawer" role="navigation" aria-label="Menú Super Admin">
+    <div class="drawer-head-mobile">
+      <button type="button" class="drawer-close" (click)="closeMenu()" aria-label="Cerrar menú">×</button>
+    </div>
     <div class="brand">Azenda <span>Super Admin</span></div>
-    <nav>
-      <a routerLink="/super/panel" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Dashboard</a>
-      <a routerLink="/super/tenants" routerLinkActive="active">Tenants</a>
-      <a routerLink="/super/modulos" routerLinkActive="active">Módulos</a>
-      <a routerLink="/super/usuarios" routerLinkActive="active">Usuarios</a>
-      <a routerLink="/super/estadisticas" routerLinkActive="active">Estadísticas</a>
+    <nav (pointerdown)="onSidebarPointerDown($event)">
+      <div class="nav-group">
+        <p class="nav-group-title">General</p>
+        <div class="nav-links-grid">
+          <a routerLink="/super/panel" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Dashboard</a>
+          <a routerLink="/super/estadisticas" routerLinkActive="active">Estadísticas</a>
+        </div>
+      </div>
+      <div class="nav-group">
+        <p class="nav-group-title">Administración</p>
+        <div class="nav-links-grid">
+          <a routerLink="/super/tenants" routerLinkActive="active">Tenants</a>
+          <a routerLink="/super/modulos" routerLinkActive="active">Módulos</a>
+          <a routerLink="/super/usuarios" routerLinkActive="active">Usuarios</a>
+        </div>
+      </div>
     </nav>
     <div class="foot">
       <span>{{ session.userName() }}</span>
@@ -15,6 +29,18 @@
     </div>
   </aside>
   <main class="super-main">
+    <header class="mobile-shell-bar">
+      <button
+        type="button"
+        class="mobile-menu-toggle"
+        (click)="toggleMenu()"
+        [attr.aria-expanded]="menuOpen()"
+        aria-controls="super-nav-drawer"
+      >
+        Menú
+      </button>
+      <span class="mobile-shell-title">Super Admin</span>
+    </header>
     <router-outlet />
   </main>
 </div>

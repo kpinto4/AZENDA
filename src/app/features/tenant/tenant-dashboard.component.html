@@ -31,6 +31,84 @@
     </div>
   </div>
 
+  <div class="az-card agenda-principal">
+    @let cal = dashboardCalendar();
+    <div class="agenda-head">
+      <div>
+        <h3>Agenda principal</h3>
+        <p class="muted">{{ cal.weekLabel }} · {{ cal.total }} cita(s)</p>
+      </div>
+      <a class="az-btn az-btn-secondary" routerLink="/app/citas">Gestionar citas</a>
+    </div>
+    <div class="employee-legend">
+      @for (emp of employeeLegend(); track emp.name) {
+        <span class="legend-item">
+          <i class="legend-dot" [style.background]="emp.color"></i>
+          {{ emp.name }}
+        </span>
+      }
+    </div>
+    <div class="agenda-scroll">
+      <div class="agenda-board">
+        @for (day of cal.days; track day.key) {
+          <section class="agenda-day" [class.today]="day.isToday">
+            <header class="agenda-day-head">
+              <span class="dow">{{ day.label }}</span>
+              <span class="dom">{{ day.sub }}</span>
+            </header>
+            <div class="agenda-day-list">
+              @if (!day.events.length) {
+                <p class="empty">Sin citas</p>
+              }
+              @for (ev of day.events; track ev.id) {
+                <article class="agenda-event" [style.borderLeftColor]="ev.employeeColor">
+                  <span class="time">{{ ev.time }}</span>
+                  <strong>{{ ev.title }}</strong>
+                  <span class="muted">{{ ev.employeeName }}</span>
+                </article>
+              }
+            </div>
+          </section>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="az-card quick-access">
+    <h3>Accesos rápidos</h3>
+    <p class="muted">Organizado por áreas para evitar navegación saturada.</p>
+    <div class="quick-grid">
+      <a class="quick-card" routerLink="/app/citas">
+        <strong>Citas</strong>
+        <span>Agenda y confirmaciones</span>
+      </a>
+      @if (session.modules().sales) {
+        <a class="quick-card" routerLink="/app/ventas">
+          <strong>Ventas</strong>
+          <span>POS y registros de tienda</span>
+        </a>
+      }
+      @if (session.modules().inventory) {
+        <a class="quick-card" routerLink="/app/inventario">
+          <strong>Inventario</strong>
+          <span>Stock y movimientos</span>
+        </a>
+        <a class="quick-card" routerLink="/app/catalogo">
+          <strong>Catálogo</strong>
+          <span>Orden y fotos para clientes</span>
+        </a>
+      }
+      <a class="quick-card" routerLink="/app/empleados">
+        <strong>Empleados</strong>
+        <span>Equipo y servicios</span>
+      </a>
+      <a class="quick-card" routerLink="/app/configuracion">
+        <strong>Configuración</strong>
+        <span>Branding, enlaces y personalización</span>
+      </a>
+    </div>
+  </div>
+
   <div class="az-grid cols-2 below">
     <div class="az-card">
       <h3>Próximas citas</h3>

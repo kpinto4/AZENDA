@@ -5,7 +5,7 @@
       <p class="az-page-sub">Horarios, servicios, WhatsApp y branding: persistencia en API más adelante.</p>
     </div>
     <button type="button" class="az-btn az-btn-secondary" (click)="toggleDark()">
-      {{ dark ? 'Modo claro' : 'Modo oscuro (preview)' }}
+      {{ dark() ? 'Modo claro' : 'Modo oscuro (preview)' }}
     </button>
   </div>
 
@@ -106,10 +106,107 @@
   </div>
 
   <div class="az-card mt">
-    <h3>Branding</h3>
-    <form [formGroup]="form">
-      <label class="az-label">Color primario (solo preview local)</label>
-      <input class="az-input wide" type="color" formControlName="brandColor" />
+    <h3>Personalización ampliada</h3>
+    <p class="muted">
+      Esta identidad visual se aplica al panel del negocio y también al enlace público de reservas.
+    </p>
+    <form [formGroup]="form" (ngSubmit)="saveBranding()">
+      <div class="brand-grid">
+        <div>
+          <label class="az-label">Nombre interno del negocio</label>
+          <input class="az-input wide" formControlName="tenantName" />
+        </div>
+        <div>
+          <label class="az-label">Nombre de marca visible</label>
+          <input class="az-input wide" formControlName="displayName" />
+        </div>
+        <div class="full-row">
+          <label class="az-label">Logo (opcional)</label>
+          <input type="file" accept="image/*" (change)="onLogoSelected($event)" />
+          @if (brandingImageHint()) {
+            <p class="field-error">{{ brandingImageHint() }}</p>
+          }
+          @if (logoPreview(); as logo) {
+            <div class="logo-row">
+              <img [src]="logo" alt="Logo" />
+              <button type="button" class="az-btn az-btn-ghost small" (click)="clearLogo()">Quitar logo</button>
+            </div>
+          }
+        </div>
+        <div>
+          <label class="az-label">Color primario</label>
+          <input class="az-input wide" type="color" formControlName="brandColor" />
+        </div>
+        <div>
+          <label class="az-label">Color acento</label>
+          <input class="az-input wide" type="color" formControlName="accentColor" />
+        </div>
+        <div>
+          <label class="az-label">Fondo</label>
+          <input class="az-input wide" type="color" formControlName="bgColor" />
+        </div>
+        <div>
+          <label class="az-label">Superficie (cards)</label>
+          <input class="az-input wide" type="color" formControlName="surfaceColor" />
+        </div>
+        <div>
+          <label class="az-label">Texto</label>
+          <input class="az-input wide" type="color" formControlName="textColor" />
+        </div>
+        <div>
+          <label class="az-label">Redondeado (px)</label>
+          <input class="az-input wide" type="number" min="4" max="28" formControlName="borderRadiusPx" />
+        </div>
+        <div class="full-row gradient-toggle">
+          <label>
+            <input type="checkbox" formControlName="useGradient" />
+            Usar fondo degradado
+          </label>
+        </div>
+        @if (form.controls.useGradient.getRawValue()) {
+          <div>
+            <label class="az-label">Degradado desde</label>
+            <input class="az-input wide" type="color" formControlName="gradientFrom" />
+          </div>
+          <div>
+            <label class="az-label">Degradado hacia</label>
+            <input class="az-input wide" type="color" formControlName="gradientTo" />
+          </div>
+          <div>
+            <label class="az-label">Ángulo degradado (0-360)</label>
+            <input class="az-input wide" type="number" min="0" max="360" formControlName="gradientAngleDeg" />
+          </div>
+        }
+      </div>
+      <div class="preset-wrap">
+        <label class="az-label">Colores recomendados</label>
+        <div class="preset-grid">
+          @for (p of colorPresets; track p.id) {
+            <button type="button" class="preset-card" (click)="applyColorPreset(p)">
+              <span class="preset-title">{{ p.name }}</span>
+              <span class="preset-swatches">
+                <span class="swatch" [style.background]="p.primaryColor" title="Primario"></span>
+                <span class="swatch" [style.background]="p.accentColor" title="Acento"></span>
+                <span class="swatch" [style.background]="p.bgColor" title="Fondo"></span>
+                <span class="swatch" [style.background]="p.surfaceColor" title="Superficie"></span>
+                <span class="swatch" [style.background]="p.textColor" title="Texto"></span>
+              </span>
+            </button>
+          }
+        </div>
+      </div>
+      <p class="muted tiny">
+        Consejo: evita usar color de texto muy parecido al fondo/superficie para mantener legibilidad.
+      </p>
+      <div class="branding-actions">
+        <button type="submit" class="az-btn az-btn-primary mt">Guardar personalización</button>
+        <button type="button" class="az-btn az-btn-secondary mt" (click)="resetBrandingColors()">
+          Restablecer colores
+        </button>
+      </div>
     </form>
+    @if (brandingMsg()) {
+      <p class="services-msg">{{ brandingMsg() }}</p>
+    }
   </div>
 </div>

@@ -1,6 +1,9 @@
-<div class="booking">
+<div class="booking" [ngStyle]="styleVars()">
   <header class="top">
-    <a routerLink="/" class="brand">Azenda</a>
+    @if (branding().logoUrl; as logo) {
+      <img class="top-logo" [src]="logo" [alt]="branding().displayName" />
+    }
+    <a routerLink="/" class="brand">{{ branding().displayName || 'Azenda' }}</a>
     <span class="slug">/{{ slug() }}</span>
   </header>
 

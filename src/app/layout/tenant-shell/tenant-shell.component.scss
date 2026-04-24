@@ -6,7 +6,7 @@
 .sidebar {
   width: 240px;
   flex-shrink: 0;
-  background: var(--az-surface);
+  background: var(--az-sidebar-bg, var(--az-surface));
   border-right: 1px solid var(--az-border);
   display: flex;
   flex-direction: column;
@@ -16,6 +16,15 @@
 .brand {
   padding: 0 1.25rem 1.25rem;
   border-bottom: 1px solid var(--az-border);
+}
+
+.brand-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: cover;
+  border-radius: 999px;
+  border: 1px solid var(--az-border);
+  margin-bottom: 0.4rem;
 }
 
 .logo {
@@ -36,8 +45,29 @@ nav {
   display: flex;
   flex-direction: column;
   padding: 1rem 0.75rem;
-  gap: 0.25rem;
+  gap: 0.85rem;
   flex: 1;
+}
+
+.nav-group {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.nav-group-title {
+  margin: 0;
+  padding: 0 0.3rem;
+  color: var(--az-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.nav-links-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.3rem;
 }
 
 nav a {
@@ -64,9 +94,7 @@ nav a.active {
 }
 
 nav a.sidebar-booking {
-  margin-top: 0.35rem;
-  padding-top: 0.65rem;
-  border-top: 1px dashed var(--az-border);
+  border: 1px dashed var(--az-border);
   font-size: 0.82rem;
   color: var(--az-accent);
 }
@@ -87,7 +115,7 @@ nav a.sidebar-booking {
 .main {
   flex: 1;
   min-width: 0;
-  background: var(--az-bg);
+  background: var(--az-page-gradient, var(--az-bg));
 }
 
 .tenant-warn {
@@ -105,35 +133,143 @@ nav a.sidebar-booking {
   align-self: flex-start;
 }
 
+.sidebar-backdrop,
+.drawer-head-mobile,
+.mobile-shell-bar {
+  display: none;
+}
+
 @media (max-width: 860px) {
   .shell {
-    flex-direction: column;
+    display: block;
+    min-height: 100dvh;
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgb(0 0 0 / 0.45);
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 0.2s ease,
+      visibility 0.2s ease;
+  }
+
+  .shell.nav-open .sidebar-backdrop {
+    opacity: 1;
+    visibility: visible;
   }
 
   .sidebar {
-    width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: min(88vw, 300px);
+    height: 100dvh;
+    max-height: 100dvh;
+    z-index: 100;
+    padding: 0.5rem 0 1rem;
+    transform: translateX(-102%);
+    transition: transform 0.22s ease;
+    box-shadow: 4px 0 24px rgb(0 0 0 / 0.12);
+    overflow-y: auto;
+    border-right: 1px solid var(--az-border);
+  }
+
+  .shell.nav-open .sidebar {
+    transform: translateX(0);
+  }
+
+  .drawer-head-mobile {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 0.35rem 0.35rem;
+  }
+
+  .drawer-close {
+    display: inline-flex;
     align-items: center;
-    padding: 0.75rem 1rem;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border: 1px solid var(--az-border);
+    border-radius: var(--az-radius-sm);
+    background: var(--az-surface);
+    color: var(--az-text);
+    font-size: 1.35rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .drawer-close:hover {
+    background: color-mix(in srgb, var(--az-border) 40%, transparent);
   }
 
   .brand {
-    border: none;
-    padding: 0 1rem 0 0;
+    padding: 0 1rem 0.85rem;
+    white-space: normal;
   }
 
   nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    flex: 1;
-    padding: 0;
+    padding: 0.65rem 0.65rem 1rem;
+    gap: 0.75rem;
+  }
+
+  .nav-links-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.35rem;
+  }
+
+  nav a {
+    white-space: normal;
+    padding-inline: 0.75rem;
   }
 
   .foot {
-    border: none;
-    padding: 0;
+    padding: 0.85rem 1rem;
     flex-direction: row;
     align-items: center;
+    justify-content: space-between;
+    white-space: normal;
+  }
+
+  .user {
+    overflow-wrap: anywhere;
+  }
+
+  .main {
+    min-height: 100dvh;
+  }
+
+  .mobile-shell-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    padding: 0.55rem 0.85rem;
+    background: var(--az-surface);
+    border-bottom: 1px solid var(--az-border);
+  }
+
+  .mobile-menu-toggle {
+    flex-shrink: 0;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .mobile-shell-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--az-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
 }

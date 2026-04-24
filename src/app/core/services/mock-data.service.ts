@@ -2,6 +2,24 @@ import { DestroyRef, Injectable, NgZone, inject, signal } from '@angular/core';
 import type { ApiTenantDto } from './api-tenants-admin.service';
 
 const PRODUCTS_LS_KEY = 'azenda.mock.products.v1';
+const TENANT_CUSTOMIZATION_LS_KEY = 'azenda.mock.tenant.customization.v1';
+
+export interface TenantBranding {
+  displayName: string;
+  logoUrl: string | null;
+  primaryColor: string;
+  accentColor: string;
+  bgColor: string;
+  surfaceColor: string;
+  textColor: string;
+  borderRadiusPx: number;
+  useGradient: boolean;
+  gradientFrom: string;
+  gradientTo: string;
+  gradientAngleDeg: number;
+}
+
+type TenantBrandingPatch = Partial<TenantBranding>;
 
 function parseProductsFromJsonString(raw: string): MockProduct[] | null {
   try {
@@ -48,6 +66,29 @@ function loadProductsFromStorage(): MockProduct[] | null {
     return null;
   }
   return parseProductsFromJsonString(raw);
+}
+
+function parseCustomizationMapFromString(raw: string): Record<string, TenantBrandingPatch> | null {
+  try {
+    const data = JSON.parse(raw) as unknown;
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      return null;
+    }
+    return data as Record<string, TenantBrandingPatch>;
+  } catch {
+    return null;
+  }
+}
+
+function loadTenantCustomizationMap(): Record<string, TenantBrandingPatch> {
+  if (typeof localStorage === 'undefined') {
+    return {};
+  }
+  const raw = localStorage.getItem(TENANT_CUSTOMIZATION_LS_KEY);
+  if (!raw) {
+    return {};
+  }
+  return parseCustomizationMapFromString(raw) ?? {};
 }
 
 export type TenantModuleKey = 'citas' | 'ventas' | 'inventario';
@@ -141,6 +182,71 @@ export interface MockCatalogModule {
 }
 
 const LOW_STOCK_BELOW = 5;
+
+function clampBorderRadius(v: number | undefined): number {
+  const n = Number(v);
+  if (!Number.isFinite(n)) {
+    return 12;
+  }
+  return Math.min(28, Math.max(4, Math.round(n)));
+}
+
+function clampGradientAngle(v: number | undefined): number {
+  const n = Number(v);
+  if (!Number.isFinite(n)) {
+    return 135;
+  }
+  return Math.min(360, Math.max(0, Math.round(n)));
+}
+
+function mixWithBlack(hex: string, amount: number): string {
+  const safe = hex.startsWith('#') ? hex.slice(1) : hex;
+  if (!/^[0-9a-fA-F]{6}$/.test(safe)) {
+    return hex;
+  }
+  const n = Number.parseInt(safe, 16);
+  const r = (n >> 16) & 0xff;
+  const g = (n >> 8) & 0xff;
+  const b = n & 0xff;
+  const k = Math.min(1, Math.max(0, amount));
+  const rr = Math.round(r * (1 - k));
+  const gg = Math.round(g * (1 - k));
+  const bb = Math.round(b * (1 - k));
+  return `#${rr.toString(16).padStart(2, '0')}${gg.toString(16).padStart(2, '0')}${bb.toString(16).padStart(2, '0')}`;
+}
+
+function lighten(hex: string, amount: number): string {
+  const safe = hex.startsWith('#') ? hex.slice(1) : hex;
+  if (!/^[0-9a-fA-F]{6}$/.test(safe)) {
+    return hex;
+  }
+  const n = Number.parseInt(safe, 16);
+  const r = (n >> 16) & 0xff;
+  const g = (n >> 8) & 0xff;
+  const b = n & 0xff;
+  const k = Math.min(1, Math.max(0, amount));
+  const rr = Math.round(r + (255 - r) * k);
+  const gg = Math.round(g + (255 - g) * k);
+  const bb = Math.round(b + (255 - b) * k);
+  return `#${rr.toString(16).padStart(2, '0')}${gg.toString(16).padStart(2, '0')}${bb.toString(16).padStart(2, '0')}`;
+}
+
+function defaultTenantBranding(name: string): TenantBranding {
+  return {
+    displayName: name,
+    logoUrl: null,
+    primaryColor: '#4f46e5',
+    accentColor: '#06b6d4',
+    bgColor: '#f8fafc',
+    surfaceColor: '#ffffff',
+    textColor: '#0f172a',
+    borderRadiusPx: 12,
+    useGradient: false,
+    gradientFrom: '#4f46e5',
+    gradientTo: '#06b6d4',
+    gradientAngleDeg: 135,
+  };
+}
 
 /** Genera un slug único para `/reservar/:slug` a partir del nombre y el id del tenant. */
 export function deriveBookingSlug(name: string, tenantId: string): string {
@@ -417,6 +523,9 @@ export class MockDataService {
   readonly stockMovements = signal<MockStockMovement[]>(initialStockMovements());
   readonly platformUsers = signal<MockPlatformUser[]>(initialPlatformUsers());
   readonly platformModuleCatalog = signal<MockCatalogModule[]>(initialCatalog());
+  readonly tenantCustomizations = signal<Record<string, TenantBrandingPatch>>(
+    loadTenantCustomizationMap(),
+  );
 
   /** Servicios ofrecidos en reserva pública y citas, por `bookingSlug`. */
   readonly tenantServiceCatalogs = signal<Record<string, string[]>>(
@@ -431,16 +540,26 @@ export class MockDataService {
       return;
     }
     const onStorage = (e: StorageEvent): void => {
-      if (e.key !== PRODUCTS_LS_KEY) {
+      if (e.key === PRODUCTS_LS_KEY) {
+        if (e.newValue === null) {
+          this.ngZone.run(() => this.products.set(initialProducts()));
+          return;
+        }
+        const parsedProducts = parseProductsFromJsonString(e.newValue);
+        if (parsedProducts) {
+          this.ngZone.run(() => this.products.set(parsedProducts));
+        }
         return;
       }
-      if (e.newValue === null) {
-        this.ngZone.run(() => this.products.set(initialProducts()));
-        return;
-      }
-      const parsed = parseProductsFromJsonString(e.newValue);
-      if (parsed) {
-        this.ngZone.run(() => this.products.set(parsed));
+      if (e.key === TENANT_CUSTOMIZATION_LS_KEY) {
+        if (e.newValue === null) {
+          this.ngZone.run(() => this.tenantCustomizations.set({}));
+          return;
+        }
+        const parsedMap = parseCustomizationMapFromString(e.newValue);
+        if (parsedMap) {
+          this.ngZone.run(() => this.tenantCustomizations.set(parsedMap));
+        }
       }
     };
     window.addEventListener('storage', onStorage);
@@ -463,6 +582,17 @@ export class MockDataService {
     this.persistProductsSnapshot(this.products());
   }
 
+  private persistTenantCustomizationMap(map: Record<string, TenantBrandingPatch>): void {
+    if (typeof localStorage === 'undefined') {
+      return;
+    }
+    try {
+      localStorage.setItem(TENANT_CUSTOMIZATION_LS_KEY, JSON.stringify(map));
+    } catch {
+      /* quota u otro */
+    }
+  }
+
   tenantById(id: string): MockTenant | undefined {
     return this.tenants().find((t) => t.id === id);
   }
@@ -470,6 +600,84 @@ export class MockDataService {
   tenantByBookingSlug(slug: string): MockTenant | undefined {
     const n = slug.trim().toLowerCase();
     return this.tenants().find((t) => t.bookingSlug.trim().toLowerCase() === n);
+  }
+
+  brandingForTenant(tenantId: string): TenantBranding {
+    const tenant = this.tenantById(tenantId);
+    const base = defaultTenantBranding(tenant?.name ?? 'Tu negocio');
+    const patch = this.tenantCustomizations()[tenantId];
+    return {
+      ...base,
+      ...patch,
+      displayName: (patch?.displayName ?? base.displayName).trim() || base.displayName,
+      logoUrl:
+        patch?.logoUrl === undefined || patch.logoUrl === '' ? base.logoUrl : patch.logoUrl,
+      borderRadiusPx: clampBorderRadius(patch?.borderRadiusPx ?? base.borderRadiusPx),
+      useGradient: !!(patch?.useGradient ?? base.useGradient),
+      gradientFrom: patch?.gradientFrom ?? base.gradientFrom,
+      gradientTo: patch?.gradientTo ?? base.gradientTo,
+      gradientAngleDeg: clampGradientAngle(patch?.gradientAngleDeg ?? base.gradientAngleDeg),
+    };
+  }
+
+  brandingForBookingSlug(slug: string): TenantBranding {
+    const tenant = this.tenantByBookingSlug(slug);
+    if (!tenant) {
+      return defaultTenantBranding('Azenda');
+    }
+    return this.brandingForTenant(tenant.id);
+  }
+
+  brandingCssVars(branding: TenantBranding, darkMode = false): Record<string, string> {
+    const effective = darkMode
+      ? {
+          ...branding,
+          primaryColor: lighten(branding.primaryColor, 0.12),
+          accentColor: lighten(branding.accentColor, 0.08),
+          bgColor: mixWithBlack(branding.bgColor, 0.78),
+          surfaceColor: mixWithBlack(branding.surfaceColor, 0.68),
+          textColor: '#e8eef8',
+          gradientFrom: mixWithBlack(branding.gradientFrom, 0.45),
+          gradientTo: mixWithBlack(branding.gradientTo, 0.45),
+        }
+      : branding;
+    const pageGradient = branding.useGradient
+      ? `linear-gradient(${branding.gradientAngleDeg}deg, ${effective.gradientFrom}, ${effective.gradientTo})`
+      : effective.bgColor;
+    return {
+      '--az-primary': effective.primaryColor,
+      '--az-primary-hover': effective.primaryColor,
+      '--az-accent': effective.accentColor,
+      '--az-bg': effective.bgColor,
+      '--az-surface': effective.surfaceColor,
+      '--az-text': effective.textColor,
+      '--az-muted': `color-mix(in srgb, ${effective.textColor} 58%, ${effective.bgColor})`,
+      '--az-border': `color-mix(in srgb, ${effective.textColor} 22%, ${effective.bgColor})`,
+      '--az-page-gradient': pageGradient,
+      '--az-sidebar-bg': `color-mix(in srgb, ${effective.surfaceColor} 92%, ${effective.bgColor})`,
+      '--az-radius': `${branding.borderRadiusPx}px`,
+      '--az-radius-sm': `${Math.max(6, branding.borderRadiusPx - 4)}px`,
+    };
+  }
+
+  updateTenantBranding(tenantId: string, patch: TenantBrandingPatch): void {
+    const cleaned: TenantBrandingPatch = { ...patch };
+    if (cleaned.displayName !== undefined) {
+      cleaned.displayName = cleaned.displayName.trim();
+    }
+    this.tenantCustomizations.update((map) => {
+      const next = { ...map, [tenantId]: { ...(map[tenantId] ?? {}), ...cleaned } };
+      this.persistTenantCustomizationMap(next);
+      return next;
+    });
+  }
+
+  updateTenantName(tenantId: string, name: string): void {
+    const clean = name.trim();
+    if (!clean) {
+      return;
+    }
+    this.tenants.update((list) => list.map((t) => (t.id === tenantId ? { ...t, name: clean } : t)));
   }
 
   /** Mock id (`t1`…) para un `tenantId` del API; incluye mapeos creados al sincronizar desde Super Admin. */
@@ -559,6 +767,8 @@ export class MockDataService {
     this.platformUsers.set(initialPlatformUsers());
     this.platformModuleCatalog.set(initialCatalog());
     this.publicStoreVisits.set([]);
+    this.tenantCustomizations.set({});
+    this.persistTenantCustomizationMap({});
   }
 
   registerNewTenant(businessName: string): MockTenant {

@@ -108,3 +108,22 @@
 .az-btn-ghost.small.danger {
   margin-top: 0.25rem;
 }
+
+@media (max-width: 900px) {
+  .add-row > * {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .plan-sel {
+    max-width: none;
+  }
+
+  .mods {
+    gap: 0.25rem 0.55rem;
+  }
+
+  .mod-label {
+    font-size: 0.72rem;
+  }
+}

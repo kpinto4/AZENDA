@@ -1,29 +1,61 @@
-<div class="shell">
-  <aside class="sidebar">
+<div class="shell" [ngStyle]="shellStyleVars()" [class.nav-open]="menuOpen()">
+  <div class="sidebar-backdrop" (click)="closeMenu()" aria-hidden="true"></div>
+  <aside class="sidebar" id="tenant-nav-drawer" role="navigation" aria-label="Menú del panel">
+    <div class="drawer-head-mobile">
+      <button type="button" class="drawer-close" (click)="closeMenu()" aria-label="Cerrar menú">×</button>
+    </div>
     <div class="brand">
-      <span class="logo">Azenda</span>
+      @if (tenantBranding().logoUrl; as logo) {
+        <img class="brand-logo" [src]="logo" [alt]="tenantBranding().displayName" />
+      }
+      <span class="logo">{{ tenantBranding().displayName || 'Azenda' }}</span>
       <span class="tenant">{{ session.tenantName() || 'Tu negocio' }}</span>
     </div>
-    <nav>
-      <a routerLink="/app/panel" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Panel</a>
-      <a routerLink="/app/citas" routerLinkActive="active">Citas</a>
-      @if (session.modules().sales) {
-        <a routerLink="/app/ventas" routerLinkActive="active">Ventas</a>
+    <nav (pointerdown)="onSidebarPointerDown($event)">
+      <div class="nav-group">
+        <p class="nav-group-title">Principal</p>
+        <div class="nav-links-grid">
+          <a routerLink="/app/panel" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Panel</a>
+          <a routerLink="/app/citas" routerLinkActive="active">Citas</a>
+        </div>
+      </div>
+
+      @if (session.modules().sales || session.modules().inventory) {
+        <div class="nav-group">
+          <p class="nav-group-title">Comercial</p>
+          <div class="nav-links-grid">
+            @if (session.modules().sales) {
+              <a routerLink="/app/ventas" routerLinkActive="active">Ventas</a>
+            }
+            @if (session.modules().inventory) {
+              <a routerLink="/app/inventario" routerLinkActive="active">Inventario</a>
+              <a routerLink="/app/catalogo" routerLinkActive="active">Catálogo</a>
+            }
+          </div>
+        </div>
       }
-      @if (session.modules().inventory) {
-        <a routerLink="/app/inventario" routerLinkActive="active">Inventario</a>
-        <a routerLink="/app/catalogo" routerLinkActive="active">Catálogo</a>
-      }
-      <a routerLink="/app/empleados" routerLinkActive="active">Empleados</a>
-      <a routerLink="/app/configuracion" routerLinkActive="active">Configuración</a>
+
+      <div class="nav-group">
+        <p class="nav-group-title">Equipo y ajustes</p>
+        <div class="nav-links-grid">
+          <a routerLink="/app/empleados" routerLinkActive="active">Empleados</a>
+          <a routerLink="/app/configuracion" routerLinkActive="active">Configuración</a>
+        </div>
+      </div>
+
       @if (session.publicBookingSlug()) {
-        <a
-          class="sidebar-booking"
-          [routerLink]="['/reservar', session.publicBookingSlug()]"
-          target="_blank"
-          rel="noopener"
-          >Enlace reservas</a
-        >
+        <div class="nav-group">
+          <p class="nav-group-title">Cliente</p>
+          <div class="nav-links-grid">
+            <a
+              class="sidebar-booking"
+              [routerLink]="['/reservar', session.publicBookingSlug()]"
+              target="_blank"
+              rel="noopener"
+              >Enlace reservas</a
+            >
+          </div>
+        </div>
       }
     </nav>
     <div class="foot">
@@ -32,6 +64,18 @@
     </div>
   </aside>
   <main class="main">
+    <header class="mobile-shell-bar">
+      <button
+        type="button"
+        class="mobile-menu-toggle az-btn az-btn-secondary"
+        (click)="toggleMenu()"
+        [attr.aria-expanded]="menuOpen()"
+        aria-controls="tenant-nav-drawer"
+      >
+        Menú
+      </button>
+      <span class="mobile-shell-title">{{ tenantBranding().displayName || session.tenantName() || 'Panel' }}</span>
+    </header>
     @if (currentTenant(); as ct) {
       @if (!ct.active) {
         <div class="tenant-warn" role="status">

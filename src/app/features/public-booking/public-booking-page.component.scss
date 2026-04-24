@@ -1,7 +1,9 @@
 .booking {
   min-height: 100vh;
-  background: radial-gradient(900px 420px at 70% -10%, rgb(79 70 229 / 0.12), transparent),
-    radial-gradient(700px 360px at 0% 0%, rgb(6 182 212 / 0.12), transparent);
+  background:
+    radial-gradient(900px 420px at 70% -10%, color-mix(in srgb, var(--az-primary) 18%, transparent), transparent),
+    radial-gradient(700px 360px at 0% 0%, color-mix(in srgb, var(--az-accent) 18%, transparent), transparent),
+    var(--az-page-gradient, var(--az-bg));
   padding: 1.5rem 1rem 3rem;
 }
 
@@ -11,17 +13,33 @@
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--az-radius-sm);
+  background: color-mix(in srgb, var(--az-surface) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--az-border) 72%, transparent);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.16);
+  backdrop-filter: blur(2px);
+}
+
+.top-logo {
+  width: 30px;
+  height: 30px;
+  object-fit: cover;
+  border-radius: 999px;
+  border: 1px solid var(--az-border);
 }
 
 .brand {
   font-weight: 800;
   text-decoration: none;
   color: var(--az-text);
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.22);
 }
 
 .slug {
-  color: var(--az-muted);
+  color: color-mix(in srgb, var(--az-text) 76%, var(--az-surface));
   font-size: 0.9rem;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.18);
 }
 
 .field-error {

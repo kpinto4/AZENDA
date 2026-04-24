@@ -1,5 +1,4 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   ApiAppointmentsService,
   mapApiAppointmentToMock,
@@ -15,6 +14,7 @@ export interface CalSimDay {
   key: string;
   label: string;
   sub: string;
+  isToday: boolean;
   events: { id: string; title: string; time: string; tone: 'primary' | 'accent' | 'neutral' }[];
 }
 
@@ -99,12 +99,11 @@ function eventTone(a: MockAppointment): 'primary' | 'accent' | 'neutral' {
 
 @Component({
   selector: 'app-tenant-appointments',
-  imports: [ReactiveFormsModule],
+  imports: [],
   templateUrl: './tenant-appointments.component.html',
   styleUrl: './tenant-appointments.component.scss',
 })
 export class TenantAppointmentsComponent {
-  private readonly fb = inject(FormBuilder);
   readonly data = inject(MockDataService);
   readonly session = inject(MockSessionService);
   readonly apiAppointments = inject(ApiAppointmentsService);
@@ -117,10 +116,6 @@ export class TenantAppointmentsComponent {
     return this.data.appointmentsForBookingSlug(this.session.publicBookingSlug());
   });
 
-  readonly serviceOptions = computed(() =>
-    this.data.servicesForBookingSlug(this.session.publicBookingSlug()),
-  );
-
   /** Desplazamiento en semanas respecto a la semana actual (lunes–viernes). */
   readonly calWeekOffset = signal(0);
 
@@ -128,7 +123,7 @@ export class TenantAppointmentsComponent {
     const monday = mondayOfWeekWithOffset(this.calWeekOffset());
     const dowLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'];
     const list = this.tenantAppointments();
-    const hours = ['09:00', '10:00', '11:00', '12:00', '13:00'];
+    const todayYmd = toYmdLocal(new Date());
 
     const days: CalSimDay[] = [];
     for (let i = 0; i < 5; i++) {
@@ -149,6 +144,7 @@ export class TenantAppointmentsComponent {
         key: `w${toYmdLocal(d)}`,
         label: dowLabels[i],
         sub: String(d.getDate()),
+        isToday: ymdStr === todayYmd,
         events,
       });
     }
@@ -156,49 +152,12 @@ export class TenantAppointmentsComponent {
     return {
       weekLabel: weekRangeLabel(monday),
       days,
-      hours,
+      totalEvents: days.reduce((acc, day) => acc + day.events.length, 0),
     };
-  });
-
-  readonly form = this.fb.nonNullable.group({
-    customer: ['', Validators.required],
-    service: ['', Validators.required],
-    when: ['', Validators.required],
   });
 
   shiftCalWeek(delta: number): void {
     this.calWeekOffset.update((o) => o + delta);
-  }
-
-  add(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-    const raw = this.form.getRawValue();
-    let when = raw.when.trim();
-    if (when.includes('T')) {
-      when = when.replace('T', ' ');
-    }
-    if (this.apiAppointments.useRemote()) {
-      this.apiAppointments
-        .create({
-          customer: raw.customer,
-          service: raw.service,
-          when,
-        })
-        .subscribe({ error: () => {} });
-    } else {
-      this.data.addAppointment({
-        customer: raw.customer,
-        service: raw.service,
-        when,
-        status: 'pendiente',
-        attendance: 'PENDIENTE',
-        tenantSlug: this.session.publicBookingSlug() || undefined,
-      });
-    }
-    this.form.reset({ customer: '', service: '', when: '' });
   }
 
   setStatus(id: string, raw: string): void {

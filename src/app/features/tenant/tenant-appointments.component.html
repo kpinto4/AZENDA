@@ -8,38 +8,20 @@
     </div>
   </div>
 
-  <div class="az-grid cols-2 layout layout-citas">
-    <div class="az-card">
-      <h3>Nueva cita</h3>
-      <p class="muted small">
-        @if (apiAppointments.useRemote()) {
-          Se guarda en la base de datos del API.
-        } @else {
-          Simulación en memoria (sin API).
-        }
-        Servicios según el catálogo de tu negocio (Configuración).
-      </p>
-      <form [formGroup]="form" (ngSubmit)="add()">
-        <label class="az-label" for="customer">Cliente</label>
-        <input id="customer" class="az-input wide" formControlName="customer" />
-        <label class="az-label" for="service">Servicio</label>
-        <select id="service" class="az-input wide" formControlName="service">
-          <option value="" disabled>Selecciona un servicio</option>
-          @for (opt of serviceOptions(); track opt) {
-            <option [value]="opt">{{ opt }}</option>
-          }
-        </select>
-        <label class="az-label" for="when">Fecha y hora</label>
-        <input id="when" class="az-input wide" type="datetime-local" formControlName="when" />
-        <button type="submit" class="az-btn az-btn-primary">Añadir a la lista</button>
-      </form>
-    </div>
-    <div class="az-card cal-sim-card">
+  <div class="az-card op-note">
+    <h3>Gestión operativa</h3>
+    <p class="muted small">
+      Esta pantalla es para editar, confirmar, reagendar, cancelar y marcar asistencia.
+      La creación de nuevas citas se realiza desde el enlace de cliente.
+    </p>
+  </div>
+
+  <div class="az-card cal-sim-card">
       @let cal = calendarWeek();
       <div class="cal-sim-head">
         <div>
           <h3>Agenda semanal</h3>
-          <p class="muted">Mismas citas que en la tabla, agrupadas por día.</p>
+          <p class="muted">Vista rápida estilo planner: simple, clara y por día.</p>
         </div>
         <div class="cal-sim-nav">
           <button type="button" class="cal-nav-btn" (click)="shiftCalWeek(-1)" aria-label="Semana anterior">
@@ -51,42 +33,30 @@
           </button>
         </div>
       </div>
-      <div class="cal-sim-body">
-        <div class="cal-time-col">
-          <div class="cal-corner"></div>
-          @for (h of cal.hours; track h) {
-            <div class="cal-hour">{{ h }}</div>
+      <div class="cal-total muted small">{{ cal.totalEvents }} cita(s) en esta semana</div>
+      <div class="cal-week-scroll">
+        <div class="cal-week-board">
+          @for (day of cal.days; track day.key) {
+            <section class="cal-day-column" [class.today]="day.isToday">
+              <header class="cal-day-head">
+                <span class="dow">{{ day.label }}</span>
+                <span class="dom">{{ day.sub }}</span>
+              </header>
+              <div class="cal-day-list">
+                @if (!day.events.length) {
+                  <p class="cal-empty">Sin citas</p>
+                }
+                @for (ev of day.events; track ev.id) {
+                  <article class="cal-event" [class.primary]="ev.tone === 'primary'" [class.accent]="ev.tone === 'accent'">
+                    <span class="t">{{ ev.time }}</span>
+                    <span class="n">{{ ev.title }}</span>
+                  </article>
+                }
+              </div>
+            </section>
           }
         </div>
-        <div class="cal-week-scroll">
-          <div class="cal-week-grid">
-            @for (day of cal.days; track day.key) {
-              <div class="cal-day">
-                <div class="cal-day-head">
-                  <span class="dow">{{ day.label }}</span>
-                  <span class="dom">{{ day.sub }}</span>
-                </div>
-                <div class="cal-day-body">
-                  <div class="cal-grid-lines">
-                    @for (_ of cal.hours; track $index) {
-                      <div class="cal-line"></div>
-                    }
-                  </div>
-                  <div class="cal-events">
-                    @for (ev of day.events; track ev.id) {
-                      <div class="cal-event" [class.primary]="ev.tone === 'primary'" [class.accent]="ev.tone === 'accent'">
-                        <span class="t">{{ ev.time }}</span>
-                        <span class="n">{{ ev.title }}</span>
-                      </div>
-                    }
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-        </div>
       </div>
-    </div>
   </div>
 
   <div class="az-table-wrap mt">

@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { NgStyle } from '@angular/common';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -11,6 +12,7 @@ import {
   PublicTenantMetaDto,
 } from '../../core/services/api-public-meta.service';
 import { MockDataService } from '../../core/services/mock-data.service';
+import { MockSessionService } from '../../core/services/mock-session.service';
 
 function tabFromQuery(tab: string | null): 'reserva' | 'asistencia' | 'tienda' | 'catalogo' {
   const t = (tab ?? '').toLowerCase();
@@ -22,7 +24,7 @@ function tabFromQuery(tab: string | null): 'reserva' | 'asistencia' | 'tienda' |
 
 @Component({
   selector: 'app-public-booking-page',
-  imports: [RouterLink, ReactiveFormsModule],
+  imports: [RouterLink, ReactiveFormsModule, NgStyle],
   templateUrl: './public-booking-page.component.html',
   styleUrl: './public-booking-page.component.scss',
 })
@@ -33,6 +35,7 @@ export class PublicBookingPageComponent {
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   readonly data = inject(MockDataService);
+  readonly session = inject(MockSessionService);
   private readonly apiAppointments = inject(ApiAppointmentsService);
   private readonly apiPublic = inject(ApiPublicMetaService);
 
@@ -68,6 +71,10 @@ export class PublicBookingPageComponent {
 
   /** Productos del negocio de este slug, en el orden definido en el panel Catálogo. */
   readonly catalogProducts = computed(() => this.data.catalogProductsForBookingSlug(this.slug()));
+  readonly branding = computed(() => this.data.brandingForBookingSlug(this.slug()));
+  readonly styleVars = computed(() =>
+    this.data.brandingCssVars(this.branding(), this.session.darkMode()),
+  );
 
   readonly slots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30'];
 

@@ -1,22 +1,5 @@
-.layout-citas {
-  align-items: stretch;
-}
-
-/* Siempre 2 columnas en pantallas medianas+; en móvil una columna pero el calendario ocupa ancho completo */
-@media (min-width: 720px) {
-  .layout-citas {
-    grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
-  }
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.az-input.wide {
-  max-width: none;
+.op-note {
+  margin-bottom: 0.9rem;
 }
 
 .muted {
@@ -45,6 +28,10 @@ form {
   justify-content: space-between;
   gap: 0.75rem 1rem;
   margin-bottom: 1rem;
+}
+
+.cal-total {
+  margin: 0 0 0.7rem;
 }
 
 .cal-sim-nav {
@@ -85,70 +72,44 @@ form {
   white-space: nowrap;
 }
 
-.cal-sim-body {
-  display: flex;
-  gap: 0;
+.cal-week-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--az-border);
   border-radius: var(--az-radius-sm);
   background: var(--az-bg);
-  min-height: 280px;
-  overflow: hidden;
 }
 
-.cal-time-col {
-  flex: 0 0 52px;
-  border-right: 1px solid var(--az-border);
-  background: var(--az-surface);
-}
-
-.cal-corner {
-  height: 44px;
-  border-bottom: 1px solid var(--az-border);
-}
-
-.cal-hour {
-  height: 48px;
-  padding: 0 0.35rem;
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--az-muted);
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  border-bottom: 1px dashed color-mix(in srgb, var(--az-border) 70%, transparent);
-}
-
-.cal-week-scroll {
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.cal-week-grid {
+.cal-week-board {
   display: grid;
-  grid-template-columns: repeat(5, minmax(112px, 1fr));
-  min-width: 560px;
-  height: 100%;
+  grid-template-columns: repeat(5, minmax(170px, 1fr));
+  min-width: 850px;
+  gap: 0;
 }
 
-.cal-day {
+.cal-day-column {
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--az-border);
-  min-height: 284px;
+  min-height: 280px;
+  background: color-mix(in srgb, var(--az-surface) 65%, var(--az-bg));
 }
 
-.cal-day:last-child {
+.cal-day-column:last-child {
   border-right: none;
 }
 
+.cal-day-column.today {
+  background: color-mix(in srgb, var(--az-primary) 8%, var(--az-surface));
+}
+
 .cal-day-head {
-  height: 44px;
+  height: 46px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 0.35rem;
+  padding: 0 0.65rem;
   border-bottom: 1px solid var(--az-border);
   background: var(--az-surface);
 }
@@ -162,47 +123,27 @@ form {
 }
 
 .cal-day-head .dom {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 800;
   color: var(--az-text);
 }
 
-.cal-day-body {
-  position: relative;
-  flex: 1;
-}
-
-.cal-grid-lines {
-  position: absolute;
-  inset: 0;
+.cal-day-list {
+  padding: 0.5rem;
   display: flex;
   flex-direction: column;
-}
-
-.cal-line {
+  gap: 0.45rem;
   flex: 1;
-  border-bottom: 1px dashed color-mix(in srgb, var(--az-border) 65%, transparent);
-}
-
-.cal-events {
-  position: relative;
-  z-index: 1;
-  padding: 0.35rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  min-height: 100%;
 }
 
 .cal-event {
-  border-radius: 8px;
-  padding: 0.4rem 0.5rem;
-  font-size: 0.72rem;
+  border-radius: 10px;
+  padding: 0.5rem 0.55rem;
+  font-size: 0.74rem;
   line-height: 1.25;
   border: 1px solid var(--az-border);
-  background: color-mix(in srgb, var(--az-border) 35%, var(--az-surface));
+  background: var(--az-surface);
   color: var(--az-text);
-  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
 }
 
 .cal-event .t {
@@ -219,9 +160,15 @@ form {
   font-weight: 600;
 }
 
+.cal-empty {
+  margin: 0.15rem 0.2rem;
+  font-size: 0.78rem;
+  color: var(--az-muted);
+}
+
 .cal-event.primary {
-  border-color: color-mix(in srgb, var(--az-primary) 45%, var(--az-border));
-  background: color-mix(in srgb, var(--az-primary) 14%, var(--az-surface));
+  border-color: color-mix(in srgb, var(--az-primary) 38%, var(--az-border));
+  background: color-mix(in srgb, var(--az-primary) 10%, var(--az-surface));
 }
 
 .cal-event.primary .t {
@@ -229,8 +176,8 @@ form {
 }
 
 .cal-event.accent {
-  border-color: color-mix(in srgb, var(--az-accent) 50%, var(--az-border));
-  background: color-mix(in srgb, var(--az-accent) 12%, var(--az-surface));
+  border-color: color-mix(in srgb, var(--az-accent) 38%, var(--az-border));
+  background: color-mix(in srgb, var(--az-accent) 10%, var(--az-surface));
 }
 
 .cal-event.accent .t {
