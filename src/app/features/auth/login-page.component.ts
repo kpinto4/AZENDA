@@ -36,7 +36,7 @@ export class LoginPageComponent {
       this.form.markAllAsTouched();
       return;
     }
-    const email = this.form.controls.email.getRawValue().toLowerCase();
+    const email = this.form.controls.email.getRawValue().trim().toLowerCase();
     const password = this.form.controls.password.getRawValue();
 
     if (environment.useLiveAuth) {
@@ -51,7 +51,11 @@ export class LoginPageComponent {
                 res.user.role === 'SUPER_ADMIN' ? '/super' : '/app';
               void this.navigateAfterLogin(fallback);
             },
-            error: () => {
+            error: (err: unknown) => {
+              if (err instanceof HttpErrorResponse && err.status) {
+                this.message = `No se pudo cargar el contexto del negocio (HTTP ${err.status}). Si el API esta en marcha, revisa la consola de red.`;
+                return;
+              }
               this.message =
                 'Error al cargar el contexto del tenant. Revisa que el API este en marcha.';
             },
@@ -60,6 +64,11 @@ export class LoginPageComponent {
         error: (err: unknown) => {
           if (err instanceof HttpErrorResponse && err.status === 401) {
             this.message = 'Credenciales invalidas.';
+            return;
+          }
+          if (err instanceof HttpErrorResponse && err.status === 400) {
+            this.message =
+              'Datos de acceso no validos (revisa el formato del correo y la contraseña).';
             return;
           }
           this.message =

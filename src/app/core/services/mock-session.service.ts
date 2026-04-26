@@ -52,6 +52,8 @@ export class MockSessionService {
 
   /** Tienda pública tipo catálogo (planes Pro+). */
   readonly tenantStorefront = signal(false);
+  /** Si está activo, se permite crear citas manualmente desde panel tenant. */
+  readonly manualBookingEnabled = signal(true);
   readonly darkMode = signal(false);
 
   readonly isSuperAdmin = computed(() => this.role() === 'SUPER_ADMIN');
@@ -80,6 +82,7 @@ export class MockSessionService {
     this.modules.set({ appointments: false, sales: false, inventory: false });
     this.tenantPlan.set('Trial');
     this.tenantStorefront.set(false);
+    this.manualBookingEnabled.set(true);
     this.darkMode.set(false);
   }
 
@@ -106,6 +109,7 @@ export class MockSessionService {
     this.tenantName.set(t.name);
     this.publicBookingSlug.set(t.bookingSlug);
     this.apiTenantId.set(t.apiTenantId ?? null);
+    this.manualBookingEnabled.set(t.manualBookingEnabled ?? true);
     this.applyModulesFromTenant(t);
   }
 
@@ -178,6 +182,7 @@ export class MockSessionService {
     this.modules.set({ appointments: false, sales: false, inventory: false });
     this.tenantPlan.set('Trial');
     this.tenantStorefront.set(false);
+    this.manualBookingEnabled.set(true);
   }
 
   /** Actualiza menús del tenant desde el API (módulos, plan, tienda pública). */
@@ -197,6 +202,7 @@ export class MockSessionService {
         });
         this.tenantPlan.set(ctx.tenant.plan ?? 'Trial');
         this.tenantStorefront.set(!!ctx.tenant.storefrontEnabled);
+        this.manualBookingEnabled.set(!!ctx.tenant.manualBookingEnabled);
         this.tenantName.set(ctx.tenant.name);
         this.publicBookingSlug.set(ctx.tenant.slug);
         this.apiTenantId.set(ctx.tenant.id);
@@ -208,6 +214,7 @@ export class MockSessionService {
             status: ctx.tenant.status as 'ACTIVE' | 'PAUSED' | 'BLOCKED',
             plan: ctx.tenant.plan,
             storefrontEnabled: ctx.tenant.storefrontEnabled,
+            manualBookingEnabled: ctx.tenant.manualBookingEnabled,
             modules: ctx.tenant.modules,
           },
         ]);
@@ -265,6 +272,7 @@ export class MockSessionService {
             status: ctx.tenant.status as 'ACTIVE' | 'PAUSED' | 'BLOCKED',
             plan: ctx.tenant.plan ?? 'Trial',
             storefrontEnabled: !!ctx.tenant.storefrontEnabled,
+            manualBookingEnabled: !!ctx.tenant.manualBookingEnabled,
             modules: ctx.tenant.modules,
           };
           this.data.syncTenantsFromApi([apiRow]);
@@ -294,6 +302,7 @@ export class MockSessionService {
           });
           this.tenantPlan.set(ctx.tenant.plan ?? 'Trial');
           this.tenantStorefront.set(!!ctx.tenant.storefrontEnabled);
+          this.manualBookingEnabled.set(!!ctx.tenant.manualBookingEnabled);
 
           return of(undefined);
         }),
@@ -326,6 +335,7 @@ export class MockSessionService {
     });
     this.tenantPlan.set(t.plan);
     this.tenantStorefront.set(!!t.storefrontEnabled);
+    this.manualBookingEnabled.set(t.manualBookingEnabled ?? true);
   }
 
   logout(): void {

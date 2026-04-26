@@ -2,6 +2,8 @@ import { DOCUMENT } from '@angular/common';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { environment } from '../../../environments/environment';
+import { ApiAuthService } from '../../core/services/api-auth.service';
 import { MockDataService } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
 
@@ -29,6 +31,7 @@ export class TenantSettingsComponent {
   private readonly fb = inject(FormBuilder);
   readonly session = inject(MockSessionService);
   private readonly data = inject(MockDataService);
+  private readonly apiAuth = inject(ApiAuthService);
   private readonly doc = inject(DOCUMENT);
 
   readonly servicesForm = this.fb.nonNullable.group({
@@ -36,6 +39,7 @@ export class TenantSettingsComponent {
   });
   readonly servicesMsg = signal('');
   readonly brandingMsg = signal('');
+  readonly opsMsg = signal('');
   readonly brandingImageHint = signal<string | null>(null);
   readonly logoPreview = signal<string | null>(null);
   readonly colorPresets: ColorPreset[] = [
@@ -186,6 +190,7 @@ export class TenantSettingsComponent {
     gradientFrom: '#4f46e5',
     gradientTo: '#06b6d4',
     gradientAngleDeg: 135,
+    manualBookingEnabled: true,
   });
 
   constructor() {
@@ -221,6 +226,7 @@ export class TenantSettingsComponent {
             gradientFrom: branding.gradientFrom,
             gradientTo: branding.gradientTo,
             gradientAngleDeg: branding.gradientAngleDeg,
+            manualBookingEnabled: tenant?.manualBookingEnabled ?? true,
           },
           { emitEvent: false },
         );
@@ -337,6 +343,53 @@ export class TenantSettingsComponent {
 
   toggleDark(): void {
     this.session.toggleDarkTheme(this.doc.documentElement, !this.dark());
+  }
+
+  readonly canManageOperations = computed(() => this.session.role() === 'TENANT_ADMIN');
+
+  saveOperationalSettings(): void {
+    const tenantId = this.session.tenantId();
+    if (!tenantId || !this.canManageOperations()) {
+      this.opsMsg.set('Solo admin del negocio puede cambiar esta opción.');
+      return;
+    }
+    const enabled = !!this.form.controls.manualBookingEnabled.getRawValue();
+    if (environment.useLiveAuth && this.session.accessToken()) {
+      this.apiAuth.patchTenantSettings({ manualBookingEnabled: enabled }).subscribe({
+        next: (ctx) => {
+          const row = ctx.tenant;
+          if (row) {
+            this.data.syncTenantsFromApi([
+              {
+                id: row.id,
+                name: row.name,
+                slug: row.slug,
+                status: row.status as 'ACTIVE' | 'PAUSED' | 'BLOCKED',
+                plan: row.plan,
+                storefrontEnabled: row.storefrontEnabled,
+                manualBookingEnabled: row.manualBookingEnabled,
+                modules: row.modules,
+              },
+            ]);
+            const t = this.data.tenantById(tenantId);
+            if (t) {
+              this.session.syncFromTenant(t);
+            }
+          }
+          this.opsMsg.set('Preferencias operativas guardadas en el API.');
+        },
+        error: () => {
+          this.opsMsg.set('No se pudo guardar en API. Verifica permisos y conexión.');
+        },
+      });
+      return;
+    }
+    this.data.setTenantManualBookingEnabled(tenantId, enabled);
+    const t = this.data.tenantById(tenantId);
+    if (t) {
+      this.session.syncFromTenant(t);
+    }
+    this.opsMsg.set('Preferencias operativas guardadas (modo demo).');
   }
 
   whatsappHref(): string {

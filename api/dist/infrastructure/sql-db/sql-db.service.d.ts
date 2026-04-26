@@ -11,7 +11,9 @@ export declare class SqlDbService {
     listTenants(): TenantEntity[];
     findTenantBySlug(slug: string): TenantEntity | undefined;
     findTenantById(tenantId: string): TenantEntity | undefined;
-    createTenant(data: TenantEntity): TenantEntity;
+    createTenant(data: Omit<TenantEntity, 'manualBookingEnabled'> & {
+        manualBookingEnabled?: boolean;
+    }): TenantEntity;
     updateTenant(tenantId: string, patch: Omit<Partial<TenantEntity>, 'modules'> & {
         modules?: Partial<TenantEntity['modules']>;
     }): TenantEntity | undefined;

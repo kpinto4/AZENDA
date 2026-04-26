@@ -160,13 +160,14 @@ export class TenantAppointmentsComponent {
     this.calWeekOffset.update((o) => o + delta);
   }
 
-  setStatus(id: string, raw: string): void {
-    const status = raw as MockAppointment['status'];
-    if (this.apiAppointments.useRemote()) {
-      this.apiAppointments.patchStatus(id, status).subscribe({ error: () => {} });
-    } else {
-      this.data.setAppointmentStatus(id, status);
+  statusLabel(status: MockAppointment['status']): string {
+    if (status === 'confirmada') {
+      return 'confirmada';
     }
+    if (status === 'cancelada') {
+      return 'cancelada';
+    }
+    return 'pendiente';
   }
 
   setAttendance(id: string, raw: string): void {

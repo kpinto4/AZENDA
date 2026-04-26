@@ -43,6 +43,13 @@ async function bootstrap() {
         transform: true,
         forbidNonWhitelisted: true,
     }));
+    const expressApp = app.getHttpAdapter().getInstance();
+    expressApp.use((_req, res, next) => {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        next();
+    });
     await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

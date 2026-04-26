@@ -26,13 +26,14 @@ let SqlDbService = class SqlDbService {
         this.seedIfEmpty();
     }
     findUserByCredentials(email, password) {
+        const normalizedEmail = email.trim().toLowerCase();
         const row = this.db
             .prepare(`
         SELECT id, email, password, role, tenant_id, systems, status
         FROM users
-        WHERE email = ? AND password = ?
+        WHERE LOWER(TRIM(email)) = ? AND password = ?
       `)
-            .get(email, password);
+            .get(normalizedEmail, password);
         return row ? this.mapUserRow(row) : undefined;
     }
     findUserById(userId) {
@@ -94,7 +95,7 @@ let SqlDbService = class SqlDbService {
     listTenants() {
         const rows = this.db
             .prepare(`
-        SELECT id, name, slug, status, plan, storefront_enabled, citas_enabled, ventas_enabled, inventario_enabled
+        SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
         FROM tenants
         ORDER BY name ASC
       `)
@@ -104,7 +105,7 @@ let SqlDbService = class SqlDbService {
     findTenantBySlug(slug) {
         const row = this.db
             .prepare(`
-        SELECT id, name, slug, status, plan, storefront_enabled, citas_enabled, ventas_enabled, inventario_enabled
+        SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
         FROM tenants
         WHERE slug = ?
       `)
@@ -114,7 +115,7 @@ let SqlDbService = class SqlDbService {
     findTenantById(tenantId) {
         const row = this.db
             .prepare(`
-        SELECT id, name, slug, status, plan, storefront_enabled, citas_enabled, ventas_enabled, inventario_enabled
+        SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
         FROM tenants
         WHERE id = ?
       `)
@@ -126,15 +127,16 @@ let SqlDbService = class SqlDbService {
             ...data,
             plan: data.plan ?? 'Trial',
             storefrontEnabled: data.storefrontEnabled ?? false,
+            manualBookingEnabled: data.manualBookingEnabled ?? true,
         };
         this.db
             .prepare(`
         INSERT INTO tenants (
-          id, name, slug, status, plan, storefront_enabled, citas_enabled, ventas_enabled, inventario_enabled
+          id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
-            .run(row.id, row.name, row.slug, row.status, row.plan, row.storefrontEnabled ? 1 : 0, row.modules.citas ? 1 : 0, row.modules.ventas ? 1 : 0, row.modules.inventario ? 1 : 0);
+            .run(row.id, row.name, row.slug, row.status, row.plan, row.storefrontEnabled ? 1 : 0, row.manualBookingEnabled ? 1 : 0, row.modules.citas ? 1 : 0, row.modules.ventas ? 1 : 0, row.modules.inventario ? 1 : 0);
         return row;
     }
     updateTenant(tenantId, patch) {
@@ -151,6 +153,9 @@ let SqlDbService = class SqlDbService {
             storefrontEnabled: patch.storefrontEnabled !== undefined
                 ? patch.storefrontEnabled
                 : current.storefrontEnabled,
+            manualBookingEnabled: patch.manualBookingEnabled !== undefined
+                ? patch.manualBookingEnabled
+                : current.manualBookingEnabled,
             modules: {
                 ...current.modules,
                 ...(patch.modules ?? {}),
@@ -159,11 +164,11 @@ let SqlDbService = class SqlDbService {
         this.db
             .prepare(`
         UPDATE tenants
-        SET name = ?, slug = ?, status = ?, plan = ?, storefront_enabled = ?,
+        SET name = ?, slug = ?, status = ?, plan = ?, storefront_enabled = ?, manual_booking_enabled = ?,
             citas_enabled = ?, ventas_enabled = ?, inventario_enabled = ?
         WHERE id = ?
       `)
-            .run(next.name, next.slug, next.status, next.plan, next.storefrontEnabled ? 1 : 0, next.modules.citas ? 1 : 0, next.modules.ventas ? 1 : 0, next.modules.inventario ? 1 : 0, tenantId);
+            .run(next.name, next.slug, next.status, next.plan, next.storefrontEnabled ? 1 : 0, next.manualBookingEnabled ? 1 : 0, next.modules.citas ? 1 : 0, next.modules.ventas ? 1 : 0, next.modules.inventario ? 1 : 0, tenantId);
         return next;
     }
     deleteTenant(tenantId) {
@@ -232,12 +237,17 @@ let SqlDbService = class SqlDbService {
         if (!current || current.tenantId !== tenantId) {
             return undefined;
         }
+        const status = attendance === 'ASISTIO'
+            ? 'confirmada'
+            : attendance === 'NO_ASISTIO'
+                ? 'cancelada'
+                : 'pendiente';
         this.db
             .prepare(`
-        UPDATE appointments SET attendance = ? WHERE id = ? AND tenant_id = ?
+        UPDATE appointments SET attendance = ?, status = ? WHERE id = ? AND tenant_id = ?
       `)
-            .run(attendance, appointmentId, tenantId);
-        return { ...current, attendance };
+            .run(attendance, status, appointmentId, tenantId);
+        return { ...current, attendance, status };
     }
     confirmPublicAppointmentAttendance(slug, appointmentId, customerName) {
         const tenant = this.findTenantBySlug(slug);
@@ -260,10 +270,10 @@ let SqlDbService = class SqlDbService {
         }
         this.db
             .prepare(`
-        UPDATE appointments SET attendance = ? WHERE id = ? AND tenant_id = ?
+        UPDATE appointments SET attendance = ?, status = ? WHERE id = ? AND tenant_id = ?
       `)
-            .run('ASISTIO', appointmentId, tenant.id);
-        return { ...appt, attendance: 'ASISTIO' };
+            .run('ASISTIO', 'confirmada', appointmentId, tenant.id);
+        return { ...appt, attendance: 'ASISTIO', status: 'confirmada' };
     }
     listStoreVisitsByTenantId(tenantId) {
         const rows = this.db
@@ -309,6 +319,9 @@ let SqlDbService = class SqlDbService {
         if (!tcols.some((c) => c.name === 'storefront_enabled')) {
             this.db.exec(`ALTER TABLE tenants ADD COLUMN storefront_enabled INTEGER NOT NULL DEFAULT 0`);
         }
+        if (!tcols.some((c) => c.name === 'manual_booking_enabled')) {
+            this.db.exec(`ALTER TABLE tenants ADD COLUMN manual_booking_enabled INTEGER NOT NULL DEFAULT 1`);
+        }
     }
     createSchema() {
         this.db.exec(`
@@ -319,6 +332,7 @@ let SqlDbService = class SqlDbService {
         status TEXT NOT NULL,
         plan TEXT NOT NULL DEFAULT 'Trial',
         storefront_enabled INTEGER NOT NULL DEFAULT 0,
+        manual_booking_enabled INTEGER NOT NULL DEFAULT 1,
         citas_enabled INTEGER NOT NULL DEFAULT 1,
         ventas_enabled INTEGER NOT NULL DEFAULT 1,
         inventario_enabled INTEGER NOT NULL DEFAULT 0
@@ -453,6 +467,7 @@ let SqlDbService = class SqlDbService {
             status: row.status,
             plan,
             storefrontEnabled: Number(row.storefront_enabled) === 1,
+            manualBookingEnabled: Number(row.manual_booking_enabled) === 1,
             modules: {
                 citas: Number(row.citas_enabled) === 1,
                 ventas: Number(row.ventas_enabled) === 1,

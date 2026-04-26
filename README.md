@@ -10,10 +10,10 @@ SaaS multi-tenant (front-end) para **citas**, **ventas** e **inventario**, const
 
 ```bash
 npm install
-npm start
+npm run dev
 ```
 
-Abre `http://localhost:4200/`.
+Eso levanta el **API** (por defecto `http://localhost:3000`) y la **web** en `http://localhost:4200/`. Para solo el front: `npm start`.
 
 ## Build
 

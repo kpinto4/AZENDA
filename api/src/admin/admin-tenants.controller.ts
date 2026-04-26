@@ -51,6 +51,7 @@ export class AdminTenantsController {
       status: body.status,
       plan: body.plan ?? 'Trial',
       storefrontEnabled: body.storefrontEnabled ?? false,
+      manualBookingEnabled: body.manualBookingEnabled ?? true,
       modules: {
         citas: body.citas ?? true,
         ventas: body.ventas ?? true,
@@ -81,6 +82,7 @@ export class AdminTenantsController {
       status: body.status,
       plan: body.plan,
       storefrontEnabled: body.storefrontEnabled,
+      manualBookingEnabled: body.manualBookingEnabled,
       ...(Object.keys(modPatch).length ? { modules: modPatch } : {}),
     });
     if (!updated) {

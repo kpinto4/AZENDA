@@ -56,4 +56,9 @@ __decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], UpdateTenantDto.prototype, "storefrontEnabled", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateTenantDto.prototype, "manualBookingEnabled", void 0);
 //# sourceMappingURL=update-tenant.dto.js.map

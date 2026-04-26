@@ -82,6 +82,12 @@ h3 {
   color: var(--az-success);
 }
 
+.remember-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .field-error {
   color: var(--az-danger, #c62828);
   font-size: 0.85rem;

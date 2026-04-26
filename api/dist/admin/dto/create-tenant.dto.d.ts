@@ -8,4 +8,5 @@ export declare class CreateTenantDto {
     inventario?: boolean;
     plan?: string;
     storefrontEnabled?: boolean;
+    manualBookingEnabled?: boolean;
 }

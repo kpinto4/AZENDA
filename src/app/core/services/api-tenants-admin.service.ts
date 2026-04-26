@@ -12,6 +12,7 @@ export interface ApiTenantDto {
   status: ApiTenantStatus;
   plan: string;
   storefrontEnabled: boolean;
+  manualBookingEnabled: boolean;
   modules: { citas: boolean; ventas: boolean; inventario: boolean };
 }
 
@@ -22,6 +23,7 @@ export interface ApiCreateTenantBody {
   status: ApiTenantStatus;
   plan?: string;
   storefrontEnabled?: boolean;
+  manualBookingEnabled?: boolean;
   citas?: boolean;
   ventas?: boolean;
   inventario?: boolean;
@@ -33,6 +35,7 @@ export interface ApiPatchTenantBody {
   status?: ApiTenantStatus;
   plan?: string;
   storefrontEnabled?: boolean;
+  manualBookingEnabled?: boolean;
   citas?: boolean;
   ventas?: boolean;
   inventario?: boolean;

@@ -7,4 +7,5 @@ export declare class UpdateTenantDto {
     inventario?: boolean;
     plan?: string;
     storefrontEnabled?: boolean;
+    manualBookingEnabled?: boolean;
 }

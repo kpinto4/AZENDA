@@ -6,6 +6,7 @@ export interface TenantEntity {
     status: 'ACTIVE' | 'PAUSED' | 'BLOCKED';
     plan: string;
     storefrontEnabled: boolean;
+    manualBookingEnabled: boolean;
     modules: {
         citas: boolean;
         ventas: boolean;

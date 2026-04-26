@@ -26,6 +26,28 @@
     </ul>
   </div>
 
+  <div class="az-card mb">
+    <h3>Operación de citas</h3>
+    <p class="muted">
+      Decide si tu equipo puede crear citas manualmente desde el panel. El enlace público de reservas sigue activo.
+    </p>
+    <form [formGroup]="form" (ngSubmit)="saveOperationalSettings()">
+      <label class="remember-row">
+        <input type="checkbox" formControlName="manualBookingEnabled" [disabled]="!canManageOperations()" />
+        <span>Permitir creación manual de citas en panel</span>
+      </label>
+      <button type="submit" class="az-btn az-btn-primary mt" [disabled]="!canManageOperations()">
+        Guardar operación de citas
+      </button>
+    </form>
+    @if (!canManageOperations()) {
+      <p class="muted tiny">Solo el admin del negocio puede cambiar esta opción.</p>
+    }
+    @if (opsMsg()) {
+      <p class="services-msg">{{ opsMsg() }}</p>
+    }
+  </div>
+
   @if (session.publicBookingSlug()) {
     <div class="az-card mb">
       <h3>Servicios de este negocio</h3>

@@ -192,3 +192,29 @@
   max-width: 140px;
   font-size: 0.8rem;
 }
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--az-border);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: lowercase;
+}
+
+.status-pill.ok {
+  border-color: color-mix(in srgb, var(--az-success, #0f9d58) 45%, var(--az-border));
+  background: color-mix(in srgb, var(--az-success, #0f9d58) 12%, var(--az-surface));
+}
+
+.status-pill.pending {
+  border-color: color-mix(in srgb, var(--az-accent) 45%, var(--az-border));
+  background: color-mix(in srgb, var(--az-accent) 12%, var(--az-surface));
+}
+
+.status-pill.cancelled {
+  border-color: color-mix(in srgb, var(--az-danger, #c62828) 42%, var(--az-border));
+  background: color-mix(in srgb, var(--az-danger, #c62828) 12%, var(--az-surface));
+}

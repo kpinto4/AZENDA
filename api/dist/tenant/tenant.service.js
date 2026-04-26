@@ -33,6 +33,18 @@ let TenantService = class TenantService {
         }
         return { tenant };
     }
+    updateTenantSettings(currentUser, dto) {
+        if (!currentUser.tenantId) {
+            throw new common_1.NotFoundException('Usuario sin tenant asignado');
+        }
+        const updated = this.sqlDbService.updateTenant(currentUser.tenantId, {
+            manualBookingEnabled: dto.manualBookingEnabled,
+        });
+        if (!updated) {
+            throw new common_1.NotFoundException('Tenant no encontrado');
+        }
+        return { tenant: updated };
+    }
 };
 exports.TenantService = TenantService;
 exports.TenantService = TenantService = __decorate([

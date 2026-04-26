@@ -11,9 +11,15 @@
   <div class="az-card op-note">
     <h3>Gestión operativa</h3>
     <p class="muted small">
-      Esta pantalla es para editar, confirmar, reagendar, cancelar y marcar asistencia.
-      La creación de nuevas citas se realiza desde el enlace de cliente.
+      El estado ahora se actualiza automáticamente según asistencia:
+      <strong>asistió → confirmada</strong>, <strong>no asistió → cancelada</strong>,
+      <strong>pendiente → pendiente</strong>.
     </p>
+    @if (!session.manualBookingEnabled()) {
+      <p class="muted small">
+        En este negocio la creación manual de citas está desactivada. Solo se crean desde el enlace público.
+      </p>
+    }
   </div>
 
   <div class="az-card cal-sim-card">
@@ -80,15 +86,9 @@
             <td>{{ a.service }}</td>
             <td>{{ a.when }}</td>
             <td>
-              <select
-                class="az-select status-sel"
-                [value]="a.status"
-                (change)="setStatus(a.id, $any($event.target).value)"
-              >
-                <option value="pendiente">pendiente</option>
-                <option value="confirmada">confirmada</option>
-                <option value="cancelada">cancelada</option>
-              </select>
+              <span class="status-pill" [class.pending]="a.status === 'pendiente'" [class.ok]="a.status === 'confirmada'" [class.cancelled]="a.status === 'cancelada'">
+                {{ statusLabel(a.status) }}
+              </span>
             </td>
             <td>
               <select

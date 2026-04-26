@@ -9,6 +9,8 @@ export interface TenantEntity {
   plan: string;
   /** Catálogo público tipo tienda (planes Pro+ y módulos ventas+inventario). */
   storefrontEnabled: boolean;
+  /** Si está activo, el equipo puede crear citas manualmente desde el panel. */
+  manualBookingEnabled: boolean;
   modules: {
     citas: boolean;
     ventas: boolean;

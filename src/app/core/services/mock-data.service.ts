@@ -103,6 +103,8 @@ export interface MockTenant {
   plan: string;
   /** Catálogo público (planes Pro+); en API viene de `storefrontEnabled`. */
   storefrontEnabled?: boolean;
+  /** Si está activo, el negocio permite crear citas manualmente desde el panel. */
+  manualBookingEnabled?: boolean;
   active: boolean;
   modules: TenantModuleKey[];
 }
@@ -271,6 +273,7 @@ function initialTenants(): MockTenant[] {
       apiTenantId: 'tenant_barberia',
       plan: 'Pro',
       storefrontEnabled: true,
+      manualBookingEnabled: true,
       active: true,
       modules: ['citas', 'ventas', 'inventario'],
     },
@@ -281,6 +284,7 @@ function initialTenants(): MockTenant[] {
       apiTenantId: 'tenant_spa',
       plan: 'Básico',
       storefrontEnabled: false,
+      manualBookingEnabled: true,
       active: true,
       modules: ['citas', 'ventas'],
     },
@@ -291,6 +295,7 @@ function initialTenants(): MockTenant[] {
       apiTenantId: 'tenant_clinica',
       plan: 'Trial',
       storefrontEnabled: false,
+      manualBookingEnabled: true,
       active: false,
       modules: ['citas'],
     },
@@ -711,6 +716,7 @@ export class MockDataService {
                 apiTenantId: row.id,
                 plan: row.plan ?? t.plan,
                 storefrontEnabled: row.storefrontEnabled,
+                manualBookingEnabled: row.manualBookingEnabled ?? true,
                 active,
                 modules,
               }
@@ -732,6 +738,7 @@ export class MockDataService {
         apiTenantId: row.id,
         plan: row.plan ?? 'Trial',
         storefrontEnabled: row.storefrontEnabled,
+        manualBookingEnabled: row.manualBookingEnabled ?? true,
         active,
         modules: modules.length ? modules : ['citas'],
       },
@@ -780,6 +787,7 @@ export class MockDataService {
       apiTenantId: undefined,
       plan: 'Trial',
       storefrontEnabled: false,
+      manualBookingEnabled: true,
       active: true,
       modules: ['citas', 'ventas', 'inventario'],
     };
@@ -798,6 +806,7 @@ export class MockDataService {
       apiTenantId: undefined,
       plan,
       storefrontEnabled: false,
+      manualBookingEnabled: true,
       active: true,
       modules: ['citas', 'ventas', 'inventario'],
     };
@@ -857,6 +866,12 @@ export class MockDataService {
     );
   }
 
+  setTenantManualBookingEnabled(id: string, enabled: boolean): void {
+    this.tenants.update((list) =>
+      list.map((t) => (t.id === id ? { ...t, manualBookingEnabled: enabled } : t)),
+    );
+  }
+
   toggleCatalogModule(key: TenantModuleKey): void {
     this.platformModuleCatalog.update((list) =>
       list.map((m) => (m.key === key ? { ...m, enabled: !m.enabled } : m)),
@@ -875,7 +890,13 @@ export class MockDataService {
   addAppointment(row: Omit<MockAppointment, 'id'>): void {
     const id = `a${Date.now()}`;
     const attendance = row.attendance ?? 'PENDIENTE';
-    this.appointments.update((list) => [{ id, ...row, attendance }, ...list]);
+    const status =
+      attendance === 'ASISTIO'
+        ? 'confirmada'
+        : attendance === 'NO_ASISTIO'
+          ? 'cancelada'
+          : row.status;
+    this.appointments.update((list) => [{ id, ...row, status, attendance }, ...list]);
   }
 
   setAppointmentStatus(id: string, status: MockAppointment['status']): void {
@@ -884,7 +905,20 @@ export class MockDataService {
 
   setAppointmentAttendance(id: string, attendance: MockAppointmentAttendance): void {
     this.appointments.update((list) =>
-      list.map((a) => (a.id === id ? { ...a, attendance } : a)),
+      list.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              attendance,
+              status:
+                attendance === 'ASISTIO'
+                  ? 'confirmada'
+                  : attendance === 'NO_ASISTIO'
+                    ? 'cancelada'
+                    : 'pendiente',
+            }
+          : a,
+      ),
     );
   }
 
@@ -906,7 +940,11 @@ export class MockDataService {
           a.status !== 'cancelada'
         ) {
           ok = true;
-          return { ...a, attendance: 'ASISTIO' as MockAppointmentAttendance };
+          return {
+            ...a,
+            attendance: 'ASISTIO' as MockAppointmentAttendance,
+            status: 'confirmada' as MockAppointment['status'],
+          };
         }
         return a;
       }),

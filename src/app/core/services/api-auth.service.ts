@@ -32,6 +32,7 @@ export interface ApiTenantContextResponse {
     status: string;
     plan: string;
     storefrontEnabled: boolean;
+    manualBookingEnabled: boolean;
     modules: { citas: boolean; ventas: boolean; inventario: boolean };
   } | null;
   message?: string;
@@ -49,12 +50,24 @@ export class ApiAuthService {
   }
 
   tenantContext(): Observable<ApiTenantContextResponse> {
-    return this.http.get<ApiTenantContextResponse>(
-      `${environment.apiBaseUrl}/tenant/context`,
-    );
+    const url = `${environment.apiBaseUrl}/tenant/context`;
+    return this.http.get<ApiTenantContextResponse>(url, {
+      params: { _: String(Date.now()) },
+    });
   }
 
   me(): Observable<ApiAuthUser> {
-    return this.http.get<ApiAuthUser>(`${environment.apiBaseUrl}/auth/me`);
+    return this.http.get<ApiAuthUser>(`${environment.apiBaseUrl}/auth/me`, {
+      params: { _: String(Date.now()) },
+    });
+  }
+
+  patchTenantSettings(body: {
+    manualBookingEnabled?: boolean;
+  }): Observable<ApiTenantContextResponse> {
+    return this.http.patch<ApiTenantContextResponse>(
+      `${environment.apiBaseUrl}/tenant/settings`,
+      body,
+    );
   }
 }

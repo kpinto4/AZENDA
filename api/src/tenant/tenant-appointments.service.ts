@@ -28,6 +28,11 @@ export class TenantAppointmentsService {
     if (!tenant.modules.citas) {
       throw new ForbiddenException('El modulo de citas no esta activo para este tenant');
     }
+    if (!tenant.manualBookingEnabled) {
+      throw new ForbiddenException(
+        'La creacion manual de citas esta desactivada en configuracion del negocio',
+      );
+    }
     return this.sqlDb.createAppointment({
       tenantId: user.tenantId!,
       customer: dto.customer,
@@ -43,15 +48,11 @@ export class TenantAppointmentsService {
     dto: PatchAppointmentStatusDto,
   ): AppointmentEntity {
     this.requireTenantUser(user);
-    const updated = this.sqlDb.updateAppointmentStatus(
-      appointmentId,
-      user.tenantId!,
-      dto.status,
+    void appointmentId;
+    void dto;
+    throw new ForbiddenException(
+      'El estado se calcula automaticamente segun la asistencia',
     );
-    if (!updated) {
-      throw new NotFoundException('Cita no encontrada');
-    }
-    return updated;
   }
 
   patchAttendance(

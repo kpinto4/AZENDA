@@ -34,4 +34,8 @@ export class UpdateTenantDto {
   @IsOptional()
   @IsBoolean()
   storefrontEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  manualBookingEnabled?: boolean;
 }

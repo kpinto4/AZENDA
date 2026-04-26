@@ -19,6 +19,7 @@ const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const systems_decorator_1 = require("../auth/decorators/systems.decorator");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
+const update_tenant_settings_dto_1 = require("./dto/update-tenant-settings.dto");
 const tenant_service_1 = require("./tenant.service");
 let TenantController = class TenantController {
     constructor(tenantService) {
@@ -26,6 +27,9 @@ let TenantController = class TenantController {
     }
     getTenantContext(req) {
         return this.tenantService.getTenantContext(req.user);
+    }
+    updateSettings(req, dto) {
+        return this.tenantService.updateTenantSettings(req.user, dto);
     }
 };
 exports.TenantController = TenantController;
@@ -36,6 +40,15 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], TenantController.prototype, "getTenantContext", null);
+__decorate([
+    (0, common_1.Patch)('settings'),
+    (0, roles_decorator_1.Roles)(auth_types_1.UserRole.ADMIN),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, update_tenant_settings_dto_1.UpdateTenantSettingsDto]),
+    __metadata("design:returntype", void 0)
+], TenantController.prototype, "updateSettings", null);
 exports.TenantController = TenantController = __decorate([
     (0, common_1.Controller)('tenant'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

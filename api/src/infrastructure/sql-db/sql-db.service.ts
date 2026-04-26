@@ -42,15 +42,16 @@ export class SqlDbService {
   }
 
   findUserByCredentials(email: string, password: string): UserEntity | undefined {
+    const normalizedEmail = email.trim().toLowerCase();
     const row = this.db
       .prepare(
         `
         SELECT id, email, password, role, tenant_id, systems, status
         FROM users
-        WHERE email = ? AND password = ?
+        WHERE LOWER(TRIM(email)) = ? AND password = ?
       `,
       )
-      .get(email, password);
+      .get(normalizedEmail, password);
 
     return row ? this.mapUserRow(row) : undefined;
   }
@@ -154,7 +155,7 @@ export class SqlDbService {
     const rows = this.db
       .prepare(
         `
-        SELECT id, name, slug, status, plan, storefront_enabled, citas_enabled, ventas_enabled, inventario_enabled
+        SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
         FROM tenants
         ORDER BY name ASC
       `,
@@ -168,7 +169,7 @@ export class SqlDbService {
     const row = this.db
       .prepare(
         `
-        SELECT id, name, slug, status, plan, storefront_enabled, citas_enabled, ventas_enabled, inventario_enabled
+        SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
         FROM tenants
         WHERE slug = ?
       `,
@@ -182,7 +183,7 @@ export class SqlDbService {
     const row = this.db
       .prepare(
         `
-        SELECT id, name, slug, status, plan, storefront_enabled, citas_enabled, ventas_enabled, inventario_enabled
+        SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
         FROM tenants
         WHERE id = ?
       `,
@@ -192,19 +193,24 @@ export class SqlDbService {
     return row ? this.mapTenantRow(row) : undefined;
   }
 
-  createTenant(data: TenantEntity): TenantEntity {
+  createTenant(
+    data: Omit<TenantEntity, 'manualBookingEnabled'> & {
+      manualBookingEnabled?: boolean;
+    },
+  ): TenantEntity {
     const row: TenantEntity = {
       ...data,
       plan: data.plan ?? 'Trial',
       storefrontEnabled: data.storefrontEnabled ?? false,
+      manualBookingEnabled: data.manualBookingEnabled ?? true,
     };
     this.db
       .prepare(
         `
         INSERT INTO tenants (
-          id, name, slug, status, plan, storefront_enabled, citas_enabled, ventas_enabled, inventario_enabled
+          id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       )
       .run(
@@ -214,6 +220,7 @@ export class SqlDbService {
         row.status,
         row.plan,
         row.storefrontEnabled ? 1 : 0,
+        row.manualBookingEnabled ? 1 : 0,
         row.modules.citas ? 1 : 0,
         row.modules.ventas ? 1 : 0,
         row.modules.inventario ? 1 : 0,
@@ -243,6 +250,10 @@ export class SqlDbService {
         patch.storefrontEnabled !== undefined
           ? patch.storefrontEnabled
           : current.storefrontEnabled,
+      manualBookingEnabled:
+        patch.manualBookingEnabled !== undefined
+          ? patch.manualBookingEnabled
+          : current.manualBookingEnabled,
       modules: {
         ...current.modules,
         ...(patch.modules ?? {}),
@@ -253,7 +264,7 @@ export class SqlDbService {
       .prepare(
         `
         UPDATE tenants
-        SET name = ?, slug = ?, status = ?, plan = ?, storefront_enabled = ?,
+        SET name = ?, slug = ?, status = ?, plan = ?, storefront_enabled = ?, manual_booking_enabled = ?,
             citas_enabled = ?, ventas_enabled = ?, inventario_enabled = ?
         WHERE id = ?
       `,
@@ -264,6 +275,7 @@ export class SqlDbService {
         next.status,
         next.plan,
         next.storefrontEnabled ? 1 : 0,
+        next.manualBookingEnabled ? 1 : 0,
         next.modules.citas ? 1 : 0,
         next.modules.ventas ? 1 : 0,
         next.modules.inventario ? 1 : 0,
@@ -371,14 +383,20 @@ export class SqlDbService {
     if (!current || current.tenantId !== tenantId) {
       return undefined;
     }
+    const status: AppointmentStatus =
+      attendance === 'ASISTIO'
+        ? 'confirmada'
+        : attendance === 'NO_ASISTIO'
+          ? 'cancelada'
+          : 'pendiente';
     this.db
       .prepare(
         `
-        UPDATE appointments SET attendance = ? WHERE id = ? AND tenant_id = ?
+        UPDATE appointments SET attendance = ?, status = ? WHERE id = ? AND tenant_id = ?
       `,
       )
-      .run(attendance, appointmentId, tenantId);
-    return { ...current, attendance };
+      .run(attendance, status, appointmentId, tenantId);
+    return { ...current, attendance, status };
   }
 
   /**
@@ -411,11 +429,11 @@ export class SqlDbService {
     this.db
       .prepare(
         `
-        UPDATE appointments SET attendance = ? WHERE id = ? AND tenant_id = ?
+        UPDATE appointments SET attendance = ?, status = ? WHERE id = ? AND tenant_id = ?
       `,
       )
-      .run('ASISTIO', appointmentId, tenant.id);
-    return { ...appt, attendance: 'ASISTIO' };
+      .run('ASISTIO', 'confirmada', appointmentId, tenant.id);
+    return { ...appt, attendance: 'ASISTIO', status: 'confirmada' };
   }
 
   listStoreVisitsByTenantId(tenantId: string): StoreVisitLogEntity[] {
@@ -479,6 +497,11 @@ export class SqlDbService {
         `ALTER TABLE tenants ADD COLUMN storefront_enabled INTEGER NOT NULL DEFAULT 0`,
       );
     }
+    if (!tcols.some((c) => c.name === 'manual_booking_enabled')) {
+      this.db.exec(
+        `ALTER TABLE tenants ADD COLUMN manual_booking_enabled INTEGER NOT NULL DEFAULT 1`,
+      );
+    }
   }
 
   private createSchema() {
@@ -490,6 +513,7 @@ export class SqlDbService {
         status TEXT NOT NULL,
         plan TEXT NOT NULL DEFAULT 'Trial',
         storefront_enabled INTEGER NOT NULL DEFAULT 0,
+        manual_booking_enabled INTEGER NOT NULL DEFAULT 1,
         citas_enabled INTEGER NOT NULL DEFAULT 1,
         ventas_enabled INTEGER NOT NULL DEFAULT 1,
         inventario_enabled INTEGER NOT NULL DEFAULT 0
@@ -630,6 +654,7 @@ export class SqlDbService {
       status: row.status as TenantEntity['status'],
       plan,
       storefrontEnabled: Number(row.storefront_enabled) === 1,
+      manualBookingEnabled: Number(row.manual_booking_enabled) === 1,
       modules: {
         citas: Number(row.citas_enabled) === 1,
         ventas: Number(row.ventas_enabled) === 1,
