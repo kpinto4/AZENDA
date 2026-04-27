@@ -6,15 +6,17 @@
     </div>
   </div>
 
-  <div class="az-card toolbar-card">
+  <div class="az-card toolbar-card az-adaptive-toolbar">
     <div class="view-switch">
       <button type="button" class="az-btn small" [class.az-btn-primary]="activeView() === 'products'" [class.az-btn-secondary]="activeView() !== 'products'" (click)="setActiveView('products')">Productos</button>
       <button type="button" class="az-btn small" [class.az-btn-primary]="activeView() === 'services'" [class.az-btn-secondary]="activeView() !== 'services'" (click)="setActiveView('services')">Servicios</button>
     </div>
     <div class="toolbar-actions">
-      <button type="button" class="az-btn az-btn-primary small" (click)="openCreateProduct()">Nuevo producto</button>
-      @if (session.publicBookingSlug()) {
-        <button type="button" class="az-btn az-btn-secondary small" (click)="openCreateService()">Nuevo servicio</button>
+      @if (canManageCatalog()) {
+        <button type="button" class="az-btn az-btn-primary small" (click)="openCreateProduct()">Nuevo producto</button>
+        @if (session.publicBookingSlug()) {
+          <button type="button" class="az-btn az-btn-secondary small" (click)="openCreateService()">Nuevo servicio</button>
+        }
       }
     </div>
     <div class="layout-control">
@@ -23,6 +25,7 @@
         id="catalog-layout"
         class="az-select compact"
         [value]="tenantCatalogLayout()"
+        [disabled]="!canManageCatalog()"
         (change)="setCatalogLayout($any($event.target).value)"
       >
         <option value="horizontal">Horizontal</option>
@@ -47,7 +50,9 @@
             <th>SKU</th>
             <th>Stock</th>
             <th>Estado</th>
-            <th>Acciones</th>
+            @if (canManageCatalog()) {
+              <th>Acciones</th>
+            }
           </tr>
         </thead>
         <tbody>
@@ -66,16 +71,18 @@
                   <span class="az-badge success">OK</span>
                 }
               </td>
-              <td class="row-actions">
-                <button type="button" class="az-btn az-btn-ghost small" (click)="moveProduct(p.id, -1)">↑</button>
-                <button type="button" class="az-btn az-btn-ghost small" (click)="moveProduct(p.id, 1)">↓</button>
-                <button type="button" class="az-btn az-btn-secondary small" (click)="openEditProduct(p)">Editar</button>
-                <button type="button" class="az-btn az-btn-ghost small" (click)="requestDeleteProduct(p)">Eliminar</button>
-              </td>
+              @if (canManageCatalog()) {
+                <td class="row-actions">
+                  <button type="button" class="az-btn az-btn-ghost small" (click)="moveProduct(p.id, -1)">↑</button>
+                  <button type="button" class="az-btn az-btn-ghost small" (click)="moveProduct(p.id, 1)">↓</button>
+                  <button type="button" class="az-btn az-btn-secondary small" (click)="openEditProduct(p)">Editar</button>
+                  <button type="button" class="az-btn az-btn-ghost small" (click)="requestDeleteProduct(p)">Eliminar</button>
+                </td>
+              }
             </tr>
           } @empty {
             <tr>
-              <td colspan="8">Aún no hay productos cargados.</td>
+              <td [attr.colspan]="canManageCatalog() ? 8 : 7">Aún no hay productos cargados.</td>
             </tr>
           }
         </tbody>
@@ -89,7 +96,9 @@
             <th>Precio base</th>
             <th>Precio promo</th>
             <th>Promoción</th>
-            <th>Acciones</th>
+            @if (canManageCatalog()) {
+              <th>Acciones</th>
+            }
           </tr>
         </thead>
         <tbody>
@@ -100,16 +109,18 @@
               <td>${{ s.price.toFixed(2) }}</td>
               <td>{{ s.promoPrice != null ? ('$' + s.promoPrice.toFixed(2)) : '—' }}</td>
               <td>{{ s.promoLabel || '—' }}</td>
-              <td class="row-actions">
-                <button type="button" class="az-btn az-btn-ghost small" (click)="moveService(s.id, -1)">↑</button>
-                <button type="button" class="az-btn az-btn-ghost small" (click)="moveService(s.id, 1)">↓</button>
-                <button type="button" class="az-btn az-btn-secondary small" (click)="openEditService(s)">Editar</button>
-                <button type="button" class="az-btn az-btn-ghost small" (click)="requestDeleteService(s)">Eliminar</button>
-              </td>
+              @if (canManageCatalog()) {
+                <td class="row-actions">
+                  <button type="button" class="az-btn az-btn-ghost small" (click)="moveService(s.id, -1)">↑</button>
+                  <button type="button" class="az-btn az-btn-ghost small" (click)="moveService(s.id, 1)">↓</button>
+                  <button type="button" class="az-btn az-btn-secondary small" (click)="openEditService(s)">Editar</button>
+                  <button type="button" class="az-btn az-btn-ghost small" (click)="requestDeleteService(s)">Eliminar</button>
+                </td>
+              }
             </tr>
           } @empty {
             <tr>
-              <td colspan="6">Aún no hay servicios cargados.</td>
+              <td [attr.colspan]="canManageCatalog() ? 6 : 5">Aún no hay servicios cargados.</td>
             </tr>
           }
         </tbody>
@@ -117,57 +128,59 @@
     }
   </div>
 
-  <div class="az-card mt">
-    <h3>Registrar movimiento (mock)</h3>
-    <p class="muted">Solo aplica para productos; usa delta negativo para salida (ej. −3) o positivo para entrada.</p>
-    <form [formGroup]="moveForm" (ngSubmit)="applyMovement()" class="move-row">
-      <div>
-        <label class="az-label" for="pid">Producto</label>
-        <select id="pid" class="az-select wide" formControlName="productId">
-          <option value="" disabled>— Elegir —</option>
-          @for (p of tenantProducts(); track p.id) {
-            <option [value]="p.id">{{ p.name }} ({{ p.stock }})</option>
-          }
-        </select>
-      </div>
-      <div>
-        <label class="az-label" for="delta">Delta</label>
-        <input id="delta" class="az-input narrow" type="number" formControlName="delta" />
-      </div>
-      <div class="grow">
-        <label class="az-label" for="rs">Motivo</label>
-        <input id="rs" class="az-input wide" formControlName="reason" />
-      </div>
-      <button type="submit" class="az-btn az-btn-primary end">Aplicar</button>
-    </form>
-  </div>
+  @if (canManageCatalog()) {
+    <div class="az-card mt">
+      <h3>Registrar movimiento (mock)</h3>
+      <p class="muted">Solo aplica para productos; usa delta negativo para salida (ej. −3) o positivo para entrada.</p>
+      <form [formGroup]="moveForm" (ngSubmit)="applyMovement()" class="move-row">
+        <div>
+          <label class="az-label" for="pid">Producto</label>
+          <select id="pid" class="az-select wide" formControlName="productId">
+            <option value="" disabled>— Elegir —</option>
+            @for (p of tenantProducts(); track p.id) {
+              <option [value]="p.id">{{ p.name }} ({{ p.stock }})</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label class="az-label" for="delta">Delta</label>
+          <input id="delta" class="az-input narrow" type="number" formControlName="delta" />
+        </div>
+        <div class="grow">
+          <label class="az-label" for="rs">Motivo</label>
+          <input id="rs" class="az-input wide" formControlName="reason" />
+        </div>
+        <button type="submit" class="az-btn az-btn-primary end">Aplicar</button>
+      </form>
+    </div>
 
-  <h2 class="sub-title">Movimientos recientes (simulado)</h2>
-  <div class="az-table-wrap">
-    <table class="az-table">
-      <thead>
-        <tr>
-          <th>Fecha</th>
-          <th>Producto</th>
-          <th>Δ</th>
-          <th>Motivo</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (m of data.stockMovements(); track m.id) {
+    <h2 class="sub-title">Movimientos recientes (simulado)</h2>
+    <div class="az-table-wrap">
+      <table class="az-table">
+        <thead>
           <tr>
-            <td>{{ m.at }}</td>
-            <td>{{ m.productName }}</td>
-            <td [class.neg]="m.delta < 0" [class.pos]="m.delta > 0">{{ m.delta > 0 ? '+' : '' }}{{ m.delta }}</td>
-            <td>{{ m.reason }}</td>
+            <th>Fecha</th>
+            <th>Producto</th>
+            <th>Δ</th>
+            <th>Motivo</th>
           </tr>
-        }
-      </tbody>
-    </table>
-  </div>
+        </thead>
+        <tbody>
+          @for (m of data.stockMovements(); track m.id) {
+            <tr>
+              <td>{{ m.at }}</td>
+              <td>{{ m.productName }}</td>
+              <td [class.neg]="m.delta < 0" [class.pos]="m.delta > 0">{{ m.delta > 0 ? '+' : '' }}{{ m.delta }}</td>
+              <td>{{ m.reason }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
 </div>
 
-@if (isEditorOpen()) {
+@if (canManageCatalog() && isEditorOpen()) {
   <div class="editor-backdrop" (click)="closeEditor()"></div>
   <aside class="editor-panel" role="dialog" aria-modal="true" aria-label="Editor de catálogo">
     <div class="editor-head">
@@ -233,7 +246,7 @@
   </aside>
 }
 
-@if (pendingDelete(); as pd) {
+@if (canManageCatalog() && pendingDelete(); as pd) {
   <div class="editor-backdrop" (click)="cancelDelete()"></div>
   <aside class="confirm-panel" role="dialog" aria-modal="true" aria-label="Confirmar eliminación">
     <h3>Confirmar eliminación</h3>

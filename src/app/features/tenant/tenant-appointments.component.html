@@ -22,6 +22,33 @@
     }
   </div>
 
+  @if (showManualCreateCard()) {
+    <div class="az-card manual-create-card">
+      <h3>Crear cita manual (panel interno)</h3>
+      <p class="muted small">Disponible para empleados del negocio.</p>
+      @if (createMsg()) {
+        <p class="muted success-line">{{ createMsg() }}</p>
+      }
+      @if (createErr()) {
+        <p class="muted field-error">{{ createErr() }}</p>
+      }
+      <form class="manual-create-grid" [formGroup]="createForm" (ngSubmit)="createAppointment()">
+        <input class="az-input" placeholder="Cliente" formControlName="customer" [disabled]="creatingAppointment()" />
+        <select class="az-select" formControlName="service" [disabled]="creatingAppointment()">
+          <option value="" disabled>Selecciona un servicio</option>
+          @for (s of manualServiceOptions(); track s) {
+            <option [value]="s">{{ s }}</option>
+          }
+        </select>
+        <input class="az-input" type="date" formControlName="date" [disabled]="creatingAppointment()" />
+        <input class="az-input" type="time" formControlName="time" [disabled]="creatingAppointment()" />
+        <button type="submit" class="az-btn az-btn-primary" [disabled]="creatingAppointment()">
+          {{ creatingAppointment() ? 'Guardando…' : 'Crear cita manual' }}
+        </button>
+      </form>
+    </div>
+  }
+
   <div class="az-card cal-sim-card">
       @let cal = calendarWeek();
       <div class="cal-sim-head">
@@ -40,10 +67,14 @@
         </div>
       </div>
       <div class="cal-total muted small">{{ cal.totalEvents }} cita(s) en esta semana</div>
-      <div class="cal-week-scroll">
-        <div class="cal-week-board">
+      <div class="cal-week-scroll" #calWeekScrollEl>
+        <div
+          class="cal-week-board"
+          [style.gridTemplateColumns]="calGridTemplate()"
+          [style.minWidth.px]="calBoardMinWidth()"
+        >
           @for (day of cal.days; track day.key) {
-            <section class="cal-day-column" [class.today]="day.isToday">
+            <section class="cal-day-column" [class.today]="day.isToday" [class.empty-day]="!day.events.length">
               <header class="cal-day-head">
                 <span class="dow">{{ day.label }}</span>
                 <span class="dom">{{ day.sub }}</span>

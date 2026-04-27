@@ -1,5 +1,5 @@
 <div class="booking" [class.catalog-active]="clientTab() === 'catalogo'" [ngStyle]="styleVars()">
-  <header class="top">
+  <header class="top az-fluid-shell">
     @if (branding().logoUrl; as logo) {
       <img class="top-logo" [src]="logo" [alt]="branding().displayName" />
     }
@@ -7,18 +7,18 @@
     <span class="slug">/{{ slug() }}</span>
   </header>
 
-  <nav class="client-tabs" aria-label="Área de cliente">
-    <button type="button" class="tab" [class.active]="clientTab() === 'reserva'" (click)="goTab('reserva')">
+  <nav class="client-tabs az-fluid-shell az-adaptive-tabs mobile-4" aria-label="Área de cliente">
+    <button type="button" class="tab az-adaptive-tab" [class.active]="clientTab() === 'reserva'" (click)="goTab('reserva')">
       Reservar cita
     </button>
-    <button type="button" class="tab" [class.active]="clientTab() === 'asistencia'" (click)="goTab('asistencia')">
+    <button type="button" class="tab az-adaptive-tab" [class.active]="clientTab() === 'asistencia'" (click)="goTab('asistencia')">
       Confirmar asistencia
     </button>
-    <button type="button" class="tab" [class.active]="clientTab() === 'tienda'" (click)="goTab('tienda')">
+    <button type="button" class="tab az-adaptive-tab" [class.active]="clientTab() === 'tienda'" (click)="goTab('tienda')">
       Compra / tienda
     </button>
     @if (catalogoVisible()) {
-      <button type="button" class="tab" [class.active]="clientTab() === 'catalogo'" (click)="goTab('catalogo')">
+      <button type="button" class="tab az-adaptive-tab" [class.active]="clientTab() === 'catalogo'" (click)="goTab('catalogo')">
         Catálogo
       </button>
     }

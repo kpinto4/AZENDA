@@ -69,6 +69,10 @@ let PublicController = class PublicController {
         if (!tenant.modules.citas) {
             throw new common_1.ForbiddenException('Reservas no disponibles para este negocio');
         }
+        const conflict = this.sqlDb.findAppointmentByTenantAndWhen(tenant.id, dto.when);
+        if (conflict) {
+            throw new common_1.ConflictException('Ese horario ya fue tomado por otra cita. Elige otro horario.');
+        }
         return this.sqlDb.createAppointment({
             tenantId: tenant.id,
             customer: dto.customer,

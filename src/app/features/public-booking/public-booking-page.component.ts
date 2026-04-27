@@ -56,14 +56,22 @@ export class PublicBookingPageComponent {
   readonly tenantServices = computed(() => {
     if (environment.useLiveAuth) {
       const services = this.publicCatalog()?.services ?? [];
-      return services.map((s) => {
-        const base = `${s.name} · $${Number(s.price).toFixed(2)}`;
-        if (s.promoPrice != null) {
-          const promo = `$${Number(s.promoPrice).toFixed(2)}`;
-          return `${base} · Promo ${promo}${s.promoLabel ? ` (${s.promoLabel})` : ''}`;
-        }
-        return base;
-      });
+      if (services.length) {
+        return services.map((s) => {
+          const base = `${s.name} · $${Number(s.price).toFixed(2)}`;
+          if (s.promoPrice != null) {
+            const promo = `$${Number(s.promoPrice).toFixed(2)}`;
+            return `${base} · Promo ${promo}${s.promoLabel ? ` (${s.promoLabel})` : ''}`;
+          }
+          return base;
+        });
+      }
+      // Fallback defensivo: evita bloquear la reserva pública si el catálogo API aún no trae servicios.
+      const mockServices = this.data.servicesForBookingSlug(this.slug());
+      if (mockServices.length && !mockServices[0].startsWith('Configura tus servicios')) {
+        return mockServices;
+      }
+      return [];
     }
     return this.data.servicesForBookingSlug(this.slug());
   });
@@ -245,10 +253,14 @@ export class PublicBookingPageComponent {
       return;
     }
     this.bookedWithLiveApi.set(false);
-    this.data.recordBooking(v.name, this.selectedService(), when, this.slug());
+    const wasCreated = this.data.recordBooking(v.name, this.selectedService(), when, this.slug());
+    if (!wasCreated) {
+      this.bookingError.set('Ese horario ya está ocupado. Elige otra hora.');
+      return;
+    }
     const list = this.data.appointmentsForBookingSlug(this.slug());
-    const created = list[0];
-    this.lastBookingId.set(created?.id ?? null);
+    const createdRow = list[0];
+    this.lastBookingId.set(createdRow?.id ?? null);
     this.done.set(true);
   }
 

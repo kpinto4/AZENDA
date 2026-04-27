@@ -67,6 +67,7 @@ export class TenantInventoryComponent {
     const tid = this.session.tenantId();
     return tid ? this.data.productsForTenant(tid) : [];
   });
+  readonly canManageCatalog = computed(() => this.session.role() === 'TENANT_ADMIN');
 
   readonly editorForm = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
@@ -129,6 +130,9 @@ export class TenantInventoryComponent {
   }
 
   setCatalogLayout(layout: 'horizontal' | 'grid'): void {
+    if (!this.canManageCatalog()) {
+      return;
+    }
     const tenantId = this.session.tenantId();
     if (!tenantId) {
       return;
@@ -157,6 +161,9 @@ export class TenantInventoryComponent {
   }
 
   openCreateProduct(): void {
+    if (!this.canManageCatalog()) {
+      return;
+    }
     this.editorEntityType.set('product');
     this.editingId.set(null);
     this.editorForm.reset({
@@ -175,6 +182,9 @@ export class TenantInventoryComponent {
   }
 
   openCreateService(): void {
+    if (!this.canManageCatalog()) {
+      return;
+    }
     this.editorEntityType.set('service');
     this.editingId.set(null);
     this.editorForm.reset({
@@ -193,6 +203,9 @@ export class TenantInventoryComponent {
   }
 
   openEditProduct(row: MockProduct): void {
+    if (!this.canManageCatalog()) {
+      return;
+    }
     this.editorEntityType.set('product');
     this.editingId.set(row.id);
     this.editorForm.reset({
@@ -211,6 +224,9 @@ export class TenantInventoryComponent {
   }
 
   openEditService(row: MockBusinessService): void {
+    if (!this.canManageCatalog()) {
+      return;
+    }
     this.editorEntityType.set('service');
     this.editingId.set(row.id);
     this.editorForm.reset({
@@ -235,6 +251,9 @@ export class TenantInventoryComponent {
   }
 
   requestDeleteProduct(row: MockProduct): void {
+    if (!this.canManageCatalog()) {
+      return;
+    }
     this.pendingDelete.set({
       type: 'product',
       id: row.id,
@@ -244,6 +263,9 @@ export class TenantInventoryComponent {
   }
 
   requestDeleteService(row: MockBusinessService): void {
+    if (!this.canManageCatalog()) {
+      return;
+    }
     this.pendingDelete.set({
       type: 'service',
       id: row.id,
@@ -298,6 +320,9 @@ export class TenantInventoryComponent {
   }
 
   saveEditor(): void {
+    if (!this.canManageCatalog()) {
+      return;
+    }
     const tid = this.session.tenantId();
     if (!tid) {
       return;
@@ -411,6 +436,9 @@ export class TenantInventoryComponent {
   }
 
   applyMovement(): void {
+    if (!this.canManageCatalog()) {
+      return;
+    }
     if (this.moveForm.invalid) {
       this.moveForm.markAllAsTouched();
       return;
@@ -420,6 +448,9 @@ export class TenantInventoryComponent {
   }
 
   moveProduct(productId: string, dir: -1 | 1): void {
+    if (!this.canManageCatalog()) {
+      return;
+    }
     const tenantId = this.session.tenantId();
     if (!tenantId) {
       return;
@@ -439,6 +470,9 @@ export class TenantInventoryComponent {
   }
 
   moveService(serviceId: string, dir: -1 | 1): void {
+    if (!this.canManageCatalog()) {
+      return;
+    }
     const slug = this.session.publicBookingSlug();
     if (!slug) {
       return;
@@ -458,6 +492,9 @@ export class TenantInventoryComponent {
   }
 
   removeProduct(productId: string): void {
+    if (!this.canManageCatalog()) {
+      return;
+    }
     const tenantId = this.session.tenantId();
     if (!tenantId) {
       return;
@@ -483,6 +520,9 @@ export class TenantInventoryComponent {
   }
 
   removeService(serviceId: string): void {
+    if (!this.canManageCatalog()) {
+      return;
+    }
     const slug = this.session.publicBookingSlug();
     if (!slug) {
       return;

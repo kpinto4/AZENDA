@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, ElementRef, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiAppointmentsService, mapApiAppointmentToMock } from '../../core/services/api-appointments.service';
 import { MockAppointment, MockDataService } from '../../core/services/mock-data.service';
@@ -30,14 +30,21 @@ function toYmdLocal(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+function addDays(base: Date, days: number): Date {
+  const next = new Date(base);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
 function mondayOfWeek(date: Date): Date {
-  const base = new Date(date);
-  base.setHours(12, 0, 0, 0);
-  const dow = base.getDay();
+  const now = new Date(date);
+  now.setHours(12, 0, 0, 0);
+  const dow = now.getDay();
   const diff = dow === 0 ? -6 : 1 - dow;
-  base.setDate(base.getDate() + diff);
-  base.setHours(0, 0, 0, 0);
-  return base;
+  const mon = new Date(now);
+  mon.setDate(now.getDate() + diff);
+  mon.setHours(0, 0, 0, 0);
+  return mon;
 }
 
 function parseWhenLocal(when: string): { ymd: string; time: string } | null {
@@ -70,6 +77,8 @@ function weekRangeLabel(monday: Date): string {
   styleUrl: './tenant-dashboard.component.scss',
 })
 export class TenantDashboardComponent {
+  @ViewChild('agendaScrollEl') private agendaScrollEl?: ElementRef<HTMLDivElement>;
+  readonly dashboardBaseDate = signal(new Date());
   readonly data = inject(MockDataService);
   readonly session = inject(MockSessionService);
   private readonly apiAppointments = inject(ApiAppointmentsService);
@@ -117,7 +126,7 @@ export class TenantDashboardComponent {
   });
 
   readonly dashboardCalendar = computed(() => {
-    const monday = mondayOfWeek(new Date());
+    const monday = mondayOfWeek(this.dashboardBaseDate());
     const dowLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
     const todayYmd = toYmdLocal(new Date());
     const colorMap = this.employeeColorByName();
@@ -157,4 +166,42 @@ export class TenantDashboardComponent {
       days,
     };
   });
+
+  readonly dashboardGridTemplate = computed(() =>
+    this.dashboardCalendar()
+      .days.map((d) => (d.events.length ? 'minmax(150px, 1fr)' : 'minmax(92px, 0.62fr)'))
+      .join(' '),
+  );
+
+  readonly dashboardBoardMinWidth = computed(() =>
+    Math.max(860, this.dashboardCalendar().days.reduce((acc, d) => acc + (d.events.length ? 150 : 92), 0)),
+  );
+
+  constructor() {
+    effect(() => {
+      this.dashboardCalendar();
+      queueMicrotask(() => this.scrollAgendaToToday());
+    });
+  }
+
+  private scrollAgendaToToday(): void {
+    const host = this.agendaScrollEl?.nativeElement;
+    if (!host) {
+      return;
+    }
+    const todayEl = host.querySelector('.agenda-day.today') as HTMLElement | null;
+    if (todayEl) {
+      todayEl.scrollIntoView({ block: 'nearest', inline: 'center' });
+      return;
+    }
+    host.scrollLeft = 0;
+  }
+
+  shiftDashboardByDays(deltaDays: number): void {
+    this.dashboardBaseDate.update((d) => addDays(d, deltaDays));
+  }
+
+  resetDashboardToToday(): void {
+    this.dashboardBaseDate.set(new Date());
+  }
 }

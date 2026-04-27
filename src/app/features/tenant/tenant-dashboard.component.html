@@ -38,7 +38,23 @@
         <h3>Agenda principal</h3>
         <p class="muted">{{ cal.weekLabel }} · {{ cal.total }} cita(s)</p>
       </div>
-      <a class="az-btn az-btn-secondary" routerLink="/app/citas">Gestionar citas</a>
+      <div class="agenda-head-actions">
+        <div class="agenda-nav">
+          <button type="button" class="cal-nav-btn" (click)="shiftDashboardByDays(-7)" aria-label="Semana anterior">
+            «
+          </button>
+          <button type="button" class="cal-nav-btn" (click)="shiftDashboardByDays(-1)" aria-label="Día anterior">
+            ‹
+          </button>
+          <button type="button" class="cal-nav-btn today-btn" (click)="resetDashboardToToday()">Hoy</button>
+          <button type="button" class="cal-nav-btn" (click)="shiftDashboardByDays(1)" aria-label="Día siguiente">
+            ›
+          </button>
+          <button type="button" class="cal-nav-btn" (click)="shiftDashboardByDays(7)" aria-label="Semana siguiente">
+            »
+          </button>
+        </div>
+      </div>
     </div>
     <div class="employee-legend">
       @for (emp of employeeLegend(); track emp.name) {
@@ -48,10 +64,14 @@
         </span>
       }
     </div>
-    <div class="agenda-scroll">
-      <div class="agenda-board">
+    <div class="agenda-scroll" #agendaScrollEl>
+      <div
+        class="agenda-board"
+        [style.gridTemplateColumns]="dashboardGridTemplate()"
+        [style.minWidth.px]="dashboardBoardMinWidth()"
+      >
         @for (day of cal.days; track day.key) {
-          <section class="agenda-day" [class.today]="day.isToday">
+          <section class="agenda-day" [class.today]="day.isToday" [class.empty-day]="!day.events.length">
             <header class="agenda-day-head">
               <span class="dow">{{ day.label }}</span>
               <span class="dom">{{ day.sub }}</span>
@@ -94,14 +114,18 @@
           <span>Inventario, catálogo y promociones</span>
         </a>
       }
-      <a class="quick-card" routerLink="/app/empleados">
-        <strong>Empleados</strong>
-        <span>Equipo y servicios</span>
-      </a>
-      <a class="quick-card" routerLink="/app/configuracion">
-        <strong>Configuración</strong>
-        <span>Branding, enlaces y personalización</span>
-      </a>
+      @if (session.role() === 'TENANT_ADMIN') {
+        <a class="quick-card" routerLink="/app/empleados">
+          <strong>Empleados</strong>
+          <span>Equipo y servicios</span>
+        </a>
+      }
+      @if (session.role() === 'TENANT_ADMIN') {
+        <a class="quick-card" routerLink="/app/configuracion">
+          <strong>Configuración</strong>
+          <span>Branding, enlaces y personalización</span>
+        </a>
+      }
     </div>
   </div>
 

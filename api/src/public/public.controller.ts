@@ -1,5 +1,6 @@
 import {
   Body,
+  ConflictException,
   Controller,
   ForbiddenException,
   Get,
@@ -77,6 +78,12 @@ export class PublicController {
     }
     if (!tenant.modules.citas) {
       throw new ForbiddenException('Reservas no disponibles para este negocio');
+    }
+    const conflict = this.sqlDb.findAppointmentByTenantAndWhen(tenant.id, dto.when);
+    if (conflict) {
+      throw new ConflictException(
+        'Ese horario ya fue tomado por otra cita. Elige otro horario.',
+      );
     }
     return this.sqlDb.createAppointment({
       tenantId: tenant.id,

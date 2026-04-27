@@ -1,4 +1,6 @@
 :root {
+  --az-shell-max: 1120px;
+  --az-scale: 1;
   --az-primary: #4f46e5;
   --az-primary-hover: #4338ca;
   --az-accent: #06b6d4;
@@ -53,8 +55,50 @@ a:hover {
 }
 
 .az-container {
-  width: min(1120px, 100% - 2rem);
+  width: min(var(--az-shell-max), 100% - 2rem);
   margin-inline: auto;
+}
+
+.az-fluid-shell {
+  width: min(var(--az-shell-max), 100% - 2rem);
+  margin-inline: auto;
+}
+
+.az-adaptive-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.az-adaptive-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.35rem;
+}
+
+.az-adaptive-tab {
+  min-width: 0;
+  text-align: center;
+  padding: clamp(0.4rem, 1.2vw, 0.5rem) clamp(0.4rem, 1vw, 0.55rem);
+  font-size: clamp(0.74rem, 1.6vw, 0.84rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 560px) {
+  .az-adaptive-tabs.mobile-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.28rem;
+  }
+
+  .az-adaptive-tabs.mobile-4 .az-adaptive-tab {
+    font-size: 0.64rem;
+    line-height: 1.1;
+    padding: 0.33rem 0.26rem;
+  }
 }
 
 .az-page {
@@ -96,8 +140,8 @@ a:hover {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.55rem 1.1rem;
-  font-size: 0.9rem;
+  padding: calc(0.55rem * var(--az-scale)) calc(1.1rem * var(--az-scale));
+  font-size: calc(0.9rem * var(--az-scale));
   font-weight: 600;
   font-family: inherit;
   border-radius: var(--az-radius-sm);
@@ -168,7 +212,7 @@ a:hover {
 .az-select {
   width: 100%;
   max-width: 320px;
-  padding: 0.55rem 0.75rem;
+  padding: calc(0.55rem * var(--az-scale)) calc(0.75rem * var(--az-scale));
   border-radius: var(--az-radius-sm);
   border: 1px solid var(--az-border);
   background: var(--az-surface);
@@ -194,20 +238,20 @@ a:hover {
 .az-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: calc(0.875rem * var(--az-scale));
 }
 
 .az-table th,
 .az-table td {
   text-align: left;
-  padding: 0.75rem 1rem;
+  padding: calc(0.75rem * var(--az-scale)) calc(1rem * var(--az-scale));
   border-bottom: 1px solid var(--az-border);
 }
 
 .az-table th {
   font-weight: 600;
   color: var(--az-muted);
-  font-size: 0.75rem;
+  font-size: calc(0.75rem * var(--az-scale));
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -253,6 +297,10 @@ a:hover {
 }
 
 @media (max-width: 900px) {
+  :root {
+    --az-scale: 0.94;
+  }
+
   .az-page {
     padding: 1rem 0 2rem;
   }
@@ -275,17 +323,37 @@ a:hover {
   }
 
   .az-btn {
-    min-height: 38px;
+    min-height: 36px;
+  }
+
+}
+
+@media (max-width: 720px) {
+  :root {
+    --az-scale: 0.88;
+  }
+
+  .az-btn {
+    min-height: 34px;
+  }
+
+  .az-table-wrap {
+    border-radius: var(--az-radius-sm);
+  }
+}
+
+@media (max-width: 560px) {
+  :root {
+    --az-scale: 0.8;
+  }
+
+  .az-btn {
+    min-height: 32px;
   }
 
   .az-table th,
   .az-table td {
-    padding: 0.55rem 0.6rem;
-    font-size: 0.82rem;
-  }
-
-  .az-table th {
-    font-size: 0.68rem;
+    white-space: nowrap;
   }
 }
 

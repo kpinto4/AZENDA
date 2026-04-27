@@ -211,6 +211,28 @@ h3 {
     padding: 0.6rem 0.7rem;
   }
 
+  .toolbar-card .az-btn {
+    min-width: 0;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.78rem;
+  }
+
+  .view-switch,
+  .toolbar-actions {
+    gap: 0.35rem;
+  }
+
+  .layout-control {
+    padding: 0.16rem 0.28rem;
+  }
+
+  .az-select.compact {
+    min-width: 108px;
+    max-width: 124px;
+    height: 30px;
+    font-size: 0.8rem;
+  }
+
   .editor-form {
     grid-template-columns: 1fr;
   }

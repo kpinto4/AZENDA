@@ -37,8 +37,10 @@
       <div class="nav-group">
         <p class="nav-group-title">Equipo y ajustes</p>
         <div class="nav-links-grid">
-          <a routerLink="/app/empleados" routerLinkActive="active">Empleados</a>
-          <a routerLink="/app/configuracion" routerLinkActive="active">Configuración</a>
+          @if (session.role() === 'TENANT_ADMIN') {
+            <a routerLink="/app/empleados" routerLinkActive="active">Empleados</a>
+            <a routerLink="/app/configuracion" routerLinkActive="active">Configuración</a>
+          }
         </div>
       </div>
 

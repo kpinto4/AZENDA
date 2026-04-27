@@ -33,6 +33,10 @@ let TenantAppointmentsService = class TenantAppointmentsService {
         if (!tenant.manualBookingEnabled) {
             throw new common_1.ForbiddenException('La creacion manual de citas esta desactivada en configuracion del negocio');
         }
+        const conflict = this.sqlDb.findAppointmentByTenantAndWhen(user.tenantId, dto.when);
+        if (conflict) {
+            throw new common_1.ConflictException('Ya existe una cita en ese mismo dia y hora. Elige otro horario.');
+        }
         return this.sqlDb.createAppointment({
             tenantId: user.tenantId,
             customer: dto.customer,

@@ -1113,7 +1113,13 @@ export class MockDataService {
     service: string,
     when: string,
     bookingSlug: string,
-  ): void {
+  ): boolean {
+    const occupied = this
+      .appointments()
+      .some((a) => a.tenantSlug === bookingSlug && a.when.trim() === when.trim());
+    if (occupied) {
+      return false;
+    }
     this.addAppointment({
       customer,
       service,
@@ -1122,6 +1128,7 @@ export class MockDataService {
       attendance: 'PENDIENTE',
       tenantSlug: bookingSlug,
     });
+    return true;
   }
 
   addEmployee(name: string, email: string, panelRole: 'ADMIN' | 'EMPLEADO'): void {

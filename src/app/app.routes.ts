@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { superAdminGuard, tenantGuard } from './core/guards/auth.guards';
+import { superAdminGuard, tenantAdminGuard, tenantGuard } from './core/guards/auth.guards';
 
 export const routes: Routes = [
   {
@@ -54,6 +54,7 @@ export const routes: Routes = [
       },
       {
         path: 'empleados',
+        canActivate: [tenantAdminGuard],
         loadComponent: () =>
           import('./features/tenant/pages/employees/tenant-employees.page').then(
             (m) => m.TenantEmployeesComponent,
@@ -61,6 +62,7 @@ export const routes: Routes = [
       },
       {
         path: 'configuracion',
+        canActivate: [tenantAdminGuard],
         loadComponent: () =>
           import('./features/tenant/pages/settings/tenant-settings.page').then(
             (m) => m.TenantSettingsComponent,

@@ -17,6 +17,17 @@
   margin: 0 0 0.5rem;
 }
 
+.manual-create-card {
+  margin-bottom: 0.9rem;
+}
+
+.manual-create-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+  align-items: end;
+}
+
 .cal-sim-card h3 {
   margin-bottom: 0.25rem;
 }
@@ -136,6 +147,10 @@
   flex: 1;
 }
 
+.cal-day-column.empty-day .cal-day-list {
+  min-height: 86px;
+}
+
 .cal-event {
   border-radius: 10px;
   padding: 0.5rem 0.55rem;
@@ -217,4 +232,61 @@
 .status-pill.cancelled {
   border-color: color-mix(in srgb, var(--az-danger, #c62828) 42%, var(--az-border));
   background: color-mix(in srgb, var(--az-danger, #c62828) 12%, var(--az-surface));
+}
+
+@media (max-width: 900px) {
+  .manual-create-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .manual-create-grid .az-btn {
+    grid-column: 1 / -1;
+  }
+
+  .cal-week-board {
+    grid-template-columns: repeat(5, minmax(150px, 1fr));
+    min-width: 760px;
+  }
+
+  .cal-day-head {
+    height: 40px;
+    padding: 0 0.5rem;
+  }
+
+  .cal-day-head .dow {
+    font-size: 0.66rem;
+  }
+
+  .cal-day-head .dom {
+    font-size: 0.86rem;
+  }
+
+  .cal-event {
+    font-size: 0.7rem;
+    padding: 0.42rem 0.45rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .manual-create-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cal-week-board {
+    grid-template-columns: repeat(5, minmax(128px, 1fr));
+    min-width: 650px;
+  }
+
+  .cal-day-list {
+    padding: 0.4rem;
+    gap: 0.35rem;
+  }
+
+  .cal-day-column.empty-day .cal-day-list {
+    min-height: 62px;
+  }
+
+  .cal-event {
+    font-size: 0.66rem;
+  }
 }

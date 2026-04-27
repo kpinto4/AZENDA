@@ -1,8 +1,10 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, computed, effect, inject, signal, untracked } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   ApiAppointmentsService,
   mapApiAppointmentToMock,
 } from '../../core/services/api-appointments.service';
+import { ApiTenantCatalogService } from '../../core/services/api-tenant-catalog.service';
 import {
   MockAppointment,
   MockAppointmentAttendance,
@@ -99,14 +101,44 @@ function eventTone(a: MockAppointment): 'primary' | 'accent' | 'neutral' {
 
 @Component({
   selector: 'app-tenant-appointments',
-  imports: [],
+  imports: [ReactiveFormsModule],
   templateUrl: './tenant-appointments.component.html',
   styleUrl: './tenant-appointments.component.scss',
 })
 export class TenantAppointmentsComponent {
+  @ViewChild('calWeekScrollEl') private calWeekScrollEl?: ElementRef<HTMLDivElement>;
+  private readonly fb = inject(FormBuilder);
   readonly data = inject(MockDataService);
   readonly session = inject(MockSessionService);
   readonly apiAppointments = inject(ApiAppointmentsService);
+  private readonly apiCatalog = inject(ApiTenantCatalogService);
+  readonly createMsg = signal<string | null>(null);
+  readonly createErr = signal<string | null>(null);
+  readonly creatingAppointment = signal(false);
+  readonly liveServiceOptions = signal<string[]>([]);
+
+  readonly createForm = this.fb.nonNullable.group({
+    customer: ['', [Validators.required, Validators.minLength(2)]],
+    service: ['', [Validators.required, Validators.minLength(2)]],
+    date: ['', Validators.required],
+    time: ['09:00', Validators.required],
+  });
+
+  readonly canCreateManualAppointment = computed(
+    () =>
+      this.session.role() === 'EMPLOYEE' && this.session.manualBookingEnabled(),
+  );
+  readonly showManualCreateCard = computed(() => this.canCreateManualAppointment());
+  readonly manualServiceOptions = computed(() => {
+    if (this.apiAppointments.useRemote()) {
+      return this.liveServiceOptions();
+    }
+    const slug = this.session.publicBookingSlug();
+    if (!slug) {
+      return [];
+    }
+    return this.data.listBusinessServicesForSlug(slug).map((s) => s.name);
+  });
 
   readonly tenantAppointments = computed(() => {
     if (this.apiAppointments.useRemote()) {
@@ -156,8 +188,59 @@ export class TenantAppointmentsComponent {
     };
   });
 
+  readonly calGridTemplate = computed(() =>
+    this.calendarWeek()
+      .days.map((d) => (d.events.length ? 'minmax(162px, 1fr)' : 'minmax(100px, 0.62fr)'))
+      .join(' '),
+  );
+
+  readonly calBoardMinWidth = computed(() =>
+    Math.max(650, this.calendarWeek().days.reduce((acc, d) => acc + (d.events.length ? 162 : 100), 0)),
+  );
+
+  constructor() {
+    effect(() => {
+      this.calendarWeek();
+      queueMicrotask(() => this.scrollCalendarToToday());
+    });
+    effect((onCleanup) => {
+      if (!this.apiAppointments.useRemote()) {
+        return;
+      }
+      const refresh = () => {
+        untracked(() => this.session.refreshTenantModulesFromApi().subscribe({ error: () => {} }));
+      };
+      refresh();
+      const timer = setInterval(refresh, 15000);
+      onCleanup(() => clearInterval(timer));
+    });
+    effect(() => {
+      if (!this.apiAppointments.useRemote()) {
+        this.liveServiceOptions.set([]);
+        return;
+      }
+      this.apiCatalog.getCatalog().subscribe({
+        next: (res) => this.liveServiceOptions.set(res.services.map((s) => s.name)),
+        error: () => this.liveServiceOptions.set([]),
+      });
+    });
+  }
+
   shiftCalWeek(delta: number): void {
     this.calWeekOffset.update((o) => o + delta);
+  }
+
+  private scrollCalendarToToday(): void {
+    const host = this.calWeekScrollEl?.nativeElement;
+    if (!host) {
+      return;
+    }
+    const todayEl = host.querySelector('.cal-day-column.today') as HTMLElement | null;
+    if (todayEl) {
+      todayEl.scrollIntoView({ block: 'nearest', inline: 'center' });
+      return;
+    }
+    host.scrollLeft = 0;
   }
 
   statusLabel(status: MockAppointment['status']): string {
@@ -177,5 +260,70 @@ export class TenantAppointmentsComponent {
     } else {
       this.data.setAppointmentAttendance(id, attendance);
     }
+  }
+
+  createAppointment(): void {
+    this.createMsg.set(null);
+    this.createErr.set(null);
+    if (this.createForm.invalid) {
+      this.createForm.markAllAsTouched();
+      return;
+    }
+    const v = this.createForm.getRawValue();
+    if (!v.service.trim()) {
+      this.createErr.set('Debes seleccionar un servicio.');
+      return;
+    }
+    const when = `${v.date} ${v.time}`;
+    if (this.apiAppointments.useRemote()) {
+      this.creatingAppointment.set(true);
+      this.session.refreshTenantModulesFromApi().subscribe({
+        next: () => {
+          if (!this.canCreateManualAppointment()) {
+            this.creatingAppointment.set(false);
+            this.createErr.set('La creación manual fue desactivada por el admin.');
+            return;
+          }
+          this.apiAppointments
+            .create({
+              customer: v.customer.trim(),
+              service: v.service.trim(),
+              when,
+            })
+            .subscribe({
+              next: () => {
+                this.creatingAppointment.set(false);
+                this.createMsg.set('Cita creada correctamente.');
+                this.createForm.patchValue({ customer: '', service: '', time: '09:00' });
+              },
+              error: () => {
+                this.creatingAppointment.set(false);
+                this.createErr.set('No se pudo crear la cita. Revisa permisos o conexión.');
+              },
+            });
+        },
+        error: () => {
+          this.creatingAppointment.set(false);
+          this.createErr.set('No se pudo validar permisos en tiempo real.');
+        },
+      });
+      return;
+    }
+    if (!this.canCreateManualAppointment()) {
+      this.createErr.set('No tienes permisos para crear citas manuales.');
+      return;
+    }
+    const slug = this.session.publicBookingSlug();
+    if (!slug) {
+      this.createErr.set('No hay negocio activo para registrar la cita.');
+      return;
+    }
+    const created = this.data.recordBooking(v.customer.trim(), v.service.trim(), when, slug);
+    if (!created) {
+      this.createErr.set('Ya existe una cita en ese mismo día y hora.');
+      return;
+    }
+    this.createMsg.set('Cita creada (modo demo).');
+    this.createForm.patchValue({ customer: '', service: '', time: '09:00' });
   }
 }

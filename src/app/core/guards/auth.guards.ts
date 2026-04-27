@@ -25,3 +25,12 @@ export const tenantGuard: CanActivateFn = () => {
   }
   return toLogin(router, '/app');
 };
+
+export const tenantAdminGuard: CanActivateFn = () => {
+  const session = inject(MockSessionService);
+  const router = inject(Router);
+  if (session.role() === 'TENANT_ADMIN') {
+    return true;
+  }
+  return router.createUrlTree(['/app/panel']);
+};

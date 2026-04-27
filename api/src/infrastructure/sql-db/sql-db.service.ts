@@ -368,6 +368,23 @@ export class SqlDbService {
     };
   }
 
+  findAppointmentByTenantAndWhen(
+    tenantId: string,
+    when: string,
+  ): AppointmentEntity | undefined {
+    const row = this.db
+      .prepare(
+        `
+        SELECT id, tenant_id, customer, service, when_at, status, attendance
+        FROM appointments
+        WHERE tenant_id = ? AND when_at = ?
+        LIMIT 1
+      `,
+      )
+      .get(tenantId, when);
+    return row ? this.mapAppointmentRow(row) : undefined;
+  }
+
   findAppointmentById(appointmentId: string): AppointmentEntity | undefined {
     const row = this.db
       .prepare(

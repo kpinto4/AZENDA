@@ -29,6 +29,7 @@ export declare class SqlDbService {
         status?: AppointmentStatus;
         attendance?: AppointmentAttendance;
     }): AppointmentEntity;
+    findAppointmentByTenantAndWhen(tenantId: string, when: string): AppointmentEntity | undefined;
     findAppointmentById(appointmentId: string): AppointmentEntity | undefined;
     updateAppointmentStatus(appointmentId: string, tenantId: string, status: AppointmentStatus): AppointmentEntity | undefined;
     updateAppointmentAttendance(appointmentId: string, tenantId: string, attendance: AppointmentAttendance): AppointmentEntity | undefined;

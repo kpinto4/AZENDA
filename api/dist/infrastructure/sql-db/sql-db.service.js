@@ -230,6 +230,17 @@ let SqlDbService = class SqlDbService {
             attendance,
         };
     }
+    findAppointmentByTenantAndWhen(tenantId, when) {
+        const row = this.db
+            .prepare(`
+        SELECT id, tenant_id, customer, service, when_at, status, attendance
+        FROM appointments
+        WHERE tenant_id = ? AND when_at = ?
+        LIMIT 1
+      `)
+            .get(tenantId, when);
+        return row ? this.mapAppointmentRow(row) : undefined;
+    }
     findAppointmentById(appointmentId) {
         const row = this.db
             .prepare(`
