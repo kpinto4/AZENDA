@@ -9,6 +9,7 @@ import { environment } from '../../../environments/environment';
 import { ApiAppointmentsService } from '../../core/services/api-appointments.service';
 import {
   ApiPublicMetaService,
+  PublicCatalogDto,
   PublicTenantMetaDto,
 } from '../../core/services/api-public-meta.service';
 import { MockDataService } from '../../core/services/mock-data.service';
@@ -40,6 +41,7 @@ export class PublicBookingPageComponent {
   private readonly apiPublic = inject(ApiPublicMetaService);
 
   readonly publicMeta = signal<PublicTenantMetaDto | null>(null);
+  readonly publicCatalog = signal<PublicCatalogDto | null>(null);
 
   readonly slug = toSignal(
     this.route.paramMap.pipe(map((p) => p.get('slug') ?? 'negocio')),
@@ -51,9 +53,20 @@ export class PublicBookingPageComponent {
     { initialValue: tabFromQuery(this.route.snapshot.queryParamMap.get('tab')) },
   );
 
-  readonly tenantServices = computed(() =>
-    this.data.servicesForBookingSlug(this.slug()),
-  );
+  readonly tenantServices = computed(() => {
+    if (environment.useLiveAuth) {
+      const services = this.publicCatalog()?.services ?? [];
+      return services.map((s) => {
+        const base = `${s.name} · $${Number(s.price).toFixed(2)}`;
+        if (s.promoPrice != null) {
+          const promo = `$${Number(s.promoPrice).toFixed(2)}`;
+          return `${base} · Promo ${promo}${s.promoLabel ? ` (${s.promoLabel})` : ''}`;
+        }
+        return base;
+      });
+    }
+    return this.data.servicesForBookingSlug(this.slug());
+  });
 
   readonly catalogoVisible = computed(() => {
     if (environment.useLiveAuth) {
@@ -70,8 +83,35 @@ export class PublicBookingPageComponent {
   });
 
   /** Productos del negocio de este slug, en el orden definido en el panel Catálogo. */
-  readonly catalogProducts = computed(() => this.data.catalogProductsForBookingSlug(this.slug()));
-  readonly branding = computed(() => this.data.brandingForBookingSlug(this.slug()));
+  readonly catalogProducts = computed(() =>
+    environment.useLiveAuth
+      ? (this.publicCatalog()?.products ?? [])
+      : this.data.catalogProductsForBookingSlug(this.slug()),
+  );
+  readonly branding = computed(() => {
+    if (environment.useLiveAuth) {
+      const b = this.publicCatalog()?.branding ?? this.publicMeta()?.branding;
+      if (b) {
+        return {
+          displayName: b.displayName,
+          logoUrl: b.logoUrl,
+          catalogLayout: b.catalogLayout,
+          primaryColor: b.primaryColor,
+          accentColor: b.accentColor,
+          bgColor: b.bgColor,
+          surfaceColor: b.surfaceColor,
+          textColor: b.textColor,
+          borderRadiusPx: b.borderRadiusPx,
+          useGradient: b.useGradient,
+          gradientFrom: b.gradientFrom,
+          gradientTo: b.gradientTo,
+          gradientAngleDeg: b.gradientAngleDeg,
+        };
+      }
+    }
+    return this.data.brandingForBookingSlug(this.slug());
+  });
+  readonly catalogLayout = computed(() => this.branding().catalogLayout ?? 'horizontal');
   readonly styleVars = computed(() =>
     this.data.brandingCssVars(this.branding(), this.session.darkMode()),
   );
@@ -124,6 +164,10 @@ export class PublicBookingPageComponent {
         this.apiPublic.getMeta(slug).subscribe({
           next: (m) => this.publicMeta.set(m),
           error: () => this.publicMeta.set(null),
+        });
+        this.apiPublic.getCatalog(slug).subscribe({
+          next: (c) => this.publicCatalog.set(c),
+          error: () => this.publicCatalog.set(null),
         });
       });
     });

@@ -1,4 +1,4 @@
-<div class="shell" [ngStyle]="shellStyleVars()" [class.nav-open]="menuOpen()">
+<div class="shell tenant-shell" [ngStyle]="shellStyleVars()" [class.nav-open]="menuOpen()">
   <div class="sidebar-backdrop" (click)="closeMenu()" aria-hidden="true"></div>
   <aside class="sidebar" id="tenant-nav-drawer" role="navigation" aria-label="Menú del panel">
     <div class="drawer-head-mobile">
@@ -28,8 +28,7 @@
               <a routerLink="/app/ventas" routerLinkActive="active">Ventas</a>
             }
             @if (session.modules().inventory) {
-              <a routerLink="/app/inventario" routerLinkActive="active">Inventario</a>
-              <a routerLink="/app/catalogo" routerLinkActive="active">Catálogo</a>
+              <a routerLink="/app/inventario" routerLinkActive="active">Productos y servicios</a>
             }
           </div>
         </div>

@@ -50,10 +50,7 @@ export const routes: Routes = [
       },
       {
         path: 'catalogo',
-        loadComponent: () =>
-          import('./features/tenant/pages/catalog/tenant-catalog.page').then(
-            (m) => m.TenantCatalogComponent,
-          ),
+        redirectTo: 'inventario',
       },
       {
         path: 'empleados',

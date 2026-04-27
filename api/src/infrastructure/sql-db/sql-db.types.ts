@@ -52,3 +52,44 @@ export interface StoreVisitLogEntity {
   detail: string;
   createdAt: string;
 }
+
+export interface TenantBrandingEntity {
+  tenantId: string;
+  displayName: string;
+  logoUrl: string | null;
+  catalogLayout: 'horizontal' | 'grid';
+  primaryColor: string;
+  accentColor: string;
+  bgColor: string;
+  surfaceColor: string;
+  textColor: string;
+  borderRadiusPx: number;
+  useGradient: boolean;
+  gradientFrom: string;
+  gradientTo: string;
+  gradientAngleDeg: number;
+}
+
+export interface TenantProductEntity {
+  id: string;
+  tenantId: string;
+  name: string;
+  description: string | null;
+  price: number;
+  promoPrice: number | null;
+  sku: string;
+  stock: number;
+  catalogOrder: number;
+  imageUrl: string | null;
+}
+
+export interface TenantServiceEntity {
+  id: string;
+  tenantId: string;
+  name: string;
+  description: string | null;
+  price: number;
+  promoPrice: number | null;
+  promoLabel: string | null;
+  catalogOrder: number;
+}

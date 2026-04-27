@@ -7,6 +7,7 @@ const TENANT_CUSTOMIZATION_LS_KEY = 'azenda.mock.tenant.customization.v1';
 export interface TenantBranding {
   displayName: string;
   logoUrl: string | null;
+  catalogLayout: 'horizontal' | 'grid';
   primaryColor: string;
   accentColor: string;
   bgColor: string;
@@ -41,6 +42,9 @@ function parseProductsFromJsonString(raw: string): MockProduct[] | null {
         id: o['id'],
         tenantId: o['tenantId'],
         name: String(o['name'] ?? '').trim() || 'Producto',
+        price: Math.max(0, Number(o['price']) || 0),
+        promoPrice:
+          o['promoPrice'] == null ? null : Math.max(0, Number(o['promoPrice']) || 0),
         sku: String(o['sku'] ?? '').trim() || '—',
         stock,
         lowStock: typeof o['lowStock'] === 'boolean' ? o['lowStock'] : stock < 5,
@@ -93,6 +97,15 @@ function loadTenantCustomizationMap(): Record<string, TenantBrandingPatch> {
 
 export type TenantModuleKey = 'citas' | 'ventas' | 'inventario';
 
+export interface MockBusinessService {
+  id: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  promoPrice?: number | null;
+  promoLabel?: string | null;
+}
+
 export interface MockTenant {
   id: string;
   name: string;
@@ -144,6 +157,9 @@ export interface MockProduct {
   /** Id del tenant mock (`t1`…) dueño del producto. */
   tenantId: string;
   name: string;
+  description?: string | null;
+  price: number;
+  promoPrice?: number | null;
   sku: string;
   stock: number;
   lowStock: boolean;
@@ -156,8 +172,8 @@ export interface MockProduct {
 export interface MockEmployee {
   id: string;
   name: string;
-  role: string;
-  services: string[];
+  email: string;
+  panelRole: 'ADMIN' | 'EMPLEADO';
 }
 
 export interface MockStockMovement {
@@ -237,6 +253,7 @@ function defaultTenantBranding(name: string): TenantBranding {
   return {
     displayName: name,
     logoUrl: null,
+    catalogLayout: 'horizontal',
     primaryColor: '#4f46e5',
     accentColor: '#06b6d4',
     bgColor: '#f8fafc',
@@ -369,6 +386,9 @@ function initialProducts(): MockProduct[] {
       id: 'p1',
       tenantId: 't1',
       name: 'Champú profesional',
+      description: 'Uso diario para limpieza profunda.',
+      price: 12,
+      promoPrice: null,
       sku: 'SKU-001',
       stock: 24,
       lowStock: false,
@@ -379,6 +399,9 @@ function initialProducts(): MockProduct[] {
       id: 'p2',
       tenantId: 't1',
       name: 'Cera mate',
+      description: 'Fijación media con acabado natural.',
+      price: 9,
+      promoPrice: 7.5,
       sku: 'SKU-014',
       stock: 4,
       lowStock: true,
@@ -389,6 +412,9 @@ function initialProducts(): MockProduct[] {
       id: 'p3',
       tenantId: 't1',
       name: 'Toallas desechables',
+      description: 'Pack higiénico para servicio rápido.',
+      price: 6,
+      promoPrice: null,
       sku: 'SKU-022',
       stock: 120,
       lowStock: false,
@@ -400,8 +426,8 @@ function initialProducts(): MockProduct[] {
 
 function initialEmployees(): MockEmployee[] {
   return [
-    { id: 'e1', name: 'Carlos Ruiz', role: 'Barbero', services: ['Corte', 'Barba'] },
-    { id: 'e2', name: 'Laura Sánchez', role: 'Colorista', services: ['Tinte', 'Mechas'] },
+    { id: 'e1', name: 'Carlos Ruiz', email: 'carlos@barberia.demo', panelRole: 'EMPLEADO' },
+    { id: 'e2', name: 'Laura Sánchez', email: 'laura@barberia.demo', panelRole: 'ADMIN' },
   ];
 }
 
@@ -451,44 +477,59 @@ function initialCatalog(): MockCatalogModule[] {
 }
 
 /** Catálogo inicial de servicios por slug de reserva (cada negocio distinto). */
-function initialTenantServiceCatalogs(): Record<string, string[]> {
+function initialTenantServiceCatalogs(): Record<string, MockBusinessService[]> {
   return {
     'barberia-centro': [
-      'Corte clásico',
-      'Corte degradado / fade',
-      'Corte + barba',
-      'Arreglo de barba',
-      'Peinado evento',
+      { id: 'svc-b-1', name: 'Corte clásico', description: 'Corte tradicional con acabado limpio.', price: 15, promoPrice: null, promoLabel: null },
+      { id: 'svc-b-2', name: 'Corte degradado / fade', description: 'Degradado progresivo personalizado.', price: 18, promoPrice: 16, promoLabel: 'Promo tarde' },
+      { id: 'svc-b-3', name: 'Corte + barba', price: 24, promoPrice: null, promoLabel: null },
+      { id: 'svc-b-4', name: 'Arreglo de barba', price: 12, promoPrice: null, promoLabel: null },
+      { id: 'svc-b-5', name: 'Peinado evento', price: 20, promoPrice: null, promoLabel: null },
     ],
     'spa-relax': [
-      'Masaje relajante 60 min',
-      'Masaje descontracturante',
-      'Facial hidratante',
-      'Circuito spa 90 min',
-      'Envoltura corporal',
+      { id: 'svc-s-1', name: 'Masaje relajante 60 min', description: 'Sesión de relajación corporal integral.', price: 45, promoPrice: 39, promoLabel: 'Lunes a jueves' },
+      { id: 'svc-s-2', name: 'Masaje descontracturante', price: 50, promoPrice: null, promoLabel: null },
+      { id: 'svc-s-3', name: 'Facial hidratante', description: 'Limpieza e hidratación profunda facial.', price: 38, promoPrice: null, promoLabel: null },
+      { id: 'svc-s-4', name: 'Circuito spa 90 min', price: 65, promoPrice: 58, promoLabel: 'Pack bienestar' },
+      { id: 'svc-s-5', name: 'Envoltura corporal', price: 42, promoPrice: null, promoLabel: null },
     ],
     'clinica-demo': [
-      'Consulta primera visita',
-      'Control / seguimiento',
-      'Teleconsulta',
-      'Informe o certificado',
+      { id: 'svc-c-1', name: 'Consulta primera visita', description: 'Evaluación inicial del caso y plan.', price: 55, promoPrice: null, promoLabel: null },
+      { id: 'svc-c-2', name: 'Control / seguimiento', price: 40, promoPrice: null, promoLabel: null },
+      { id: 'svc-c-3', name: 'Teleconsulta', price: 35, promoPrice: 30, promoLabel: 'Campaña digital' },
+      { id: 'svc-c-4', name: 'Informe o certificado', price: 25, promoPrice: null, promoLabel: null },
     ],
   };
 }
 
 /** Servicios por defecto al crear un negocio nuevo (según nombre). */
-export function defaultServicesForNewTenant(businessName: string): string[] {
+export function defaultServicesForNewTenant(businessName: string): MockBusinessService[] {
   const n = businessName.toLowerCase();
   if (n.includes('spa')) {
-    return ['Masaje 60 min', 'Masaje 90 min', 'Tratamiento facial'];
+    return [
+      { id: `svc-${Date.now()}-1`, name: 'Masaje 60 min', price: 45, promoPrice: null, promoLabel: null },
+      { id: `svc-${Date.now()}-2`, name: 'Masaje 90 min', price: 60, promoPrice: null, promoLabel: null },
+      { id: `svc-${Date.now()}-3`, name: 'Tratamiento facial', price: 38, promoPrice: null, promoLabel: null },
+    ];
   }
   if (n.includes('clín') || n.includes('clin')) {
-    return ['Consulta general', 'Control', 'Teleconsulta'];
+    return [
+      { id: `svc-${Date.now()}-1`, name: 'Consulta general', price: 50, promoPrice: null, promoLabel: null },
+      { id: `svc-${Date.now()}-2`, name: 'Control', price: 35, promoPrice: null, promoLabel: null },
+      { id: `svc-${Date.now()}-3`, name: 'Teleconsulta', price: 30, promoPrice: null, promoLabel: null },
+    ];
   }
   if (n.includes('barber') || n.includes('pelu')) {
-    return ['Corte caballero', 'Corte + barba', 'Arreglo de barba'];
+    return [
+      { id: `svc-${Date.now()}-1`, name: 'Corte caballero', price: 15, promoPrice: null, promoLabel: null },
+      { id: `svc-${Date.now()}-2`, name: 'Corte + barba', price: 24, promoPrice: null, promoLabel: null },
+      { id: `svc-${Date.now()}-3`, name: 'Arreglo de barba', price: 12, promoPrice: null, promoLabel: null },
+    ];
   }
-  return ['Servicio principal', 'Servicio adicional (edita en Configuración)'];
+  return [
+    { id: `svc-${Date.now()}-1`, name: 'Servicio principal', price: 30, promoPrice: null, promoLabel: null },
+    { id: `svc-${Date.now()}-2`, name: 'Servicio adicional', price: 20, promoPrice: null, promoLabel: null },
+  ];
 }
 
 function modulesFromApiShape(m: {
@@ -533,7 +574,7 @@ export class MockDataService {
   );
 
   /** Servicios ofrecidos en reserva pública y citas, por `bookingSlug`. */
-  readonly tenantServiceCatalogs = signal<Record<string, string[]>>(
+  readonly tenantServiceCatalogs = signal<Record<string, MockBusinessService[]>>(
     initialTenantServiceCatalogs(),
   );
 
@@ -814,22 +855,89 @@ export class MockDataService {
     this.ensureDefaultServicesForSlug(row.bookingSlug, nm);
   }
 
-  /** Lista de servicios del negocio para reserva pública / citas. */
+  /** Lista de servicios formateada para reserva pública / citas. */
   servicesForBookingSlug(slug: string): string[] {
     const cat = this.tenantServiceCatalogs()[slug];
     if (cat?.length) {
-      return [...cat];
+      return cat.map((s) => this.serviceDisplayLabel(s));
     }
-    return ['Configura tus servicios en Panel → Configuración'];
+    return ['Configura tus servicios en Panel → Catálogo'];
   }
 
-  /** Reemplaza el catálogo de servicios de un slug (una línea = un servicio en UI de ajustes). */
+  listBusinessServicesForSlug(slug: string): MockBusinessService[] {
+    return [...(this.tenantServiceCatalogs()[slug] ?? [])];
+  }
+
+  createBusinessService(
+    slug: string,
+    data: { name: string; description?: string | null; price: number; promoPrice?: number | null; promoLabel?: string | null },
+  ): void {
+    const name = data.name.trim();
+    if (!name) {
+      return;
+    }
+    const price = Math.max(0, Number(data.price) || 0);
+    const promoPrice =
+      data.promoPrice == null ? null : Math.max(0, Number(data.promoPrice) || 0);
+    const promoLabel = data.promoLabel?.trim() || null;
+    const row: MockBusinessService = {
+      id: `svc_${Date.now()}`,
+      name,
+      description: data.description?.trim() || null,
+      price,
+      promoPrice,
+      promoLabel,
+    };
+    this.tenantServiceCatalogs.update((m) => ({ ...m, [slug]: [...(m[slug] ?? []), row] }));
+  }
+
+  updateBusinessService(
+    slug: string,
+    serviceId: string,
+    patch: { name: string; description?: string | null; price: number; promoPrice?: number | null; promoLabel?: string | null },
+  ): void {
+    this.tenantServiceCatalogs.update((m) => ({
+      ...m,
+      [slug]: (m[slug] ?? []).map((s) =>
+        s.id === serviceId
+          ? {
+              ...s,
+              name: patch.name.trim(),
+              description: patch.description?.trim() || null,
+              price: Math.max(0, Number(patch.price) || 0),
+              promoPrice:
+                patch.promoPrice == null
+                  ? null
+                  : Math.max(0, Number(patch.promoPrice) || 0),
+              promoLabel: patch.promoLabel?.trim() || null,
+            }
+          : s,
+      ),
+    }));
+  }
+
+  deleteBusinessService(slug: string, serviceId: string): void {
+    this.tenantServiceCatalogs.update((m) => ({
+      ...m,
+      [slug]: (m[slug] ?? []).filter((s) => s.id !== serviceId),
+    }));
+  }
+
+  /** Compatibilidad con flujos antiguos de texto libre. */
   setServicesForBookingSlug(slug: string, serviceNames: string[]): void {
     const cleaned = serviceNames.map((s) => s.trim()).filter(Boolean);
     if (!cleaned.length) {
       return;
     }
-    this.tenantServiceCatalogs.update((m) => ({ ...m, [slug]: cleaned }));
+    const next: MockBusinessService[] = cleaned.map((name, idx) => ({
+      id: `svc_txt_${Date.now()}_${idx}`,
+      name,
+      description: null,
+      price: 0,
+      promoPrice: null,
+      promoLabel: null,
+    }));
+    this.tenantServiceCatalogs.update((m) => ({ ...m, [slug]: next }));
   }
 
   /** Si no hay catálogo para el slug, crea uno por defecto según el nombre del negocio. */
@@ -840,6 +948,17 @@ export class MockDataService {
       }
       return { ...m, [slug]: defaultServicesForNewTenant(businessName) };
     });
+  }
+
+  private serviceDisplayLabel(s: MockBusinessService): string {
+    const desc = s.description?.trim() ? ` — ${s.description.trim()}` : '';
+    const base = `${s.name}${desc} · $${s.price.toFixed(2)}`;
+    if (s.promoPrice != null) {
+      const promo = `$${Number(s.promoPrice).toFixed(2)}`;
+      const tag = s.promoLabel ? ` (${s.promoLabel})` : '';
+      return `${base} · Promo ${promo}${tag}`;
+    }
+    return base;
   }
 
   setTenantActive(id: string, active: boolean): void {
@@ -1005,13 +1124,12 @@ export class MockDataService {
     });
   }
 
-  addEmployee(name: string, role: string, servicesCsv: string): void {
+  addEmployee(name: string, email: string, panelRole: 'ADMIN' | 'EMPLEADO'): void {
     const id = `e${Date.now()}`;
-    const services = servicesCsv
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    this.employees.update((list) => [...list, { id, name: name.trim(), role: role.trim(), services }]);
+    this.employees.update((list) => [
+      ...list,
+      { id, name: name.trim(), email: email.trim().toLowerCase(), panelRole },
+    ]);
   }
 
   /** Productos de un tenant mock, ordenados para inventario / ventas. */
@@ -1033,7 +1151,15 @@ export class MockDataService {
 
   addProduct(
     tenantId: string,
-    input: { name: string; sku: string; stock: number; imageUrl?: string | null },
+    input: {
+      name: string;
+      description?: string | null;
+      price: number;
+      promoPrice?: number | null;
+      sku: string;
+      stock: number;
+      imageUrl?: string | null;
+    },
   ): string {
     const id = `p${Date.now()}`;
     const orders = this.products()
@@ -1045,6 +1171,9 @@ export class MockDataService {
       id,
       tenantId,
       name: input.name.trim(),
+      description: input.description?.trim() || null,
+      price: Math.max(0, Number(input.price) || 0),
+      promoPrice: input.promoPrice == null ? null : Math.max(0, Number(input.promoPrice) || 0),
       sku: input.sku.trim(),
       stock,
       lowStock: stock < LOW_STOCK_BELOW,
@@ -1053,6 +1182,48 @@ export class MockDataService {
     };
     this.mutateProducts((list) => [...list, row]);
     return id;
+  }
+
+  updateProduct(
+    tenantId: string,
+    productId: string,
+    patch: {
+      name: string;
+      description?: string | null;
+      price: number;
+      promoPrice?: number | null;
+      sku: string;
+      stock: number;
+      imageUrl?: string | null;
+    },
+  ): void {
+    this.mutateProducts((list) =>
+      list.map((p) => {
+        if (p.id !== productId || p.tenantId !== tenantId) {
+          return p;
+        }
+        const stock = Math.max(0, Math.floor(Number(patch.stock)) || 0);
+        return {
+          ...p,
+          name: patch.name.trim(),
+          description: patch.description?.trim() || null,
+          price: Math.max(0, Number(patch.price) || 0),
+          promoPrice:
+            patch.promoPrice == null ? null : Math.max(0, Number(patch.promoPrice) || 0),
+          sku: patch.sku.trim(),
+          stock,
+          lowStock: stock < LOW_STOCK_BELOW,
+          imageUrl: patch.imageUrl ?? null,
+        };
+      }),
+    );
+  }
+
+  deleteProduct(tenantId: string, productId: string): void {
+    this.mutateProducts((list) =>
+      list.filter((p) => !(p.id === productId && p.tenantId === tenantId)),
+    );
+    this.stockMovements.update((m) => m.filter((row) => row.productId !== productId));
   }
 
   setProductImage(tenantId: string, productId: string, imageUrl: string | null): void {
@@ -1083,6 +1254,21 @@ export class MockDataService {
         return p;
       }),
     );
+  }
+
+  moveBusinessService(slug: string, serviceId: string, direction: -1 | 1): void {
+    this.tenantServiceCatalogs.update((m) => {
+      const list = [...(m[slug] ?? [])];
+      const idx = list.findIndex((s) => s.id === serviceId);
+      const j = idx + direction;
+      if (idx < 0 || j < 0 || j >= list.length) {
+        return m;
+      }
+      const tmp = list[idx];
+      list[idx] = list[j];
+      list[j] = tmp;
+      return { ...m, [slug]: list };
+    });
   }
 
   /** Movimiento manual de stock (entrada/salida simulada), solo si el producto pertenece al tenant. */

@@ -18,6 +18,81 @@
     <p class="field-error">{{ imageHint() }}</p>
   }
 
+  @if (session.publicBookingSlug()) {
+    <div class="az-card services-card">
+      <h3>Servicios del negocio</h3>
+      <p class="muted">
+        CRUD de servicios con precio y promoción para reservas/citas.
+      </p>
+      <form [formGroup]="servicesForm" (ngSubmit)="saveServicesCatalog()" class="services-form">
+        <div>
+          <label class="az-label" for="svc-name">Servicio</label>
+          <input id="svc-name" class="az-input wide" formControlName="name" placeholder="Ej. Masaje relajante 60 min" />
+        </div>
+        <div>
+          <label class="az-label" for="svc-price">Precio base</label>
+          <input id="svc-price" class="az-input" type="number" min="0" step="0.01" formControlName="price" />
+        </div>
+        <div class="grow">
+          <label class="az-label" for="svc-desc">Descripción corta (opcional)</label>
+          <input id="svc-desc" class="az-input wide" formControlName="description" placeholder="Ej. Incluye lavado y peinado básico" />
+        </div>
+        <div>
+          <label class="az-label" for="svc-promo-price">Precio promo (opcional)</label>
+          <input id="svc-promo-price" class="az-input" type="number" min="0" step="0.01" formControlName="promoPrice" />
+        </div>
+        <div class="grow">
+          <label class="az-label" for="svc-promo-label">Promoción (opcional)</label>
+          <input id="svc-promo-label" class="az-input wide" formControlName="promoLabel" placeholder="Ej. Promo lunes a jueves" />
+        </div>
+        <div class="actions">
+          <button type="submit" class="az-btn az-btn-primary">
+            {{ editingServiceId() ? 'Actualizar servicio' : 'Agregar servicio' }}
+          </button>
+          @if (editingServiceId()) {
+            <button type="button" class="az-btn az-btn-secondary" (click)="cancelEditService()">Cancelar edición</button>
+          }
+        </div>
+      </form>
+      <div class="az-table-wrap mt">
+        <table class="az-table">
+          <thead>
+            <tr>
+              <th>Servicio</th>
+              <th>Descripción</th>
+              <th>Precio base</th>
+              <th>Precio promo</th>
+              <th>Promoción</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of businessServices(); track s.id) {
+              <tr>
+                <td>{{ s.name }}</td>
+                <td>{{ s.description || '—' }}</td>
+                <td>${{ s.price.toFixed(2) }}</td>
+                <td>{{ s.promoPrice != null ? ('$' + s.promoPrice.toFixed(2)) : '—' }}</td>
+                <td>{{ s.promoLabel || '—' }}</td>
+                <td class="row-actions">
+                  <button type="button" class="az-btn az-btn-secondary small" (click)="editService(s)">Editar</button>
+                  <button type="button" class="az-btn az-btn-ghost small" (click)="removeService(s.id)">Eliminar</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6">Aún no hay servicios cargados.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (servicesMsg()) {
+        <p class="services-msg">{{ servicesMsg() }}</p>
+      }
+    </div>
+  }
+
   <div class="az-card">
     <h3>Orden en la vitrina</h3>
     <p class="muted">El primero de la lista es el que aparece arriba en el área cliente.</p>

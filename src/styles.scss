@@ -343,3 +343,28 @@ a:hover {
 .az-demo-banner .banner-reset:hover {
   background: rgb(255 255 255 / 0.35);
 }
+
+/* Tenant panel: grid adaptativo para evitar bloques largos en columna. */
+.tenant-shell .main .tenant-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 1rem;
+}
+
+.tenant-shell .main .tenant-cards-grid > .az-card {
+  margin: 0;
+  height: 100%;
+  padding: 0.95rem 1rem;
+}
+
+.tenant-shell .main .tenant-cards-grid > .az-card.span-2 {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 760px) {
+  .tenant-shell .main .tenant-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}

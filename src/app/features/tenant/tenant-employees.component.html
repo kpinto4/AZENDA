@@ -2,47 +2,106 @@
   <div class="az-page-head">
     <div>
       <h1 class="az-page-title">Empleados</h1>
-      <p class="az-page-sub">Simulación: alta inmediata en la tabla. Horarios y permisos serán del backend.</p>
+      <p class="az-page-sub">Gestiona el acceso del equipo al mini panel con correo, rol y credenciales.</p>
     </div>
   </div>
 
-  <div class="az-card form-card">
-    <h3>Añadir empleado (mock)</h3>
-    <form [formGroup]="form" (ngSubmit)="invite()" class="emp-form">
-      <div>
-        <label class="az-label" for="nm">Nombre</label>
-        <input id="nm" class="az-input wide" formControlName="name" />
-      </div>
-      <div>
-        <label class="az-label" for="rl">Rol</label>
-        <input id="rl" class="az-input wide" formControlName="role" placeholder="ej. Barbero" />
-      </div>
-      <div class="grow">
-        <label class="az-label" for="sv">Servicios (separados por coma)</label>
-        <input id="sv" class="az-input wide" formControlName="services" />
-      </div>
-      <button type="submit" class="az-btn az-btn-primary">Añadir</button>
-    </form>
+  <div class="az-card toolbar-card">
+    <p class="muted no-margin">Total activos: <strong>{{ employees().length }}</strong></p>
+    <button type="button" class="az-btn az-btn-primary" (click)="openCreate()">Nuevo empleado</button>
   </div>
+  @if (msg()) {
+    <p class="muted">{{ msg() }}</p>
+  }
 
   <div class="az-table-wrap mt">
     <table class="az-table">
       <thead>
         <tr>
           <th>Nombre</th>
-          <th>Rol</th>
-          <th>Servicios</th>
+          <th>Correo</th>
+          <th>Función panel</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
-        @for (e of data.employees(); track e.id) {
+        @for (e of employees(); track e.id) {
           <tr>
             <td>{{ e.name }}</td>
-            <td>{{ e.role }}</td>
-            <td>{{ e.services.join(', ') }}</td>
+            <td>{{ e.email }}</td>
+            <td>{{ e.panelRole }}</td>
+            <td class="row-actions">
+              <button type="button" class="az-btn az-btn-secondary small" (click)="openEdit(e)">Editar</button>
+              <button type="button" class="az-btn az-btn-ghost small" (click)="requestDelete(e)">Eliminar</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="4">Aún no hay empleados cargados.</td>
           </tr>
         }
       </tbody>
     </table>
   </div>
 </div>
+
+@if (isEditorOpen()) {
+  <div class="editor-backdrop" (click)="closeEditor()"></div>
+  <aside class="editor-panel" role="dialog" aria-modal="true" aria-label="Editor de empleado">
+    <div class="editor-head">
+      <h3>{{ editingId() ? 'Editar empleado' : 'Nuevo empleado' }}</h3>
+      <button type="button" class="az-btn az-btn-ghost small" (click)="closeEditor()">Cerrar</button>
+    </div>
+    <form [formGroup]="form" (ngSubmit)="saveEmployee()" class="editor-form">
+      <div>
+        <label class="az-label" for="nm">Nombre</label>
+        <input id="nm" class="az-input wide" formControlName="name" />
+      </div>
+      <div>
+        <label class="az-label" for="rl">Función en panel</label>
+        <select id="rl" class="az-select wide" formControlName="role">
+          <option value="EMPLEADO">Empleado</option>
+          <option value="ADMIN">Admin</option>
+        </select>
+      </div>
+      <div class="full">
+        <label class="az-label" for="em">Correo de acceso</label>
+        <input id="em" class="az-input wide" type="email" formControlName="email" placeholder="empleado@negocio.com" />
+      </div>
+      <div class="full">
+        <label class="az-label" for="pw">Contraseña mini panel</label>
+        <div class="password-row">
+          <input
+            id="pw"
+            class="az-input wide"
+            [type]="showPassword() ? 'text' : 'password'"
+            formControlName="password"
+            placeholder="Mínimo 6 caracteres (vacío: mantiene o usa azenda123)"
+          />
+          <button type="button" class="az-btn az-btn-ghost small" (click)="togglePasswordVisibility()">
+            {{ showPassword() ? 'Ocultar' : 'Mostrar' }}
+          </button>
+        </div>
+      </div>
+      <div class="editor-actions">
+        <button type="button" class="az-btn az-btn-secondary" (click)="closeEditor()">Cancelar</button>
+        <button type="submit" class="az-btn az-btn-primary">Guardar</button>
+      </div>
+    </form>
+  </aside>
+}
+
+@if (pendingDelete(); as pd) {
+  <div class="editor-backdrop" (click)="cancelDelete()"></div>
+  <aside class="confirm-panel" role="dialog" aria-modal="true" aria-label="Confirmar eliminación">
+    <h3>Confirmar eliminación</h3>
+    <p>Vas a eliminar este empleado:</p>
+    <p><strong>{{ pd.name }}</strong></p>
+    <p class="muted">{{ pd.email }}</p>
+    <p class="muted">Esta acción no se puede deshacer.</p>
+    <div class="editor-actions">
+      <button type="button" class="az-btn az-btn-secondary" (click)="cancelDelete()">Cancelar</button>
+      <button type="button" class="az-btn az-btn-primary" (click)="confirmDelete()">Sí, eliminar</button>
+    </div>
+  </aside>
+}

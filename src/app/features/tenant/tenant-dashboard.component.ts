@@ -98,11 +98,14 @@ export class TenantDashboardComponent {
   });
 
   private employeeForAppointment(appt: MockAppointment): string {
-    const svc = appt.service.trim().toLowerCase();
-    const byService = this.data.employees().find((e) =>
-      e.services.some((s) => s.trim().toLowerCase() === svc),
-    );
-    return byService?.name ?? 'Sin asignar';
+    const employees = this.data.employees();
+    if (!employees.length) {
+      return 'Sin asignar';
+    }
+    const seed = `${appt.id}|${appt.customer}|${appt.service}`
+      .split('')
+      .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    return employees[seed % employees.length].name;
   }
 
   readonly employeeLegend = computed(() => {

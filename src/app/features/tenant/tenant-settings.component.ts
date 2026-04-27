@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { ApiAuthService } from '../../core/services/api-auth.service';
+import { ApiTenantCatalogService } from '../../core/services/api-tenant-catalog.service';
 import { MockDataService } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
 
@@ -32,12 +33,9 @@ export class TenantSettingsComponent {
   readonly session = inject(MockSessionService);
   private readonly data = inject(MockDataService);
   private readonly apiAuth = inject(ApiAuthService);
+  private readonly apiCatalog = inject(ApiTenantCatalogService);
   private readonly doc = inject(DOCUMENT);
 
-  readonly servicesForm = this.fb.nonNullable.group({
-    servicesText: [''],
-  });
-  readonly servicesMsg = signal('');
   readonly brandingMsg = signal('');
   readonly opsMsg = signal('');
   readonly brandingImageHint = signal<string | null>(null);
@@ -195,16 +193,6 @@ export class TenantSettingsComponent {
 
   constructor() {
     effect(() => {
-      const slug = this.session.publicBookingSlug();
-      if (!slug) {
-        return;
-      }
-      const lines = this.data.servicesForBookingSlug(slug).join('\n');
-      untracked(() =>
-        this.servicesForm.patchValue({ servicesText: lines }, { emitEvent: false }),
-      );
-    });
-    effect(() => {
       const tenantId = this.session.tenantId();
       if (!tenantId) {
         return;
@@ -267,8 +255,7 @@ export class TenantSettingsComponent {
       return;
     }
     const v = this.form.getRawValue();
-    this.data.updateTenantName(tenantId, v.tenantName);
-    this.data.updateTenantBranding(tenantId, {
+    const brandingPatch = {
       displayName: v.displayName,
       logoUrl: this.logoPreview(),
       primaryColor: v.brandColor,
@@ -281,10 +268,27 @@ export class TenantSettingsComponent {
       gradientFrom: v.gradientFrom,
       gradientTo: v.gradientTo,
       gradientAngleDeg: Number(v.gradientAngleDeg),
-    });
+    };
+    this.data.updateTenantName(tenantId, v.tenantName);
+    this.data.updateTenantBranding(tenantId, brandingPatch);
     const tenant = this.data.tenantById(tenantId);
     if (tenant) {
       this.session.syncFromTenant(tenant);
+    }
+    if (environment.useLiveAuth && this.session.accessToken()) {
+      this.apiCatalog.patchBranding(brandingPatch).subscribe({
+        next: () => {
+          this.brandingMsg.set(
+            'Identidad y estilo guardados en API. Aplica al panel y al enlace de reservas.',
+          );
+        },
+        error: () => {
+          this.brandingMsg.set(
+            'Se guardó solo localmente. No se pudo persistir branding en API.',
+          );
+        },
+      });
+      return;
     }
     this.brandingMsg.set('Identidad y estilo guardados. Aplica al panel y al enlace de reservas.');
   }
@@ -319,24 +323,6 @@ export class TenantSettingsComponent {
       gradientAngleDeg: preset.gradientAngleDeg,
     });
     this.brandingMsg.set(`Paleta aplicada: ${preset.name}. Guarda para confirmar.`);
-  }
-
-  saveServicesCatalog(): void {
-    const slug = this.session.publicBookingSlug();
-    if (!slug) {
-      return;
-    }
-    const raw = this.servicesForm.controls.servicesText.getRawValue();
-    const list = raw
-      .split('\n')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (!list.length) {
-      this.servicesMsg.set('Escribe al menos un servicio (una línea cada uno).');
-      return;
-    }
-    this.data.setServicesForBookingSlug(slug, list);
-    this.servicesMsg.set('Servicios guardados para este negocio (demo en memoria).');
   }
 
   readonly dark = computed(() => this.session.darkMode());

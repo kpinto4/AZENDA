@@ -11,6 +11,47 @@ export interface PublicTenantMetaDto {
   modules: { citas: boolean; ventas: boolean; inventario: boolean };
   storefrontEnabled: boolean;
   catalogoActivo: boolean;
+  branding?: {
+    displayName: string;
+    logoUrl: string | null;
+    catalogLayout: 'horizontal' | 'grid';
+    primaryColor: string;
+    accentColor: string;
+    bgColor: string;
+    surfaceColor: string;
+    textColor: string;
+    borderRadiusPx: number;
+    useGradient: boolean;
+    gradientFrom: string;
+    gradientTo: string;
+    gradientAngleDeg: number;
+  };
+}
+
+export interface PublicCatalogDto {
+  products: Array<{
+    id: string;
+    tenantId: string;
+    name: string;
+    description: string | null;
+    price: number;
+    promoPrice: number | null;
+    sku: string;
+    stock: number;
+    catalogOrder: number;
+    imageUrl: string | null;
+  }>;
+  services: Array<{
+    id: string;
+    tenantId: string;
+    name: string;
+    description: string | null;
+    price: number;
+    promoPrice: number | null;
+    promoLabel: string | null;
+    catalogOrder: number;
+  }>;
+  branding: NonNullable<PublicTenantMetaDto['branding']>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -20,6 +61,12 @@ export class ApiPublicMetaService {
   getMeta(slug: string): Observable<PublicTenantMetaDto> {
     return this.http.get<PublicTenantMetaDto>(
       `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/meta`,
+    );
+  }
+
+  getCatalog(slug: string): Observable<PublicCatalogDto> {
+    return this.http.get<PublicCatalogDto>(
+      `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/catalog`,
     );
   }
 }

@@ -9,6 +9,45 @@
   margin: 0 0 1rem;
 }
 
+.services-card {
+  margin-bottom: 1rem;
+}
+
+.services-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: flex-end;
+}
+
+.services-form .grow {
+  flex: 1;
+  min-width: 220px;
+}
+
+.services-form .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.services-msg {
+  margin: 0.65rem 0 0;
+  font-size: 0.88rem;
+  color: var(--az-success);
+}
+
+.mt {
+  margin-top: 0.8rem;
+}
+
 .muted {
   color: var(--az-muted);
   font-size: 0.9rem;

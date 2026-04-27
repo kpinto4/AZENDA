@@ -44,6 +44,18 @@ let PublicController = class PublicController {
             modules: tenant.modules,
             storefrontEnabled: tenant.storefrontEnabled,
             catalogoActivo: active && catalogoPublicoActivo(tenant),
+            branding: this.sqlDb.getTenantBranding(tenant.id),
+        };
+    }
+    getPublicCatalog(slug) {
+        const tenant = this.sqlDb.findTenantBySlug(slug);
+        if (!tenant) {
+            throw new common_1.NotFoundException('Negocio no encontrado');
+        }
+        return {
+            products: this.sqlDb.listProductsByTenantId(tenant.id),
+            services: this.sqlDb.listServicesByTenantId(tenant.id),
+            branding: this.sqlDb.getTenantBranding(tenant.id),
         };
     }
     createBooking(slug, dto) {
@@ -98,6 +110,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], PublicController.prototype, "getPublicMeta", null);
+__decorate([
+    (0, common_1.Get)(':slug/catalog'),
+    __param(0, (0, common_1.Param)('slug')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], PublicController.prototype, "getPublicCatalog", null);
 __decorate([
     (0, common_1.Post)(':slug/appointments'),
     (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),

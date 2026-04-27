@@ -45,6 +45,20 @@ export class PublicController {
       modules: tenant.modules,
       storefrontEnabled: tenant.storefrontEnabled,
       catalogoActivo: active && catalogoPublicoActivo(tenant),
+      branding: this.sqlDb.getTenantBranding(tenant.id),
+    };
+  }
+
+  @Get(':slug/catalog')
+  getPublicCatalog(@Param('slug') slug: string) {
+    const tenant = this.sqlDb.findTenantBySlug(slug);
+    if (!tenant) {
+      throw new NotFoundException('Negocio no encontrado');
+    }
+    return {
+      products: this.sqlDb.listProductsByTenantId(tenant.id),
+      services: this.sqlDb.listServicesByTenantId(tenant.id),
+      branding: this.sqlDb.getTenantBranding(tenant.id),
     };
   }
 

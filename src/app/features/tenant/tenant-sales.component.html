@@ -6,9 +6,10 @@
     </div>
   </div>
 
-  <div class="az-card form-card">
-    <h3>Registrar venta (mock)</h3>
-    <form [formGroup]="form" (ngSubmit)="add()" class="row">
+  <div class="tenant-cards-grid">
+    <div class="az-card form-card">
+      <h3>Registrar venta (mock)</h3>
+      <form [formGroup]="form" (ngSubmit)="add()" class="row">
       <div>
         <label class="az-label" for="total">Importe (€)</label>
         <input id="total" class="az-input" type="number" formControlName="total" />
@@ -37,73 +38,74 @@
           <input class="az-input qty" type="number" min="1" formControlName="stockQty" title="Unidades" />
         </div>
       </div>
-      <button type="submit" class="az-btn az-btn-primary end full-row-btn">Registrar</button>
-    </form>
-  </div>
+        <button type="submit" class="az-btn az-btn-primary end full-row-btn">Registrar</button>
+      </form>
+    </div>
 
-  @if (environment.useLiveAuth && session.accessToken() && session.modules().sales) {
-    <div class="az-card mt">
-      <div class="public-logs-head">
-        <h3>Registros desde el enlace público (pestaña «Compra / tienda»)</h3>
-        <button type="button" class="az-btn az-btn-secondary" (click)="refreshPublicLogs()">Actualizar</button>
+    @if (environment.useLiveAuth && session.accessToken() && session.modules().sales) {
+      <div class="az-card">
+        <div class="public-logs-head">
+          <h3>Registros desde enlace público</h3>
+          <button type="button" class="az-btn az-btn-secondary" (click)="refreshPublicLogs()">Actualizar</button>
+        </div>
+        <p class="muted small">
+          Datos enviados por clientes desde «Compra / tienda».
+        </p>
+        <div class="az-table-wrap">
+          <table class="az-table">
+            <thead>
+              <tr>
+                <th>Fecha (UTC)</th>
+                <th>Cliente</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (v of storeVisitsRemote(); track v.id) {
+                <tr>
+                  <td>{{ v.createdAt }}</td>
+                  <td>{{ v.customer }}</td>
+                  <td>{{ v.detail }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="3">Aún no hay registros.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </div>
-      <p class="muted small">
-        Los clientes envían esto desde la misma URL de reservas, pestaña «Compra / tienda».
-      </p>
-      <div class="az-table-wrap">
-        <table class="az-table">
-          <thead>
-            <tr>
-              <th>Fecha (UTC)</th>
-              <th>Cliente</th>
-              <th>Detalle</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (v of storeVisitsRemote(); track v.id) {
+    } @else if (session.publicBookingSlug()) {
+      <div class="az-card">
+        <h3>Registros públicos (demo sin API)</h3>
+        <div class="az-table-wrap">
+          <table class="az-table">
+            <thead>
               <tr>
-                <td>{{ v.createdAt }}</td>
-                <td>{{ v.customer }}</td>
-                <td>{{ v.detail }}</td>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Detalle</th>
               </tr>
-            } @empty {
-              <tr>
-                <td colspan="3">Aún no hay registros.</td>
-              </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (v of data.publicStoreVisitsForSlug(session.publicBookingSlug()); track v.id) {
+                <tr>
+                  <td>{{ v.createdAt }}</td>
+                  <td>{{ v.customer }}</td>
+                  <td>{{ v.detail }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="3">Aún no hay registros de tienda para este negocio.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  } @else if (session.publicBookingSlug()) {
-    <div class="az-card mt">
-      <h3>Registros públicos (demo sin API)</h3>
-      <div class="az-table-wrap">
-        <table class="az-table">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Cliente</th>
-              <th>Detalle</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (v of data.publicStoreVisitsForSlug(session.publicBookingSlug()); track v.id) {
-              <tr>
-                <td>{{ v.createdAt }}</td>
-                <td>{{ v.customer }}</td>
-                <td>{{ v.detail }}</td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="3">Aún no hay registros de tienda para este negocio.</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    </div>
-  }
+    }
+  </div>
 
   <div class="az-table-wrap mt">
     <table class="az-table">

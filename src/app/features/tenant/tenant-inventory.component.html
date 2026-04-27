@@ -1,52 +1,125 @@
 <div class="az-container az-page">
   <div class="az-page-head">
     <div>
-      <h1 class="az-page-title">Inventario</h1>
-      <p class="az-page-sub">
-        Los productos son de <strong>este negocio</strong>; el catálogo público los muestra en el orden que definas en
-        <a routerLink="/app/catalogo">Catálogo</a>.
-      </p>
+      <h1 class="az-page-title">Productos y servicios</h1>
+      <p class="az-page-sub">Un solo panel para administrar catálogo comercial e inventario operativo.</p>
     </div>
   </div>
 
-  <div class="az-card">
-    <h3>Nuevo producto</h3>
-    <p class="muted">Al guardarlo aparece en inventario, ventas (si aplica) y en el catálogo del enlace público.</p>
-    <form [formGroup]="createForm" (ngSubmit)="createProduct()" class="create-grid">
-      <div>
-        <label class="az-label" for="pname">Nombre</label>
-        <input id="pname" class="az-input wide" type="text" formControlName="name" autocomplete="off" />
-      </div>
-      <div>
-        <label class="az-label" for="psku">SKU</label>
-        <input id="psku" class="az-input wide" type="text" formControlName="sku" autocomplete="off" />
-      </div>
-      <div>
-        <label class="az-label" for="pstock">Stock inicial</label>
-        <input id="pstock" class="az-input narrow" type="number" min="0" formControlName="stock" />
-      </div>
-      <div class="full">
-        <label class="az-label" for="pimg">Foto (opcional)</label>
-        <input id="pimg" type="file" accept="image/*" (change)="onCreateImageSelected($event)" />
-        @if (imageHint()) {
-          <p class="field-error">{{ imageHint() }}</p>
-        }
-        @if (createImageDataUrl(); as src) {
-          <div class="thumb-preview">
-            <img [src]="src" alt="Vista previa" />
-            <button type="button" class="az-btn az-btn-ghost small" (click)="clearCreateImage()">Quitar imagen</button>
-          </div>
-        }
-      </div>
-      <div class="full">
-        <button type="submit" class="az-btn az-btn-primary" [disabled]="createForm.invalid">Añadir producto</button>
-      </div>
-    </form>
+  <div class="az-card toolbar-card">
+    <div class="view-switch">
+      <button type="button" class="az-btn small" [class.az-btn-primary]="activeView() === 'products'" [class.az-btn-secondary]="activeView() !== 'products'" (click)="setActiveView('products')">Productos</button>
+      <button type="button" class="az-btn small" [class.az-btn-primary]="activeView() === 'services'" [class.az-btn-secondary]="activeView() !== 'services'" (click)="setActiveView('services')">Servicios</button>
+    </div>
+    <div class="toolbar-actions">
+      <button type="button" class="az-btn az-btn-primary small" (click)="openCreateProduct()">Nuevo producto</button>
+      @if (session.publicBookingSlug()) {
+        <button type="button" class="az-btn az-btn-secondary small" (click)="openCreateService()">Nuevo servicio</button>
+      }
+    </div>
+    <div class="layout-control">
+      <label class="az-label compact" for="catalog-layout">Vista</label>
+      <select
+        id="catalog-layout"
+        class="az-select compact"
+        [value]="tenantCatalogLayout()"
+        (change)="setCatalogLayout($any($event.target).value)"
+      >
+        <option value="horizontal">Horizontal</option>
+        <option value="grid">Cuadritos</option>
+      </select>
+    </div>
   </div>
 
-  <div class="az-card">
+  @if (flashMsg()) {
+    <p class="services-msg">{{ flashMsg() }}</p>
+  }
+
+  <div class="az-table-wrap mt">
+    @if (activeView() === 'products') {
+      <table class="az-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Descripción</th>
+            <th>Precio</th>
+            <th>Precio promo</th>
+            <th>SKU</th>
+            <th>Stock</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of tenantProducts(); track p.id) {
+            <tr>
+              <td>{{ p.name }}</td>
+              <td>{{ p.description || '—' }}</td>
+              <td>${{ p.price.toFixed(2) }}</td>
+              <td>{{ p.promoPrice != null ? ('$' + p.promoPrice.toFixed(2)) : '—' }}</td>
+              <td>{{ p.sku }}</td>
+              <td>{{ p.stock }}</td>
+              <td>
+                @if (p.lowStock) {
+                  <span class="az-badge warn">Stock bajo</span>
+                } @else {
+                  <span class="az-badge success">OK</span>
+                }
+              </td>
+              <td class="row-actions">
+                <button type="button" class="az-btn az-btn-ghost small" (click)="moveProduct(p.id, -1)">↑</button>
+                <button type="button" class="az-btn az-btn-ghost small" (click)="moveProduct(p.id, 1)">↓</button>
+                <button type="button" class="az-btn az-btn-secondary small" (click)="openEditProduct(p)">Editar</button>
+                <button type="button" class="az-btn az-btn-ghost small" (click)="requestDeleteProduct(p)">Eliminar</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8">Aún no hay productos cargados.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <table class="az-table">
+        <thead>
+          <tr>
+            <th>Servicio</th>
+            <th>Descripción</th>
+            <th>Precio base</th>
+            <th>Precio promo</th>
+            <th>Promoción</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of businessServices(); track s.id) {
+            <tr>
+              <td>{{ s.name }}</td>
+              <td>{{ s.description || '—' }}</td>
+              <td>${{ s.price.toFixed(2) }}</td>
+              <td>{{ s.promoPrice != null ? ('$' + s.promoPrice.toFixed(2)) : '—' }}</td>
+              <td>{{ s.promoLabel || '—' }}</td>
+              <td class="row-actions">
+                <button type="button" class="az-btn az-btn-ghost small" (click)="moveService(s.id, -1)">↑</button>
+                <button type="button" class="az-btn az-btn-ghost small" (click)="moveService(s.id, 1)">↓</button>
+                <button type="button" class="az-btn az-btn-secondary small" (click)="openEditService(s)">Editar</button>
+                <button type="button" class="az-btn az-btn-ghost small" (click)="requestDeleteService(s)">Eliminar</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6">Aún no hay servicios cargados.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+
+  <div class="az-card mt">
     <h3>Registrar movimiento (mock)</h3>
-    <p class="muted">Usa delta negativo para salida (ej. −3) o positivo para entrada.</p>
+    <p class="muted">Solo aplica para productos; usa delta negativo para salida (ej. −3) o positivo para entrada.</p>
     <form [formGroup]="moveForm" (ngSubmit)="applyMovement()" class="move-row">
       <div>
         <label class="az-label" for="pid">Producto</label>
@@ -67,35 +140,6 @@
       </div>
       <button type="submit" class="az-btn az-btn-primary end">Aplicar</button>
     </form>
-  </div>
-
-  <div class="az-table-wrap mt">
-    <table class="az-table">
-      <thead>
-        <tr>
-          <th>Producto</th>
-          <th>SKU</th>
-          <th>Stock</th>
-          <th>Estado</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (p of tenantProducts(); track p.id) {
-          <tr>
-            <td>{{ p.name }}</td>
-            <td>{{ p.sku }}</td>
-            <td>{{ p.stock }}</td>
-            <td>
-              @if (p.lowStock) {
-                <span class="az-badge warn">Stock bajo</span>
-              } @else {
-                <span class="az-badge success">OK</span>
-              }
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
   </div>
 
   <h2 class="sub-title">Movimientos recientes (simulado)</h2>
@@ -122,3 +166,84 @@
     </table>
   </div>
 </div>
+
+@if (isEditorOpen()) {
+  <div class="editor-backdrop" (click)="closeEditor()"></div>
+  <aside class="editor-panel" role="dialog" aria-modal="true" aria-label="Editor de catálogo">
+    <div class="editor-head">
+      <h3>{{ editorTitle() }}</h3>
+      <button type="button" class="az-btn az-btn-ghost small" (click)="closeEditor()">Cerrar</button>
+    </div>
+    <form [formGroup]="editorForm" (ngSubmit)="saveEditor()" class="editor-form">
+      <div>
+        <label class="az-label" for="e-name">Nombre</label>
+        <input id="e-name" class="az-input wide" type="text" formControlName="name" autocomplete="off" />
+      </div>
+      <div>
+        <label class="az-label" for="e-price">Precio</label>
+        <input id="e-price" class="az-input" type="number" min="0" step="0.01" formControlName="price" />
+      </div>
+      <div class="full">
+        <label class="az-label" for="e-desc">Descripción corta (opcional)</label>
+        <input id="e-desc" class="az-input wide" type="text" formControlName="description" />
+      </div>
+
+      @if (isProductEditor()) {
+        <div>
+          <label class="az-label" for="e-sku">SKU</label>
+          <input id="e-sku" class="az-input wide" type="text" formControlName="sku" autocomplete="off" />
+        </div>
+        <div>
+          <label class="az-label" for="e-stock">Stock</label>
+          <input id="e-stock" class="az-input" type="number" min="0" formControlName="stock" />
+        </div>
+        <div>
+          <label class="az-label" for="e-prod-promo-price">Precio promo (opcional)</label>
+          <input id="e-prod-promo-price" class="az-input" type="number" min="0" step="0.01" formControlName="promoPrice" />
+        </div>
+        <div class="full">
+          <label class="az-label" for="e-img">Foto (opcional)</label>
+          <input id="e-img" type="file" accept="image/*" (change)="onEditorImageSelected($event)" />
+          @if (imageHint()) {
+            <p class="field-error">{{ imageHint() }}</p>
+          }
+          @if (editorImageDataUrl(); as src) {
+            <div class="thumb-preview">
+              <img [src]="src" alt="Vista previa" />
+              <button type="button" class="az-btn az-btn-ghost small" (click)="clearEditorImage()">Quitar imagen</button>
+            </div>
+          }
+        </div>
+      } @else {
+        <div>
+          <label class="az-label" for="e-promo-price">Precio promo (opcional)</label>
+          <input id="e-promo-price" class="az-input" type="number" min="0" step="0.01" formControlName="promoPrice" />
+        </div>
+        <div class="full">
+          <label class="az-label" for="e-promo-label">Promoción (opcional)</label>
+          <input id="e-promo-label" class="az-input wide" type="text" formControlName="promoLabel" />
+        </div>
+      }
+
+      <div class="editor-actions">
+        <button type="button" class="az-btn az-btn-secondary" (click)="closeEditor()">Cancelar</button>
+        <button type="submit" class="az-btn az-btn-primary">Guardar</button>
+      </div>
+    </form>
+  </aside>
+}
+
+@if (pendingDelete(); as pd) {
+  <div class="editor-backdrop" (click)="cancelDelete()"></div>
+  <aside class="confirm-panel" role="dialog" aria-modal="true" aria-label="Confirmar eliminación">
+    <h3>Confirmar eliminación</h3>
+    <p>Vas a eliminar este {{ pd.type === 'product' ? 'producto' : 'servicio' }}:</p>
+    <p><strong>{{ pd.name }}</strong></p>
+    <p class="muted">{{ pd.detail }}</p>
+    <p class="muted">Esta acción no se puede deshacer.</p>
+    <div class="editor-actions">
+      <button type="button" class="az-btn az-btn-secondary" (click)="cancelDelete()">Cancelar</button>
+      <button type="button" class="az-btn az-btn-primary" (click)="confirmDelete()">Sí, eliminar</button>
+    </div>
+  </aside>
+}

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const core_1 = require("@nestjs/core");
 const app_module_1 = require("./app.module");
 const common_1 = require("@nestjs/common");
+const express_1 = require("express");
 function isLocalDevOrigin(origin) {
     if (!origin) {
         return true;
@@ -17,6 +18,8 @@ function isLocalDevOrigin(origin) {
 }
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.use((0, express_1.json)({ limit: '3mb' }));
+    app.use((0, express_1.urlencoded)({ extended: true, limit: '3mb' }));
     const extraOrigins = (process.env.CORS_ORIGINS ?? '')
         .split(',')
         .map((s) => s.trim())

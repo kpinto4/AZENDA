@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
-import type { Application, NextFunction, Request, Response } from 'express';
+import { json, type Application, NextFunction, Request, Response, urlencoded } from 'express';
 
 function isLocalDevOrigin(origin: string | undefined): boolean {
   if (!origin) {
@@ -17,6 +17,8 @@ function isLocalDevOrigin(origin: string | undefined): boolean {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.use(json({ limit: '3mb' }));
+  app.use(urlencoded({ extended: true, limit: '3mb' }));
   const extraOrigins = (process.env.CORS_ORIGINS ?? '')
     .split(',')
     .map((s) => s.trim())

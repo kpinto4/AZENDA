@@ -8,11 +8,12 @@
 }
 
 .top {
-  max-width: 520px;
+  max-width: min(1100px, 96vw);
   margin: 0 auto 1.25rem;
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
+  gap: clamp(0.35rem, 1.1vw, 0.6rem);
+  flex-wrap: wrap;
   padding: 0.45rem 0.6rem;
   border-radius: var(--az-radius-sm);
   background: color-mix(in srgb, var(--az-surface) 82%, transparent);
@@ -63,22 +64,21 @@
 }
 
 .client-tabs {
-  max-width: 520px;
+  max-width: min(1100px, 96vw);
   margin: 0 auto 1rem;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 0.35rem;
 }
 
 .client-tabs .tab {
-  flex: 1 1 auto;
-  min-width: 0;
+  min-width: 130px;
   text-align: center;
-  padding: 0.45rem 0.5rem;
+  padding: clamp(0.4rem, 1.2vw, 0.5rem) clamp(0.4rem, 1vw, 0.55rem);
   border-radius: 8px;
   border: 1px solid var(--az-border);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: clamp(0.74rem, 1.6vw, 0.84rem);
   font-weight: 700;
   color: var(--az-muted);
   background: var(--az-surface);
@@ -147,6 +147,28 @@
   min-width: 0;
 }
 
+.catalog-list.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.catalog-list.catalog-grid .catalog-row {
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0.75rem;
+}
+
+.catalog-list.catalog-grid .catalog-thumb {
+  width: 100%;
+  height: 124px;
+}
+
+.catalog-list.catalog-grid .catalog-row .az-btn {
+  margin-left: 0;
+  width: 100%;
+}
+
 .small-block {
   display: block;
   font-size: 0.78rem;
@@ -154,8 +176,55 @@
 }
 
 .panel {
-  max-width: 520px;
+  max-width: min(1100px, 96vw);
   margin: 0 auto;
+}
+
+.catalog-panel {
+  max-width: min(1100px, 96vw);
+}
+
+@media (min-width: 700px) {
+  .catalog-list.catalog-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .catalog-list.catalog-grid .catalog-thumb {
+    height: 132px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .catalog-list.catalog-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .catalog-list.catalog-grid .catalog-thumb {
+    height: 142px;
+  }
+}
+
+@media (max-width: 560px) {
+  .top {
+    padding: 0.4rem 0.5rem;
+  }
+
+  .top-logo {
+    width: 26px;
+    height: 26px;
+  }
+
+  .slug {
+    font-size: 0.8rem;
+  }
+
+  .client-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .client-tabs .tab {
+    min-width: 0;
+  }
 }
 
 .success h1 {

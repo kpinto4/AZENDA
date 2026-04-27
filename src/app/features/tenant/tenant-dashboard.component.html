@@ -11,7 +11,7 @@
         >Área cliente</a
       >
       @if (session.modules().inventory) {
-        <a class="az-btn az-btn-secondary" routerLink="/app/inventario">Inventario</a>
+        <a class="az-btn az-btn-secondary" routerLink="/app/inventario">Productos y servicios</a>
       }
     </div>
   </div>
@@ -90,12 +90,8 @@
       }
       @if (session.modules().inventory) {
         <a class="quick-card" routerLink="/app/inventario">
-          <strong>Inventario</strong>
-          <span>Stock y movimientos</span>
-        </a>
-        <a class="quick-card" routerLink="/app/catalogo">
-          <strong>Catálogo</strong>
-          <span>Orden y fotos para clientes</span>
+          <strong>Productos y servicios</strong>
+          <span>Inventario, catálogo y promociones</span>
         </a>
       }
       <a class="quick-card" routerLink="/app/empleados">

@@ -1,4 +1,4 @@
-<div class="booking" [ngStyle]="styleVars()">
+<div class="booking" [class.catalog-active]="clientTab() === 'catalogo'" [ngStyle]="styleVars()">
   <header class="top">
     @if (branding().logoUrl; as logo) {
       <img class="top-logo" [src]="logo" [alt]="branding().displayName" />
@@ -25,7 +25,7 @@
   </nav>
 
   @if (clientTab() === 'catalogo') {
-    <div class="az-card panel tab-panel">
+    <div class="az-card panel tab-panel catalog-panel">
       <h1>Catálogo (mini tienda)</h1>
       <p class="muted">
         Disponible en planes <strong>Pro</strong> o <strong>Negocio</strong> con inventario, ventas y tienda pública
@@ -34,7 +34,7 @@
       @if (environment.useLiveAuth && publicMeta() && !publicMeta()!.active) {
         <p class="muted field-error">Este negocio no está activo; el catálogo no está disponible.</p>
       }
-      <ul class="catalog-list">
+      <ul class="catalog-list" [class.catalog-grid]="catalogLayout() === 'grid'">
         @for (p of catalogProducts(); track p.id) {
           <li class="catalog-row">
             @if (p.imageUrl) {
@@ -44,6 +44,12 @@
             }
             <div class="catalog-main">
               <strong>{{ p.name }}</strong>
+              <span class="muted small-block">{{ p.description || 'Sin descripción' }}</span>
+              @if (p.promoPrice != null) {
+                <span class="muted small-block">Precio ${{ p.price.toFixed(2) }} · Promo ${{ p.promoPrice.toFixed(2) }}</span>
+              } @else {
+                <span class="muted small-block">Precio ${{ p.price.toFixed(2) }}</span>
+              }
               <span class="muted small-block">SKU {{ p.sku }} · stock {{ p.stock }}</span>
             </div>
             <button type="button" class="az-btn az-btn-secondary" (click)="solicitarProducto(p.name)">

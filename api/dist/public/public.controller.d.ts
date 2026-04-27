@@ -17,6 +17,12 @@ export declare class PublicController {
         };
         storefrontEnabled: boolean;
         catalogoActivo: boolean;
+        branding: import("../infrastructure/sql-db/sql-db.types").TenantBrandingEntity;
+    };
+    getPublicCatalog(slug: string): {
+        products: import("../infrastructure/sql-db/sql-db.types").TenantProductEntity[];
+        services: import("../infrastructure/sql-db/sql-db.types").TenantServiceEntity[];
+        branding: import("../infrastructure/sql-db/sql-db.types").TenantBrandingEntity;
     };
     createBooking(slug: string, dto: CreatePublicAppointmentDto): import("../infrastructure/sql-db/sql-db.types").AppointmentEntity;
     confirmAttendance(slug: string, dto: ConfirmPublicAttendanceDto): import("../infrastructure/sql-db/sql-db.types").AppointmentEntity;

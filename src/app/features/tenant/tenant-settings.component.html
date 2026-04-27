@@ -9,101 +9,80 @@
     </button>
   </div>
 
-  <div class="az-card mb">
-    <h3>Identificadores del negocio</h3>
-    <p class="muted">
-      El <strong>nombre</strong> puede coincidir con otro negocio; lo que no debe repetirse es el
-      <strong>slug</strong> de reservas y el <strong>id</strong> en base de datos.
-    </p>
-    <ul class="id-list">
-      <li><span class="lbl">Id panel (demo)</span> <code>{{ session.tenantId() || '—' }}</code></li>
-      @if (session.apiTenantId()) {
-        <li><span class="lbl">Id en servidor (API)</span> <code>{{ session.apiTenantId() }}</code></li>
-      }
-      <li>
-        <span class="lbl">Slug reservas</span> <code>{{ session.publicBookingSlug() || '—' }}</code>
-      </li>
-    </ul>
-  </div>
-
-  <div class="az-card mb">
-    <h3>Operación de citas</h3>
-    <p class="muted">
-      Decide si tu equipo puede crear citas manualmente desde el panel. El enlace público de reservas sigue activo.
-    </p>
-    <form [formGroup]="form" (ngSubmit)="saveOperationalSettings()">
-      <label class="remember-row">
-        <input type="checkbox" formControlName="manualBookingEnabled" [disabled]="!canManageOperations()" />
-        <span>Permitir creación manual de citas en panel</span>
-      </label>
-      <button type="submit" class="az-btn az-btn-primary mt" [disabled]="!canManageOperations()">
-        Guardar operación de citas
-      </button>
-    </form>
-    @if (!canManageOperations()) {
-      <p class="muted tiny">Solo el admin del negocio puede cambiar esta opción.</p>
-    }
-    @if (opsMsg()) {
-      <p class="services-msg">{{ opsMsg() }}</p>
-    }
-  </div>
-
-  @if (session.publicBookingSlug()) {
-    <div class="az-card mb">
-      <h3>Servicios de este negocio</h3>
+  <div class="tenant-cards-grid">
+    <div class="az-card">
+      <h3>Identificadores del negocio</h3>
       <p class="muted">
-        Cada negocio tiene su propia lista: reserva pública y citas usan solo estos nombres. Una línea = un servicio.
+        El <strong>nombre</strong> puede coincidir con otro negocio; lo que no debe repetirse es el
+        <strong>slug</strong> de reservas y el <strong>id</strong> en base de datos.
       </p>
-      <form [formGroup]="servicesForm" (ngSubmit)="saveServicesCatalog()">
-        <label class="az-label" for="svc-lines">Catálogo (visible en /reservar/{{ session.publicBookingSlug() }})</label>
-        <textarea
-          id="svc-lines"
-          class="az-input wide services-ta"
-          rows="8"
-          formControlName="servicesText"
-          placeholder="Un servicio por línea, por ejemplo: Corte degradado"
-        ></textarea>
-        <button type="submit" class="az-btn az-btn-primary mt">Guardar servicios</button>
+      <ul class="id-list">
+        <li><span class="lbl">Id panel (demo)</span> <code>{{ session.tenantId() || '—' }}</code></li>
+        @if (session.apiTenantId()) {
+          <li><span class="lbl">Id en servidor (API)</span> <code>{{ session.apiTenantId() }}</code></li>
+        }
+        <li>
+          <span class="lbl">Slug reservas</span> <code>{{ session.publicBookingSlug() || '—' }}</code>
+        </li>
+      </ul>
+    </div>
+
+    <div class="az-card">
+      <h3>Operación de citas</h3>
+      <p class="muted">
+        Decide si tu equipo puede crear citas manualmente desde el panel. El enlace público de reservas sigue activo.
+      </p>
+      <form [formGroup]="form" (ngSubmit)="saveOperationalSettings()">
+        <label class="remember-row">
+          <input type="checkbox" formControlName="manualBookingEnabled" [disabled]="!canManageOperations()" />
+          <span>Permitir creación manual de citas en panel</span>
+        </label>
+        <button type="submit" class="az-btn az-btn-primary mt" [disabled]="!canManageOperations()">
+          Guardar operación de citas
+        </button>
       </form>
-      @if (servicesMsg()) {
-        <p class="services-msg">{{ servicesMsg() }}</p>
+      @if (!canManageOperations()) {
+        <p class="muted tiny">Solo el admin del negocio puede cambiar esta opción.</p>
+      }
+      @if (opsMsg()) {
+        <p class="services-msg">{{ opsMsg() }}</p>
       }
     </div>
-  }
 
-  @if (session.publicBookingSlug()) {
-    <div class="az-card mb">
-      <h3>Enlace público de cliente (reservas, asistencia y tienda)</h3>
-      <p class="muted">
-        Es la <strong>misma base</strong> para reservar cita, que el cliente confirme que acudió, y para dejar un registro
-        breve de compra o visita en tienda (útil para ventas). Puedes compartir la URL general o enlaces directos a cada
-        pestaña.
-      </p>
-      <p class="booking-actions">
-        <a class="az-btn az-btn-primary" [routerLink]="['/reservar', session.publicBookingSlug()]">Vista previa</a>
-        <button type="button" class="az-btn az-btn-secondary" (click)="copyBookingLink()">Copiar URL principal</button>
-      </p>
-      <label class="az-label">URL principal (reservar)</label>
-      <input class="az-input wide" type="text" readonly [value]="publicBookingUrl()" />
-      @if (publicClientUrls(); as urls) {
-        <label class="az-label lbl-top">Confirmar asistencia (misma página, pestaña)</label>
-        <div class="url-row">
-          <input class="az-input wide" type="text" readonly [value]="urls.asistencia" />
-          <button type="button" class="az-btn az-btn-secondary" (click)="copyUrl(urls.asistencia)">Copiar</button>
-        </div>
-        <label class="az-label lbl-top">Compra / tienda (misma página, pestaña)</label>
-        <div class="url-row">
-          <input class="az-input wide" type="text" readonly [value]="urls.tienda" />
-          <button type="button" class="az-btn az-btn-secondary" (click)="copyUrl(urls.tienda)">Copiar</button>
-        </div>
-        <label class="az-label lbl-top">Catálogo público (planes Pro+ con tienda activada)</label>
-        <div class="url-row">
-          <input class="az-input wide" type="text" readonly [value]="urls.catalogo" />
-          <button type="button" class="az-btn az-btn-secondary" (click)="copyUrl(urls.catalogo)">Copiar</button>
-        </div>
-      }
-    </div>
-  }
+    @if (session.publicBookingSlug()) {
+      <div class="az-card span-2">
+        <h3>Enlace público de cliente (reservas, asistencia y tienda)</h3>
+        <p class="muted">
+          Es la <strong>misma base</strong> para reservar cita, que el cliente confirme que acudió, y para dejar un registro
+          breve de compra o visita en tienda (útil para ventas). Puedes compartir la URL general o enlaces directos a cada
+          pestaña.
+        </p>
+        <p class="booking-actions">
+          <a class="az-btn az-btn-primary" [routerLink]="['/reservar', session.publicBookingSlug()]">Vista previa</a>
+          <button type="button" class="az-btn az-btn-secondary" (click)="copyBookingLink()">Copiar URL principal</button>
+        </p>
+        <label class="az-label">URL principal (reservar)</label>
+        <input class="az-input wide" type="text" readonly [value]="publicBookingUrl()" />
+        @if (publicClientUrls(); as urls) {
+          <label class="az-label lbl-top">Confirmar asistencia (misma página, pestaña)</label>
+          <div class="url-row">
+            <input class="az-input wide" type="text" readonly [value]="urls.asistencia" />
+            <button type="button" class="az-btn az-btn-secondary" (click)="copyUrl(urls.asistencia)">Copiar</button>
+          </div>
+          <label class="az-label lbl-top">Compra / tienda (misma página, pestaña)</label>
+          <div class="url-row">
+            <input class="az-input wide" type="text" readonly [value]="urls.tienda" />
+            <button type="button" class="az-btn az-btn-secondary" (click)="copyUrl(urls.tienda)">Copiar</button>
+          </div>
+          <label class="az-label lbl-top">Catálogo público (planes Pro+ con tienda activada)</label>
+          <div class="url-row">
+            <input class="az-input wide" type="text" readonly [value]="urls.catalogo" />
+            <button type="button" class="az-btn az-btn-secondary" (click)="copyUrl(urls.catalogo)">Copiar</button>
+          </div>
+        }
+      </div>
+    }
+  </div>
 
   <div class="az-grid cols-2">
     <div class="az-card">
