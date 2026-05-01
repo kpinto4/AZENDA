@@ -40,3 +40,9 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# SQLite local (USE_SQLITE=1)
+api/data/azenda.db
+
+# PostgreSQL local (Docker): volumen en api/data/postgres
+api/data/postgres/

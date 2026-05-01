@@ -14,6 +14,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { Systems } from '../auth/decorators/systems.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { TenantStatusGuard } from '../auth/guards/tenant-status.guard';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { PatchAppointmentAttendanceDto } from './dto/patch-appointment-attendance.dto';
 import { PatchAppointmentStatusDto } from './dto/patch-appointment-status.dto';
@@ -22,7 +23,7 @@ import { TenantAppointmentsService } from './tenant-appointments.service';
 type AuthenticatedRequest = Request & { user: AuthUser };
 
 @Controller('tenant/appointments')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantStatusGuard)
 @Roles(UserRole.ADMIN, UserRole.EMPLEADO)
 @Systems(AppSystem.TENANT)
 export class TenantAppointmentsController {

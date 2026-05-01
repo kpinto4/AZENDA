@@ -11,8 +11,8 @@ export class AuthService {
     private readonly sqlDbService: SqlDbService,
   ) {}
 
-  login(dto: LoginDto) {
-    const user = this.sqlDbService.findUserByCredentials(dto.email, dto.password);
+  async login(dto: LoginDto) {
+    const user = await this.sqlDbService.findUserByCredentials(dto.email, dto.password);
 
     if (!user) {
       throw new UnauthorizedException('Credenciales invalidas');
@@ -37,15 +37,15 @@ export class AuthService {
     };
   }
 
-  me(userId: string) {
-    const user = this.findById(userId);
+  async me(userId: string) {
+    const user = await this.findById(userId);
     if (!user) {
       throw new UnauthorizedException('Usuario no encontrado');
     }
     return this.toSafeUser(user);
   }
 
-  findById(userId: string) {
+  async findById(userId: string) {
     return this.sqlDbService.findUserById(userId);
   }
 

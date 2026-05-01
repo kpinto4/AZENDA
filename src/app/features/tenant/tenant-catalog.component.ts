@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
@@ -6,6 +6,7 @@ import {
   MockDataService,
 } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
+import { UiAlertService } from '../../core/services/ui-alert.service';
 
 const MAX_IMAGE_BYTES = 600 * 1024;
 
@@ -19,6 +20,7 @@ export class TenantCatalogComponent {
   private readonly fb = inject(FormBuilder);
   readonly data = inject(MockDataService);
   readonly session = inject(MockSessionService);
+  private readonly alerts = inject(UiAlertService);
 
   readonly imageHint = signal<string | null>(null);
   readonly servicesMsg = signal('');
@@ -39,8 +41,26 @@ export class TenantCatalogComponent {
   readonly businessServices = computed(() =>
     this.data.listBusinessServicesForSlug(this.session.publicBookingSlug()),
   );
+  readonly catalogBlockedMessage = computed(() => this.session.tenantRestrictionMessage());
+  readonly canEditCatalog = computed(
+    () => this.session.role() === 'TENANT_ADMIN' && !this.session.isTenantRestricted(),
+  );
+
+  constructor() {
+    effect(() => {
+      if (this.canEditCatalog()) {
+        this.servicesForm.enable({ emitEvent: false });
+      } else {
+        this.servicesForm.disable({ emitEvent: false });
+      }
+    });
+  }
 
   onRowImageSelected(productId: string, ev: Event): void {
+    if (!this.canEditCatalog()) {
+      this.alerts.warning(this.session.tenantRestrictionMessage() ?? 'Accion no permitida.');
+      return;
+    }
     const tid = this.session.tenantId();
     if (!tid) {
       return;
@@ -67,6 +87,10 @@ export class TenantCatalogComponent {
   }
 
   clearImage(productId: string): void {
+    if (!this.canEditCatalog()) {
+      this.alerts.warning(this.session.tenantRestrictionMessage() ?? 'Accion no permitida.');
+      return;
+    }
     const tid = this.session.tenantId();
     if (!tid) {
       return;
@@ -75,14 +99,25 @@ export class TenantCatalogComponent {
   }
 
   move(productId: string, dir: -1 | 1): void {
+    if (!this.canEditCatalog()) {
+      this.alerts.warning(this.session.tenantRestrictionMessage() ?? 'Accion no permitida.');
+      return;
+    }
     const tid = this.session.tenantId();
     if (!tid) {
       return;
     }
     this.data.moveCatalogProduct(tid, productId, dir);
+    this.alerts.info('Orden del catalogo actualizada.');
   }
 
   saveServicesCatalog(): void {
+    if (!this.canEditCatalog()) {
+      const msg = this.session.tenantRestrictionMessage() ?? 'Operacion no permitida.';
+      this.servicesMsg.set(msg);
+      this.alerts.warning(msg);
+      return;
+    }
     const slug = this.session.publicBookingSlug();
     if (!slug || this.servicesForm.invalid) {
       this.servicesForm.markAllAsTouched();
@@ -100,14 +135,20 @@ export class TenantCatalogComponent {
     if (editing) {
       this.data.updateBusinessService(slug, editing, payload);
       this.servicesMsg.set('Servicio actualizado.');
+      this.alerts.success('Servicio actualizado.');
     } else {
       this.data.createBusinessService(slug, payload);
       this.servicesMsg.set('Servicio creado.');
+      this.alerts.success('Servicio creado.');
     }
     this.cancelEditService();
   }
 
   editService(row: MockBusinessService): void {
+    if (!this.canEditCatalog()) {
+      this.alerts.warning(this.session.tenantRestrictionMessage() ?? 'Accion no permitida.');
+      return;
+    }
     this.editingServiceId.set(row.id);
     this.servicesForm.patchValue({
       name: row.name,
@@ -130,7 +171,20 @@ export class TenantCatalogComponent {
     });
   }
 
-  removeService(serviceId: string): void {
+  async removeService(serviceId: string): Promise<void> {
+    if (!this.canEditCatalog()) {
+      this.alerts.warning(this.session.tenantRestrictionMessage() ?? 'Accion no permitida.');
+      return;
+    }
+    const ok = await this.alerts.confirm({
+      title: 'Eliminar servicio',
+      message: 'Esta accion borrara el servicio del catalogo. ¿Deseas continuar?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+    });
+    if (!ok) {
+      return;
+    }
     const slug = this.session.publicBookingSlug();
     if (!slug) {
       return;
@@ -140,5 +194,6 @@ export class TenantCatalogComponent {
       this.cancelEditService();
     }
     this.servicesMsg.set('Servicio eliminado.');
+    this.alerts.warning('Servicio eliminado.');
   }
 }

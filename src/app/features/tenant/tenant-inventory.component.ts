@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { MockBusinessService, MockDataService, MockProduct } from '../../core/services/mock-data.service';
 import { environment } from '../../../environments/environment';
 import {
@@ -8,6 +9,7 @@ import {
   ApiTenantServiceDto,
 } from '../../core/services/api-tenant-catalog.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
+import { UiAlertService } from '../../core/services/ui-alert.service';
 
 const MAX_IMAGE_BYTES = 600 * 1024;
 type InventoryEntityType = 'product' | 'service';
@@ -37,6 +39,7 @@ export class TenantInventoryComponent {
   readonly data = inject(MockDataService);
   readonly session = inject(MockSessionService);
   private readonly apiCatalog = inject(ApiTenantCatalogService);
+  private readonly alerts = inject(UiAlertService);
 
   readonly imageHint = signal<string | null>(null);
   readonly flashMsg = signal<string>('');
@@ -67,7 +70,10 @@ export class TenantInventoryComponent {
     const tid = this.session.tenantId();
     return tid ? this.data.productsForTenant(tid) : [];
   });
-  readonly canManageCatalog = computed(() => this.session.role() === 'TENANT_ADMIN');
+  readonly canManageCatalog = computed(
+    () => this.session.role() === 'TENANT_ADMIN' && !this.session.isTenantRestricted(),
+  );
+  readonly inventoryBlockedMessage = computed(() => this.session.tenantRestrictionMessage());
 
   readonly editorForm = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
@@ -111,7 +117,7 @@ export class TenantInventoryComponent {
     effect(() => {
       const tenantId = this.session.tenantId();
       const token = this.session.accessToken();
-      if (!tenantId || !environment.useLiveAuth || !token) {
+      if (!tenantId || !environment.useLiveAuth || !token || this.session.isTenantRestricted()) {
         return;
       }
       untracked(() => this.reloadCatalogFromApi());
@@ -131,6 +137,7 @@ export class TenantInventoryComponent {
 
   setCatalogLayout(layout: 'horizontal' | 'grid'): void {
     if (!this.canManageCatalog()) {
+      this.notifyRestriction();
       return;
     }
     const tenantId = this.session.tenantId();
@@ -146,9 +153,11 @@ export class TenantInventoryComponent {
               ? 'Vista de catálogo actualizada a cuadritos.'
               : 'Vista de catálogo actualizada a horizontal.',
           );
+          this.alerts.success('Vista de catalogo actualizada.');
         },
         error: () => {
           this.flashMsg.set('No se pudo guardar en API. Verifica conexión/permisos.');
+          this.alerts.error('No se pudo guardar la configuracion en API.');
         },
       });
       return;
@@ -158,10 +167,12 @@ export class TenantInventoryComponent {
         ? 'Vista de catálogo actualizada a cuadritos.'
         : 'Vista de catálogo actualizada a horizontal.',
     );
+    this.alerts.success('Vista de catalogo actualizada.');
   }
 
   openCreateProduct(): void {
     if (!this.canManageCatalog()) {
+      this.notifyRestriction();
       return;
     }
     this.editorEntityType.set('product');
@@ -183,6 +194,7 @@ export class TenantInventoryComponent {
 
   openCreateService(): void {
     if (!this.canManageCatalog()) {
+      this.notifyRestriction();
       return;
     }
     this.editorEntityType.set('service');
@@ -204,6 +216,7 @@ export class TenantInventoryComponent {
 
   openEditProduct(row: MockProduct): void {
     if (!this.canManageCatalog()) {
+      this.notifyRestriction();
       return;
     }
     this.editorEntityType.set('product');
@@ -225,6 +238,7 @@ export class TenantInventoryComponent {
 
   openEditService(row: MockBusinessService): void {
     if (!this.canManageCatalog()) {
+      this.notifyRestriction();
       return;
     }
     this.editorEntityType.set('service');
@@ -252,6 +266,7 @@ export class TenantInventoryComponent {
 
   requestDeleteProduct(row: MockProduct): void {
     if (!this.canManageCatalog()) {
+      this.notifyRestriction();
       return;
     }
     this.pendingDelete.set({
@@ -264,6 +279,7 @@ export class TenantInventoryComponent {
 
   requestDeleteService(row: MockBusinessService): void {
     if (!this.canManageCatalog()) {
+      this.notifyRestriction();
       return;
     }
     this.pendingDelete.set({
@@ -321,6 +337,7 @@ export class TenantInventoryComponent {
 
   saveEditor(): void {
     if (!this.canManageCatalog()) {
+      this.notifyRestriction();
       return;
     }
     const tid = this.session.tenantId();
@@ -373,19 +390,25 @@ export class TenantInventoryComponent {
       req.subscribe({
         next: () => {
           this.flashMsg.set(editing ? 'Producto actualizado.' : 'Producto creado.');
+          this.alerts.success(editing ? 'Producto actualizado.' : 'Producto creado.');
           this.closeEditor();
           this.reloadCatalogFromApi();
         },
-        error: () => this.flashMsg.set('No se pudo guardar producto en API.'),
+        error: () => {
+          this.flashMsg.set('No se pudo guardar producto en API.');
+          this.alerts.error('No se pudo guardar producto en API.');
+        },
       });
       return;
     }
     if (editing) {
       this.data.updateProduct(tenantId, editing, payload);
       this.flashMsg.set('Producto actualizado.');
+      this.alerts.success('Producto actualizado.');
     } else {
       this.data.addProduct(tenantId, payload);
       this.flashMsg.set('Producto creado.');
+      this.alerts.success('Producto creado.');
     }
     this.closeEditor();
   }
@@ -418,25 +441,32 @@ export class TenantInventoryComponent {
       req.subscribe({
         next: () => {
           this.flashMsg.set(editing ? 'Servicio actualizado.' : 'Servicio creado.');
+          this.alerts.success(editing ? 'Servicio actualizado.' : 'Servicio creado.');
           this.closeEditor();
           this.reloadCatalogFromApi();
         },
-        error: () => this.flashMsg.set('No se pudo guardar servicio en API.'),
+        error: () => {
+          this.flashMsg.set('No se pudo guardar servicio en API.');
+          this.alerts.error('No se pudo guardar servicio en API.');
+        },
       });
       return;
     }
     if (editing) {
       this.data.updateBusinessService(slug, editing, payload);
       this.flashMsg.set('Servicio actualizado.');
+      this.alerts.success('Servicio actualizado.');
     } else {
       this.data.createBusinessService(slug, payload);
       this.flashMsg.set('Servicio creado.');
+      this.alerts.success('Servicio creado.');
     }
     this.closeEditor();
   }
 
   applyMovement(): void {
     if (!this.canManageCatalog()) {
+      this.notifyRestriction();
       return;
     }
     if (this.moveForm.invalid) {
@@ -445,10 +475,12 @@ export class TenantInventoryComponent {
     }
     const v = this.moveForm.getRawValue();
     this.data.applyStockMovement(this.session.tenantId(), v.productId, Number(v.delta), v.reason);
+    this.alerts.success('Movimiento de stock aplicado.');
   }
 
   moveProduct(productId: string, dir: -1 | 1): void {
     if (!this.canManageCatalog()) {
+      this.notifyRestriction();
       return;
     }
     const tenantId = this.session.tenantId();
@@ -459,18 +491,24 @@ export class TenantInventoryComponent {
       this.apiCatalog.moveProduct(productId, dir).subscribe({
         next: () => {
           this.flashMsg.set('Orden de producto actualizado.');
+          this.alerts.info('Orden de producto actualizada.');
           this.reloadCatalogFromApi();
         },
-        error: () => this.flashMsg.set('No se pudo reordenar producto en API.'),
+        error: () => {
+          this.flashMsg.set('No se pudo reordenar producto en API.');
+          this.alerts.error('No se pudo reordenar producto en API.');
+        },
       });
       return;
     }
     this.data.moveCatalogProduct(tenantId, productId, dir);
     this.flashMsg.set('Orden de producto actualizado.');
+    this.alerts.info('Orden de producto actualizada.');
   }
 
   moveService(serviceId: string, dir: -1 | 1): void {
     if (!this.canManageCatalog()) {
+      this.notifyRestriction();
       return;
     }
     const slug = this.session.publicBookingSlug();
@@ -481,18 +519,24 @@ export class TenantInventoryComponent {
       this.apiCatalog.moveService(serviceId, dir).subscribe({
         next: () => {
           this.flashMsg.set('Orden de servicio actualizado.');
+          this.alerts.info('Orden de servicio actualizada.');
           this.reloadCatalogFromApi();
         },
-        error: () => this.flashMsg.set('No se pudo reordenar servicio en API.'),
+        error: () => {
+          this.flashMsg.set('No se pudo reordenar servicio en API.');
+          this.alerts.error('No se pudo reordenar servicio en API.');
+        },
       });
       return;
     }
     this.data.moveBusinessService(slug, serviceId, dir);
     this.flashMsg.set('Orden de servicio actualizado.');
+    this.alerts.info('Orden de servicio actualizada.');
   }
 
   removeProduct(productId: string): void {
     if (!this.canManageCatalog()) {
+      this.notifyRestriction();
       return;
     }
     const tenantId = this.session.tenantId();
@@ -506,9 +550,13 @@ export class TenantInventoryComponent {
             this.closeEditor();
           }
           this.flashMsg.set('Producto eliminado.');
+          this.alerts.warning('Producto eliminado.');
           this.reloadCatalogFromApi();
         },
-        error: () => this.flashMsg.set('No se pudo eliminar producto en API.'),
+        error: () => {
+          this.flashMsg.set('No se pudo eliminar producto en API.');
+          this.alerts.error('No se pudo eliminar producto en API.');
+        },
       });
       return;
     }
@@ -517,10 +565,12 @@ export class TenantInventoryComponent {
       this.closeEditor();
     }
     this.flashMsg.set('Producto eliminado.');
+    this.alerts.warning('Producto eliminado.');
   }
 
   removeService(serviceId: string): void {
     if (!this.canManageCatalog()) {
+      this.notifyRestriction();
       return;
     }
     const slug = this.session.publicBookingSlug();
@@ -534,9 +584,13 @@ export class TenantInventoryComponent {
             this.closeEditor();
           }
           this.flashMsg.set('Servicio eliminado.');
+          this.alerts.warning('Servicio eliminado.');
           this.reloadCatalogFromApi();
         },
-        error: () => this.flashMsg.set('No se pudo eliminar servicio en API.'),
+        error: () => {
+          this.flashMsg.set('No se pudo eliminar servicio en API.');
+          this.alerts.error('No se pudo eliminar servicio en API.');
+        },
       });
       return;
     }
@@ -545,6 +599,7 @@ export class TenantInventoryComponent {
       this.closeEditor();
     }
     this.flashMsg.set('Servicio eliminado.');
+    this.alerts.warning('Servicio eliminado.');
   }
 
   private reloadCatalogFromApi(): void {
@@ -571,9 +626,19 @@ export class TenantInventoryComponent {
           });
         }
       },
-      error: () => {
+      error: (err: unknown) => {
+        if (err instanceof HttpErrorResponse && err.status === 403) {
+          return;
+        }
         this.flashMsg.set('No se pudo cargar catálogo desde API.');
+        this.alerts.error('No se pudo cargar catalogo desde API.');
       },
     });
+  }
+
+  private notifyRestriction(): void {
+    this.alerts.warning(
+      this.session.tenantRestrictionMessage() ?? 'Tu plan actual no permite esta accion.',
+    );
   }
 }

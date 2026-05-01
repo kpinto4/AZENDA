@@ -21,6 +21,8 @@ export interface TenantModulesState {
   inventory: boolean;
 }
 
+export type TenantLifecycleStatus = 'ACTIVE' | 'PAUSED' | 'BLOCKED';
+
 const AUTH_STORAGE_KEY = 'azenda.auth.v1';
 
 @Injectable({ providedIn: 'root' })
@@ -54,12 +56,28 @@ export class MockSessionService {
   readonly tenantStorefront = signal(false);
   /** Si está activo, se permite crear citas manualmente desde panel tenant. */
   readonly manualBookingEnabled = signal(true);
+  /** Estado operativo del tenant para avisos/restricciones en UI. */
+  readonly tenantStatus = signal<TenantLifecycleStatus | null>(null);
   readonly darkMode = signal(false);
 
   readonly isSuperAdmin = computed(() => this.role() === 'SUPER_ADMIN');
   readonly isTenantUser = computed(() => {
     const r = this.role();
     return r === 'TENANT_ADMIN' || r === 'EMPLOYEE';
+  });
+  readonly isTenantRestricted = computed(() => {
+    const status = this.tenantStatus();
+    return status === 'PAUSED' || status === 'BLOCKED';
+  });
+  readonly tenantRestrictionMessage = computed(() => {
+    const status = this.tenantStatus();
+    if (status === 'PAUSED') {
+      return 'Tu plan esta pausado. Las funciones operativas estan deshabilitadas temporalmente.';
+    }
+    if (status === 'BLOCKED') {
+      return 'Tu negocio esta bloqueado. Contacta a soporte para recuperar el acceso.';
+    }
+    return null;
   });
 
   constructor() {
@@ -83,6 +101,7 @@ export class MockSessionService {
     this.tenantPlan.set('Trial');
     this.tenantStorefront.set(false);
     this.manualBookingEnabled.set(true);
+    this.tenantStatus.set(null);
     this.darkMode.set(false);
   }
 
@@ -183,6 +202,7 @@ export class MockSessionService {
     this.tenantPlan.set('Trial');
     this.tenantStorefront.set(false);
     this.manualBookingEnabled.set(true);
+    this.tenantStatus.set(null);
   }
 
   /** Actualiza menús del tenant desde el API (módulos, plan, tienda pública). */
@@ -203,6 +223,7 @@ export class MockSessionService {
         this.tenantPlan.set(ctx.tenant.plan ?? 'Trial');
         this.tenantStorefront.set(!!ctx.tenant.storefrontEnabled);
         this.manualBookingEnabled.set(!!ctx.tenant.manualBookingEnabled);
+        this.tenantStatus.set(ctx.tenant.status as TenantLifecycleStatus);
         this.tenantName.set(ctx.tenant.name);
         this.publicBookingSlug.set(ctx.tenant.slug);
         this.apiTenantId.set(ctx.tenant.id);
@@ -303,6 +324,7 @@ export class MockSessionService {
           this.tenantPlan.set(ctx.tenant.plan ?? 'Trial');
           this.tenantStorefront.set(!!ctx.tenant.storefrontEnabled);
           this.manualBookingEnabled.set(!!ctx.tenant.manualBookingEnabled);
+          this.tenantStatus.set(ctx.tenant.status as TenantLifecycleStatus);
 
           return of(undefined);
         }),
@@ -336,6 +358,7 @@ export class MockSessionService {
     this.tenantPlan.set(t.plan);
     this.tenantStorefront.set(!!t.storefrontEnabled);
     this.manualBookingEnabled.set(t.manualBookingEnabled ?? true);
+    this.tenantStatus.set(t.active ? 'ACTIVE' : 'PAUSED');
   }
 
   logout(): void {

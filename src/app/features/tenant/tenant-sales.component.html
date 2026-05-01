@@ -5,6 +5,11 @@
       <p class="az-page-sub">POS rápido. En backend: impuestos, series, cierres de caja.</p>
     </div>
   </div>
+  @if (salesBlockedMessage(); as msg) {
+    <div class="tenant-warn" role="status">
+      <strong>Ventas deshabilitadas:</strong> {{ msg }}
+    </div>
+  }
 
   <div class="tenant-cards-grid">
     <div class="az-card form-card">
@@ -38,7 +43,7 @@
           <input class="az-input qty" type="number" min="1" formControlName="stockQty" title="Unidades" />
         </div>
       </div>
-        <button type="submit" class="az-btn az-btn-primary end full-row-btn">Registrar</button>
+        <button type="submit" class="az-btn az-btn-primary end full-row-btn" [disabled]="!canCreateSales()">Registrar</button>
       </form>
     </div>
 

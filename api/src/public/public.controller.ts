@@ -32,12 +32,13 @@ export class PublicController {
   constructor(private readonly sqlDb: SqlDbService) {}
 
   @Get(':slug/meta')
-  getPublicMeta(@Param('slug') slug: string) {
-    const tenant = this.sqlDb.findTenantBySlug(slug);
+  async getPublicMeta(@Param('slug') slug: string) {
+    const tenant = await this.sqlDb.findTenantBySlug(slug);
     if (!tenant) {
       throw new NotFoundException('Negocio no encontrado');
     }
     const active = tenant.status === 'ACTIVE';
+    const branding = await this.sqlDb.getTenantBranding(tenant.id);
     return {
       slug: tenant.slug,
       name: tenant.name,
@@ -46,30 +47,35 @@ export class PublicController {
       modules: tenant.modules,
       storefrontEnabled: tenant.storefrontEnabled,
       catalogoActivo: active && catalogoPublicoActivo(tenant),
-      branding: this.sqlDb.getTenantBranding(tenant.id),
+      branding,
     };
   }
 
   @Get(':slug/catalog')
-  getPublicCatalog(@Param('slug') slug: string) {
-    const tenant = this.sqlDb.findTenantBySlug(slug);
+  async getPublicCatalog(@Param('slug') slug: string) {
+    const tenant = await this.sqlDb.findTenantBySlug(slug);
     if (!tenant) {
       throw new NotFoundException('Negocio no encontrado');
     }
+    const [products, services, branding] = await Promise.all([
+      this.sqlDb.listProductsByTenantId(tenant.id),
+      this.sqlDb.listServicesByTenantId(tenant.id),
+      this.sqlDb.getTenantBranding(tenant.id),
+    ]);
     return {
-      products: this.sqlDb.listProductsByTenantId(tenant.id),
-      services: this.sqlDb.listServicesByTenantId(tenant.id),
-      branding: this.sqlDb.getTenantBranding(tenant.id),
+      products,
+      services,
+      branding,
     };
   }
 
   @Post(':slug/appointments')
   @HttpCode(HttpStatus.CREATED)
-  createBooking(
+  async createBooking(
     @Param('slug') slug: string,
     @Body() dto: CreatePublicAppointmentDto,
   ) {
-    const tenant = this.sqlDb.findTenantBySlug(slug);
+    const tenant = await this.sqlDb.findTenantBySlug(slug);
     if (!tenant) {
       throw new NotFoundException('Negocio no encontrado');
     }
@@ -79,7 +85,7 @@ export class PublicController {
     if (!tenant.modules.citas) {
       throw new ForbiddenException('Reservas no disponibles para este negocio');
     }
-    const conflict = this.sqlDb.findAppointmentByTenantAndWhen(tenant.id, dto.when);
+    const conflict = await this.sqlDb.findAppointmentByTenantAndWhen(tenant.id, dto.when);
     if (conflict) {
       throw new ConflictException(
         'Ese horario ya fue tomado por otra cita. Elige otro horario.',
@@ -96,8 +102,8 @@ export class PublicController {
 
   @Post(':slug/confirmar-asistencia')
   @HttpCode(HttpStatus.OK)
-  confirmAttendance(@Param('slug') slug: string, @Body() dto: ConfirmPublicAttendanceDto) {
-    const updated = this.sqlDb.confirmPublicAppointmentAttendance(
+  async confirmAttendance(@Param('slug') slug: string, @Body() dto: ConfirmPublicAttendanceDto) {
+    const updated = await this.sqlDb.confirmPublicAppointmentAttendance(
       slug,
       dto.appointmentId,
       dto.customer,
@@ -110,8 +116,8 @@ export class PublicController {
 
   @Post(':slug/registro-tienda')
   @HttpCode(HttpStatus.CREATED)
-  createStoreVisit(@Param('slug') slug: string, @Body() dto: CreatePublicStoreVisitDto) {
-    const tenant = this.sqlDb.findTenantBySlug(slug);
+  async createStoreVisit(@Param('slug') slug: string, @Body() dto: CreatePublicStoreVisitDto) {
+    const tenant = await this.sqlDb.findTenantBySlug(slug);
     if (!tenant) {
       throw new NotFoundException('Negocio no encontrado');
     }

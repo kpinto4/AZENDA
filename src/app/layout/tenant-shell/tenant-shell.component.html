@@ -77,13 +77,10 @@
       </button>
       <span class="mobile-shell-title">{{ tenantBranding().displayName || session.tenantName() || 'Panel' }}</span>
     </header>
-    @if (currentTenant(); as ct) {
-      @if (!ct.active) {
-        <div class="tenant-warn" role="status">
-          Este negocio está <strong>pausado</strong> en la simulación (como en Super Admin → Tenants). Sigue siendo navegable
-          solo para la demo.
-        </div>
-      }
+    @if (tenantRestrictionMessage(); as msg) {
+      <div class="tenant-warn" role="status">
+        <strong>Estado del plan:</strong> {{ msg }}
+      </div>
     }
     <router-outlet />
   </main>

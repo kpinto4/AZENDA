@@ -13,6 +13,11 @@
       </p>
     </div>
   </div>
+  @if (catalogBlockedMessage(); as msg) {
+    <div class="tenant-warn" role="status">
+      <strong>Catálogo público bloqueado para edición:</strong> {{ msg }}
+    </div>
+  }
 
   @if (imageHint()) {
     <p class="field-error">{{ imageHint() }}</p>
@@ -46,11 +51,11 @@
           <input id="svc-promo-label" class="az-input wide" formControlName="promoLabel" placeholder="Ej. Promo lunes a jueves" />
         </div>
         <div class="actions">
-          <button type="submit" class="az-btn az-btn-primary">
+          <button type="submit" class="az-btn az-btn-primary" [disabled]="!canEditCatalog()">
             {{ editingServiceId() ? 'Actualizar servicio' : 'Agregar servicio' }}
           </button>
           @if (editingServiceId()) {
-            <button type="button" class="az-btn az-btn-secondary" (click)="cancelEditService()">Cancelar edición</button>
+            <button type="button" class="az-btn az-btn-secondary" (click)="cancelEditService()" [disabled]="!canEditCatalog()">Cancelar edición</button>
           }
         </div>
       </form>
@@ -75,8 +80,8 @@
                 <td>{{ s.promoPrice != null ? ('$' + s.promoPrice.toFixed(2)) : '—' }}</td>
                 <td>{{ s.promoLabel || '—' }}</td>
                 <td class="row-actions">
-                  <button type="button" class="az-btn az-btn-secondary small" (click)="editService(s)">Editar</button>
-                  <button type="button" class="az-btn az-btn-ghost small" (click)="removeService(s.id)">Eliminar</button>
+                  <button type="button" class="az-btn az-btn-secondary small" (click)="editService(s)" [disabled]="!canEditCatalog()">Editar</button>
+                  <button type="button" class="az-btn az-btn-ghost small" (click)="removeService(s.id)" [disabled]="!canEditCatalog()">Eliminar</button>
                 </td>
               </tr>
             } @empty {
@@ -106,7 +111,7 @@
               <button
                 type="button"
                 class="az-btn az-btn-ghost small"
-                [disabled]="i === 0"
+                [disabled]="i === 0 || !canEditCatalog()"
                 (click)="move(p.id, -1)"
                 aria-label="Subir"
               >
@@ -115,7 +120,7 @@
               <button
                 type="button"
                 class="az-btn az-btn-ghost small"
-                [disabled]="i === tenantProducts().length - 1"
+                [disabled]="i === tenantProducts().length - 1 || !canEditCatalog()"
                 (click)="move(p.id, 1)"
                 aria-label="Bajar"
               >
@@ -136,10 +141,10 @@
             <div class="img-actions">
               <label class="az-btn az-btn-secondary small file-label">
                 Subir foto
-                <input type="file" accept="image/*" (change)="onRowImageSelected(p.id, $event)" />
+                <input type="file" accept="image/*" [disabled]="!canEditCatalog()" (change)="onRowImageSelected(p.id, $event)" />
               </label>
               @if (p.imageUrl) {
-                <button type="button" class="az-btn az-btn-ghost small" (click)="clearImage(p.id)">Quitar</button>
+                <button type="button" class="az-btn az-btn-ghost small" (click)="clearImage(p.id)" [disabled]="!canEditCatalog()">Quitar</button>
               }
             </div>
           </li>

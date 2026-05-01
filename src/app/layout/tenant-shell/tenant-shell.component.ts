@@ -39,6 +39,7 @@ export class TenantShellComponent {
   readonly shellStyleVars = computed(() =>
     this.data.brandingCssVars(this.tenantBranding(), this.session.darkMode()),
   );
+  readonly tenantRestrictionMessage = computed(() => this.session.tenantRestrictionMessage());
 
   constructor() {
     this.destroyRef.onDestroy(() => {

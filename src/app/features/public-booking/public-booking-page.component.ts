@@ -14,6 +14,7 @@ import {
 } from '../../core/services/api-public-meta.service';
 import { MockDataService } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
+import { UiAlertService } from '../../core/services/ui-alert.service';
 
 function tabFromQuery(tab: string | null): 'reserva' | 'asistencia' | 'tienda' | 'catalogo' {
   const t = (tab ?? '').toLowerCase();
@@ -39,9 +40,11 @@ export class PublicBookingPageComponent {
   readonly session = inject(MockSessionService);
   private readonly apiAppointments = inject(ApiAppointmentsService);
   private readonly apiPublic = inject(ApiPublicMetaService);
+  private readonly alerts = inject(UiAlertService);
 
   readonly publicMeta = signal<PublicTenantMetaDto | null>(null);
   readonly publicCatalog = signal<PublicCatalogDto | null>(null);
+  readonly blockedAlertShownForSlug = signal<string | null>(null);
 
   readonly slug = toSignal(
     this.route.paramMap.pipe(map((p) => p.get('slug') ?? 'negocio')),
@@ -125,6 +128,22 @@ export class PublicBookingPageComponent {
   );
 
   readonly slots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30'];
+  readonly publicBookingBlockedMessage = computed(() => {
+    if (!environment.useLiveAuth) {
+      return null;
+    }
+    const meta = this.publicMeta();
+    if (!meta) {
+      return null;
+    }
+    if (!meta.active) {
+      return 'Este negocio no acepta reservas publicas en este momento. Contacta al negocio o renueva el plan.';
+    }
+    if (!meta.modules.citas) {
+      return 'Las reservas estan deshabilitadas para este negocio. Contacta al negocio para mas informacion.';
+    }
+    return null;
+  });
 
   step = signal<1 | 2 | 3 | 4>(1);
   readonly done = signal(false);
@@ -179,6 +198,18 @@ export class PublicBookingPageComponent {
         });
       });
     });
+    effect(() => {
+      const slug = this.slug();
+      const blockedMsg = this.publicBookingBlockedMessage();
+      if (!blockedMsg) {
+        return;
+      }
+      if (this.blockedAlertShownForSlug() === slug) {
+        return;
+      }
+      this.blockedAlertShownForSlug.set(slug);
+      this.alerts.warning(blockedMsg, 'Acceso restringido');
+    });
   }
 
   goTab(tab: 'reserva' | 'asistencia' | 'tienda' | 'catalogo'): void {
@@ -196,11 +227,19 @@ export class PublicBookingPageComponent {
   }
 
   pickService(s: string): void {
+    if (this.publicBookingBlockedMessage()) {
+      this.alerts.warning(this.publicBookingBlockedMessage()!, 'Acceso restringido');
+      return;
+    }
     this.selectedService.set(s);
     this.step.set(2);
   }
 
   continueFromDate(): void {
+    if (this.publicBookingBlockedMessage()) {
+      this.alerts.warning(this.publicBookingBlockedMessage()!, 'Acceso restringido');
+      return;
+    }
     if (!this.selectedDate().trim()) {
       this.dateStepError.set('Indica una fecha.');
       return;
@@ -210,11 +249,19 @@ export class PublicBookingPageComponent {
   }
 
   pickSlot(s: string): void {
+    if (this.publicBookingBlockedMessage()) {
+      this.alerts.warning(this.publicBookingBlockedMessage()!, 'Acceso restringido');
+      return;
+    }
     this.selectedSlot.set(s);
     this.step.set(4);
   }
 
   confirm(): void {
+    if (this.publicBookingBlockedMessage()) {
+      this.alerts.warning(this.publicBookingBlockedMessage()!, 'Acceso restringido');
+      return;
+    }
     if (this.confirmForm.invalid) {
       this.confirmForm.markAllAsTouched();
       return;

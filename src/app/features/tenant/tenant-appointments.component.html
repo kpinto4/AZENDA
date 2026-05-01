@@ -7,6 +7,11 @@
       </p>
     </div>
   </div>
+  @if (appointmentsBlockedMessage(); as msg) {
+    <div class="tenant-warn" role="status">
+      <strong>Reservas deshabilitadas:</strong> {{ msg }}
+    </div>
+  }
 
   <div class="az-card op-note">
     <h3>Gestión operativa</h3>
@@ -33,15 +38,15 @@
         <p class="muted field-error">{{ createErr() }}</p>
       }
       <form class="manual-create-grid" [formGroup]="createForm" (ngSubmit)="createAppointment()">
-        <input class="az-input" placeholder="Cliente" formControlName="customer" [disabled]="creatingAppointment()" />
-        <select class="az-select" formControlName="service" [disabled]="creatingAppointment()">
+        <input class="az-input" placeholder="Cliente" formControlName="customer" />
+        <select class="az-select" formControlName="service">
           <option value="" disabled>Selecciona un servicio</option>
           @for (s of manualServiceOptions(); track s) {
             <option [value]="s">{{ s }}</option>
           }
         </select>
-        <input class="az-input" type="date" formControlName="date" [disabled]="creatingAppointment()" />
-        <input class="az-input" type="time" formControlName="time" [disabled]="creatingAppointment()" />
+        <input class="az-input" type="date" formControlName="date" />
+        <input class="az-input" type="time" formControlName="time" />
         <button type="submit" class="az-btn az-btn-primary" [disabled]="creatingAppointment()">
           {{ creatingAppointment() ? 'Guardando…' : 'Crear cita manual' }}
         </button>
@@ -125,6 +130,7 @@
               <select
                 class="az-select status-sel"
                 [value]="a.attendance ?? 'PENDIENTE'"
+                [disabled]="session.isTenantRestricted()"
                 (change)="setAttendance(a.id, $any($event.target).value)"
               >
                 <option value="PENDIENTE">pendiente confirmar</option>

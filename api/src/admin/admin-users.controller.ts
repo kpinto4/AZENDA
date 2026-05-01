@@ -28,16 +28,17 @@ export class AdminUsersController {
   constructor(private readonly sqlDbService: SqlDbService) {}
 
   @Get()
-  listUsers() {
-    return this.sqlDbService.listUsers().map((user) => {
+  async listUsers() {
+    const users = await this.sqlDbService.listUsers();
+    return users.map((user) => {
       const { password: _password, ...safeUser } = user;
       return safeUser;
     });
   }
 
   @Get(':userId')
-  getUserById(@Param('userId') userId: string) {
-    const user = this.sqlDbService.findUserById(userId);
+  async getUserById(@Param('userId') userId: string) {
+    const user = await this.sqlDbService.findUserById(userId);
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
     }
@@ -46,8 +47,8 @@ export class AdminUsersController {
   }
 
   @Post()
-  createUser(@Body() body: CreateUserDto) {
-    const created = this.sqlDbService.createUser({
+  async createUser(@Body() body: CreateUserDto) {
+    const created = await this.sqlDbService.createUser({
       id: body.id,
       email: body.email,
       password: body.password,
@@ -62,8 +63,8 @@ export class AdminUsersController {
   }
 
   @Patch(':userId')
-  updateUser(@Param('userId') userId: string, @Body() body: UpdateUserDto) {
-    const updated = this.sqlDbService.updateUser(userId, {
+  async updateUser(@Param('userId') userId: string, @Body() body: UpdateUserDto) {
+    const updated = await this.sqlDbService.updateUser(userId, {
       email: body.email,
       password: body.password,
       role: body.role,
@@ -81,8 +82,8 @@ export class AdminUsersController {
 
   @Delete(':userId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  deleteUser(@Param('userId') userId: string) {
-    const deleted = this.sqlDbService.deleteUser(userId);
+  async deleteUser(@Param('userId') userId: string) {
+    const deleted = await this.sqlDbService.deleteUser(userId);
     if (!deleted) {
       throw new NotFoundException('Usuario no encontrado');
     }

@@ -15,14 +15,14 @@ import { PatchAppointmentStatusDto } from './dto/patch-appointment-status.dto';
 export class TenantAppointmentsService {
   constructor(private readonly sqlDb: SqlDbService) {}
 
-  listForUser(user: AuthUser): AppointmentEntity[] {
+  async listForUser(user: AuthUser): Promise<AppointmentEntity[]> {
     this.requireTenantUser(user);
     return this.sqlDb.listAppointmentsByTenantId(user.tenantId!);
   }
 
-  createForUser(user: AuthUser, dto: CreateAppointmentDto): AppointmentEntity {
+  async createForUser(user: AuthUser, dto: CreateAppointmentDto): Promise<AppointmentEntity> {
     this.requireTenantUser(user);
-    const tenant = this.sqlDb.findTenantById(user.tenantId!);
+    const tenant = await this.sqlDb.findTenantById(user.tenantId!);
     if (!tenant) {
       throw new NotFoundException('Tenant no encontrado');
     }
@@ -34,7 +34,7 @@ export class TenantAppointmentsService {
         'La creacion manual de citas esta desactivada en configuracion del negocio',
       );
     }
-    const conflict = this.sqlDb.findAppointmentByTenantAndWhen(user.tenantId!, dto.when);
+    const conflict = await this.sqlDb.findAppointmentByTenantAndWhen(user.tenantId!, dto.when);
     if (conflict) {
       throw new ConflictException(
         'Ya existe una cita en ese mismo dia y hora. Elige otro horario.',
@@ -62,13 +62,13 @@ export class TenantAppointmentsService {
     );
   }
 
-  patchAttendance(
+  async patchAttendance(
     user: AuthUser,
     appointmentId: string,
     dto: PatchAppointmentAttendanceDto,
-  ): AppointmentEntity {
+  ): Promise<AppointmentEntity> {
     this.requireTenantUser(user);
-    const updated = this.sqlDb.updateAppointmentAttendance(
+    const updated = await this.sqlDb.updateAppointmentAttendance(
       appointmentId,
       user.tenantId!,
       dto.attendance,

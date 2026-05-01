@@ -34,7 +34,7 @@
       </p>
       <form [formGroup]="form" (ngSubmit)="saveOperationalSettings()">
         <label class="remember-row">
-          <input type="checkbox" formControlName="manualBookingEnabled" [disabled]="!canManageOperations()" />
+          <input type="checkbox" formControlName="manualBookingEnabled" />
           <span>Permitir creación manual de citas en panel</span>
         </label>
         <button type="submit" class="az-btn az-btn-primary mt" [disabled]="!canManageOperations()">

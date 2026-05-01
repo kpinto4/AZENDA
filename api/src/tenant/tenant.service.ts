@@ -13,7 +13,7 @@ import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
 export class TenantService {
   constructor(private readonly sqlDbService: SqlDbService) {}
 
-  getTenantContext(currentUser: AuthUser) {
+  async getTenantContext(currentUser: AuthUser) {
     if (currentUser.role === UserRole.SUPER_ADMIN) {
       return {
         tenant: null,
@@ -25,7 +25,7 @@ export class TenantService {
       throw new NotFoundException('Usuario sin tenant asignado');
     }
 
-    const tenant = this.sqlDbService.findTenantById(currentUser.tenantId);
+    const tenant = await this.sqlDbService.findTenantById(currentUser.tenantId);
     if (!tenant) {
       throw new NotFoundException('Tenant no encontrado');
     }
@@ -33,11 +33,11 @@ export class TenantService {
     return { tenant };
   }
 
-  updateTenantSettings(currentUser: AuthUser, dto: UpdateTenantSettingsDto) {
+  async updateTenantSettings(currentUser: AuthUser, dto: UpdateTenantSettingsDto) {
     if (!currentUser.tenantId) {
       throw new NotFoundException('Usuario sin tenant asignado');
     }
-    const updated = this.sqlDbService.updateTenant(currentUser.tenantId, {
+    const updated = await this.sqlDbService.updateTenant(currentUser.tenantId, {
       manualBookingEnabled: dto.manualBookingEnabled,
     });
     if (!updated) {
@@ -46,16 +46,21 @@ export class TenantService {
     return { tenant: updated };
   }
 
-  listCatalog(currentUser: AuthUser) {
+  async listCatalog(currentUser: AuthUser) {
     const tenantId = this.requireTenantId(currentUser);
+    const [products, services, branding] = await Promise.all([
+      this.sqlDbService.listProductsByTenantId(tenantId),
+      this.sqlDbService.listServicesByTenantId(tenantId),
+      this.sqlDbService.getTenantBranding(tenantId),
+    ]);
     return {
-      products: this.sqlDbService.listProductsByTenantId(tenantId),
-      services: this.sqlDbService.listServicesByTenantId(tenantId),
-      branding: this.sqlDbService.getTenantBranding(tenantId),
+      products,
+      services,
+      branding,
     };
   }
 
-  createProduct(currentUser: AuthUser, dto: UpsertTenantProductDto) {
+  async createProduct(currentUser: AuthUser, dto: UpsertTenantProductDto) {
     const tenantId = this.requireTenantId(currentUser);
     return this.sqlDbService.createTenantProduct(tenantId, {
       name: dto.name,
@@ -68,9 +73,9 @@ export class TenantService {
     });
   }
 
-  updateProduct(currentUser: AuthUser, productId: string, dto: UpsertTenantProductDto) {
+  async updateProduct(currentUser: AuthUser, productId: string, dto: UpsertTenantProductDto) {
     const tenantId = this.requireTenantId(currentUser);
-    const row = this.sqlDbService.updateTenantProduct(tenantId, productId, {
+    const row = await this.sqlDbService.updateTenantProduct(tenantId, productId, {
       name: dto.name,
       description: dto.description,
       price: dto.price,
@@ -85,22 +90,22 @@ export class TenantService {
     return row;
   }
 
-  deleteProduct(currentUser: AuthUser, productId: string) {
+  async deleteProduct(currentUser: AuthUser, productId: string) {
     const tenantId = this.requireTenantId(currentUser);
-    const ok = this.sqlDbService.deleteTenantProduct(tenantId, productId);
+    const ok = await this.sqlDbService.deleteTenantProduct(tenantId, productId);
     if (!ok) {
       throw new NotFoundException('Producto no encontrado');
     }
     return { ok: true };
   }
 
-  moveProduct(currentUser: AuthUser, productId: string, dto: MoveCatalogItemDto) {
+  async moveProduct(currentUser: AuthUser, productId: string, dto: MoveCatalogItemDto) {
     const tenantId = this.requireTenantId(currentUser);
-    this.sqlDbService.moveTenantProduct(tenantId, productId, dto.direction);
+    await this.sqlDbService.moveTenantProduct(tenantId, productId, dto.direction);
     return { ok: true };
   }
 
-  createService(currentUser: AuthUser, dto: UpsertTenantServiceDto) {
+  async createService(currentUser: AuthUser, dto: UpsertTenantServiceDto) {
     const tenantId = this.requireTenantId(currentUser);
     return this.sqlDbService.createTenantService(tenantId, {
       name: dto.name,
@@ -111,9 +116,9 @@ export class TenantService {
     });
   }
 
-  updateService(currentUser: AuthUser, serviceId: string, dto: UpsertTenantServiceDto) {
+  async updateService(currentUser: AuthUser, serviceId: string, dto: UpsertTenantServiceDto) {
     const tenantId = this.requireTenantId(currentUser);
-    const row = this.sqlDbService.updateTenantService(tenantId, serviceId, {
+    const row = await this.sqlDbService.updateTenantService(tenantId, serviceId, {
       name: dto.name,
       description: dto.description,
       price: dto.price,
@@ -126,30 +131,30 @@ export class TenantService {
     return row;
   }
 
-  deleteService(currentUser: AuthUser, serviceId: string) {
+  async deleteService(currentUser: AuthUser, serviceId: string) {
     const tenantId = this.requireTenantId(currentUser);
-    const ok = this.sqlDbService.deleteTenantService(tenantId, serviceId);
+    const ok = await this.sqlDbService.deleteTenantService(tenantId, serviceId);
     if (!ok) {
       throw new NotFoundException('Servicio no encontrado');
     }
     return { ok: true };
   }
 
-  moveService(currentUser: AuthUser, serviceId: string, dto: MoveCatalogItemDto) {
+  async moveService(currentUser: AuthUser, serviceId: string, dto: MoveCatalogItemDto) {
     const tenantId = this.requireTenantId(currentUser);
-    this.sqlDbService.moveTenantService(tenantId, serviceId, dto.direction);
+    await this.sqlDbService.moveTenantService(tenantId, serviceId, dto.direction);
     return { ok: true };
   }
 
-  updateBranding(currentUser: AuthUser, dto: UpdateTenantBrandingDto) {
+  async updateBranding(currentUser: AuthUser, dto: UpdateTenantBrandingDto) {
     const tenantId = this.requireTenantId(currentUser);
     return this.sqlDbService.updateTenantBranding(tenantId, dto);
   }
 
-  listEmployees(currentUser: AuthUser) {
+  async listEmployees(currentUser: AuthUser) {
     const tenantId = this.requireTenantId(currentUser);
-    return this.sqlDbService
-      .listUsersByTenantId(tenantId)
+    const users = await this.sqlDbService.listUsersByTenantId(tenantId);
+    return users
       .filter((u) => u.role === UserRole.ADMIN || u.role === UserRole.EMPLEADO)
       .map((u) => ({
         id: u.id,
@@ -161,12 +166,12 @@ export class TenantService {
       }));
   }
 
-  createEmployee(currentUser: AuthUser, dto: CreateTenantEmployeeDto) {
+  async createEmployee(currentUser: AuthUser, dto: CreateTenantEmployeeDto) {
     const tenantId = this.requireTenantId(currentUser);
-    const created = this.sqlDbService.createUser({
+    const created = await this.sqlDbService.createUser({
       id: `usr_${Date.now()}`,
       email: dto.email.trim().toLowerCase(),
-      password: (dto.password?.trim() || 'azenda123'),
+      password: dto.password?.trim() || 'azenda123',
       role: dto.role === 'ADMIN' ? UserRole.ADMIN : UserRole.EMPLEADO,
       tenantId,
       systems: dto.role === 'ADMIN' ? [AppSystem.TENANT, AppSystem.PUBLIC_BOOKING] : [AppSystem.TENANT],
@@ -182,9 +187,9 @@ export class TenantService {
     };
   }
 
-  updateEmployee(currentUser: AuthUser, userId: string, dto: UpdateTenantEmployeeDto) {
+  async updateEmployee(currentUser: AuthUser, userId: string, dto: UpdateTenantEmployeeDto) {
     const tenantId = this.requireTenantId(currentUser);
-    const current = this.sqlDbService.findUserById(userId);
+    const current = await this.sqlDbService.findUserById(userId);
     if (!current || current.tenantId !== tenantId) {
       throw new NotFoundException('Empleado no encontrado');
     }
@@ -193,7 +198,7 @@ export class TenantService {
         ? UserRole.ADMIN
         : UserRole.EMPLEADO
       : current.role;
-    const updated = this.sqlDbService.updateUser(userId, {
+    const updated = await this.sqlDbService.updateUser(userId, {
       email: dto.email?.trim().toLowerCase(),
       password: dto.password?.trim(),
       role,
@@ -204,7 +209,7 @@ export class TenantService {
     }
     return {
       id: updated.id,
-      name: (dto.name?.trim() || updated.email.split('@')[0]),
+      name: dto.name?.trim() || updated.email.split('@')[0],
       email: updated.email,
       password: updated.password,
       role: updated.role === UserRole.ADMIN ? 'ADMIN' : 'EMPLEADO',
@@ -212,9 +217,9 @@ export class TenantService {
     };
   }
 
-  deleteEmployee(currentUser: AuthUser, userId: string) {
+  async deleteEmployee(currentUser: AuthUser, userId: string) {
     const tenantId = this.requireTenantId(currentUser);
-    const ok = this.sqlDbService.deleteUserByTenant(userId, tenantId);
+    const ok = await this.sqlDbService.deleteUserByTenant(userId, tenantId);
     if (!ok) {
       throw new NotFoundException('Empleado no encontrado');
     }

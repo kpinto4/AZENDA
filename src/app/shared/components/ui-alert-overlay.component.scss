@@ -1,0 +1,86 @@
+.ui-alert-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 14, 26, 0.45);
+  z-index: 1200;
+}
+
+.ui-alert-card {
+  position: fixed;
+  z-index: 1201;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(92vw, 440px);
+  padding: 20px 20px 16px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(21, 32, 62, 0.12);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+  text-align: center;
+}
+
+.ui-alert-card h3 {
+  margin: 6px 0 8px;
+}
+
+.ui-alert-card p {
+  margin: 0;
+  color: #445072;
+}
+
+.ui-alert-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+  color: #6f7991;
+}
+
+.ui-alert-close:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ui-alert-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 8px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.ui-alert-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.ui-alert-card.success .ui-alert-icon {
+  background: #daf7e9;
+  color: #14985e;
+}
+
+.ui-alert-card.info .ui-alert-icon {
+  background: #ddeeff;
+  color: #2b6cb0;
+}
+
+.ui-alert-card.warning .ui-alert-icon,
+.ui-alert-card.confirm .ui-alert-icon {
+  background: #fff4ce;
+  color: #b7791f;
+}
+
+.ui-alert-card.error .ui-alert-icon {
+  background: #ffe1e1;
+  color: #c53030;
+}
+

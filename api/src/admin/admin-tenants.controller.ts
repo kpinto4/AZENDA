@@ -34,8 +34,8 @@ export class AdminTenantsController {
   }
 
   @Get(':tenantId')
-  getTenantById(@Param('tenantId') tenantId: string) {
-    const tenant = this.sqlDbService.findTenantById(tenantId);
+  async getTenantById(@Param('tenantId') tenantId: string) {
+    const tenant = await this.sqlDbService.findTenantById(tenantId);
     if (!tenant) {
       throw new NotFoundException('Tenant no encontrado');
     }
@@ -61,7 +61,7 @@ export class AdminTenantsController {
   }
 
   @Patch(':tenantId')
-  updateTenant(
+  async updateTenant(
     @Param('tenantId') tenantId: string,
     @Body() body: UpdateTenantDto,
   ) {
@@ -76,7 +76,7 @@ export class AdminTenantsController {
       modPatch.inventario = body.inventario;
     }
 
-    const updated = this.sqlDbService.updateTenant(tenantId, {
+    const updated = await this.sqlDbService.updateTenant(tenantId, {
       name: body.name,
       slug: body.slug,
       status: body.status,
@@ -94,8 +94,8 @@ export class AdminTenantsController {
 
   @Delete(':tenantId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  deleteTenant(@Param('tenantId') tenantId: string) {
-    const deleted = this.sqlDbService.deleteTenant(tenantId);
+  async deleteTenant(@Param('tenantId') tenantId: string) {
+    const deleted = await this.sqlDbService.deleteTenant(tenantId);
     if (!deleted) {
       throw new NotFoundException('Tenant no encontrado');
     }

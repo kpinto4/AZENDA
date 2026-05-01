@@ -4,6 +4,7 @@ import { environment } from '../../../environments/environment';
 import { ApiStoreVisitDto, ApiStoreVisitsService } from '../../core/services/api-store-visits.service';
 import { MockDataService } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
+import { UiAlertService } from '../../core/services/ui-alert.service';
 
 @Component({
   selector: 'app-tenant-sales',
@@ -16,6 +17,7 @@ export class TenantSalesComponent {
   readonly data = inject(MockDataService);
   readonly session = inject(MockSessionService);
   private readonly apiStore = inject(ApiStoreVisitsService);
+  private readonly alerts = inject(UiAlertService);
 
   readonly storeVisitsRemote = signal<ApiStoreVisitDto[]>([]);
 
@@ -33,10 +35,19 @@ export class TenantSalesComponent {
   });
 
   readonly methods = ['Efectivo', 'Tarjeta', 'Bizum', 'Transferencia'];
+  readonly salesBlockedMessage = computed(() => this.session.tenantRestrictionMessage());
+  readonly canCreateSales = computed(() => !this.session.isTenantRestricted());
 
   protected readonly environment = environment;
 
   constructor() {
+    effect(() => {
+      if (this.canCreateSales()) {
+        this.form.enable({ emitEvent: false });
+      } else {
+        this.form.disable({ emitEvent: false });
+      }
+    });
     effect((onCleanup) => {
       const live =
         environment.useLiveAuth &&
@@ -73,6 +84,10 @@ export class TenantSalesComponent {
   }
 
   add(): void {
+    if (!this.canCreateSales()) {
+      this.alerts.warning(this.session.tenantRestrictionMessage() ?? 'Ventas deshabilitadas.');
+      return;
+    }
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -95,5 +110,6 @@ export class TenantSalesComponent {
           }
         : undefined,
     );
+    this.alerts.success('Venta registrada correctamente.');
   }
 }

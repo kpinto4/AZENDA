@@ -7,6 +7,18 @@
     "start:web": "ng serve",
     "start:api": "npm --prefix api run start:dev",
     "dev": "concurrently -k -n api,web -c blue,green \"npm run start:api\" \"npm run start:web\"",
+    "dev:sqlite": "cross-env USE_SQLITE=1 concurrently -k -n api,web -c blue,green \"npm run start:api\" \"npm run start:web\"",
+    "pg:up": "docker compose up -d --wait postgres",
+    "pg:down": "docker compose down",
+    "db:create-db": "npm --prefix api run db:create-db",
+    "db:bootstrap": "npm --prefix api run db:bootstrap",
+    "db:setup": "npm run pg:up && npm run db:create-db && npm run db:bootstrap",
+    "mysql:up": "npm run pg:up",
+    "mysql:down": "npm run pg:down",
+    "mysql:create-db": "npm run db:create-db",
+    "mysql:bootstrap": "npm run db:bootstrap",
+    "mysql:setup": "npm run db:setup",
+    "mysql:bootstrap:sqlite": "cross-env USE_SQLITE=1 npm run db:bootstrap",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
@@ -29,13 +41,14 @@
     "@angular/cli": "^19.2.23",
     "@angular/compiler-cli": "^19.2.0",
     "@types/jasmine": "~5.1.0",
+    "concurrently": "^9.1.2",
+    "cross-env": "^10.1.0",
     "jasmine-core": "~5.6.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "typescript": "~5.7.2",
-    "concurrently": "^9.1.2"
+    "typescript": "~5.7.2"
   }
 }

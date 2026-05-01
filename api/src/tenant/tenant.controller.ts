@@ -15,6 +15,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { Systems } from '../auth/decorators/systems.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { TenantStatusGuard } from '../auth/guards/tenant-status.guard';
 import { MoveCatalogItemDto } from './dto/move-catalog-item.dto';
 import { UpdateTenantBrandingDto } from './dto/update-tenant-branding.dto';
 import { CreateTenantEmployeeDto } from './dto/create-tenant-employee.dto';
@@ -27,7 +28,7 @@ import { TenantService } from './tenant.service';
 type AuthenticatedRequest = Request & { user: AuthUser };
 
 @Controller('tenant')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantStatusGuard)
 @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLEADO)
 @Systems(AppSystem.TENANT)
 export class TenantController {

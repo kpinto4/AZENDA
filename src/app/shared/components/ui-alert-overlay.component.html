@@ -1,0 +1,35 @@
+@if (current(); as alert) {
+  <div class="ui-alert-backdrop" (click)="alerts.close()"></div>
+  <section class="ui-alert-card" [ngClass]="alert.kind" role="alertdialog" aria-modal="true">
+    <button
+      type="button"
+      class="ui-alert-close"
+      aria-label="Cerrar alerta"
+      [disabled]="!alert.dismissible"
+      (click)="alerts.close()"
+    >
+      ×
+    </button>
+
+    <div class="ui-alert-icon">{{ icon() }}</div>
+    <h3>{{ alert.title }}</h3>
+    <p>{{ alert.message }}</p>
+
+    <div class="ui-alert-actions">
+      @if (alert.kind === 'confirm' && alert.cancelText) {
+        <button type="button" class="az-btn az-btn-secondary" (click)="alerts.cancelCurrent()">
+          {{ alert.cancelText }}
+        </button>
+      }
+      <button
+        type="button"
+        class="az-btn"
+        [ngClass]="alert.kind === 'error' ? 'az-btn-primary' : 'az-btn-secondary'"
+        (click)="alert.kind === 'confirm' ? alerts.confirmCurrent() : alerts.close()"
+      >
+        {{ alert.confirmText }}
+      </button>
+    </div>
+  </section>
+}
+

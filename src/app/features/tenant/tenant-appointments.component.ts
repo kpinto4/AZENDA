@@ -11,6 +11,7 @@ import {
   MockDataService,
 } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
+import { UiAlertService } from '../../core/services/ui-alert.service';
 
 export interface CalSimDay {
   key: string;
@@ -110,6 +111,7 @@ export class TenantAppointmentsComponent {
   private readonly fb = inject(FormBuilder);
   readonly data = inject(MockDataService);
   readonly session = inject(MockSessionService);
+  private readonly alerts = inject(UiAlertService);
   readonly apiAppointments = inject(ApiAppointmentsService);
   private readonly apiCatalog = inject(ApiTenantCatalogService);
   readonly createMsg = signal<string | null>(null);
@@ -126,8 +128,11 @@ export class TenantAppointmentsComponent {
 
   readonly canCreateManualAppointment = computed(
     () =>
-      this.session.role() === 'EMPLOYEE' && this.session.manualBookingEnabled(),
+      this.session.role() === 'EMPLOYEE' &&
+      this.session.manualBookingEnabled() &&
+      !this.session.isTenantRestricted(),
   );
+  readonly appointmentsBlockedMessage = computed(() => this.session.tenantRestrictionMessage());
   readonly showManualCreateCard = computed(() => this.canCreateManualAppointment());
   readonly manualServiceOptions = computed(() => {
     if (this.apiAppointments.useRemote()) {
@@ -200,6 +205,13 @@ export class TenantAppointmentsComponent {
 
   constructor() {
     effect(() => {
+      if (this.creatingAppointment()) {
+        this.createForm.disable({ emitEvent: false });
+      } else {
+        this.createForm.enable({ emitEvent: false });
+      }
+    });
+    effect(() => {
       this.calendarWeek();
       queueMicrotask(() => this.scrollCalendarToToday());
     });
@@ -254,6 +266,10 @@ export class TenantAppointmentsComponent {
   }
 
   setAttendance(id: string, raw: string): void {
+    if (this.session.isTenantRestricted()) {
+      this.alerts.warning(this.session.tenantRestrictionMessage() ?? 'Operacion no permitida.');
+      return;
+    }
     const attendance = raw as MockAppointmentAttendance;
     if (this.apiAppointments.useRemote()) {
       this.apiAppointments.patchAttendance(id, attendance).subscribe({ error: () => {} });
@@ -265,6 +281,12 @@ export class TenantAppointmentsComponent {
   createAppointment(): void {
     this.createMsg.set(null);
     this.createErr.set(null);
+    if (this.session.isTenantRestricted()) {
+      const msg = this.session.tenantRestrictionMessage() ?? 'Operacion no permitida.';
+      this.createErr.set(msg);
+      this.alerts.warning(msg);
+      return;
+    }
     if (this.createForm.invalid) {
       this.createForm.markAllAsTouched();
       return;
@@ -282,6 +304,7 @@ export class TenantAppointmentsComponent {
           if (!this.canCreateManualAppointment()) {
             this.creatingAppointment.set(false);
             this.createErr.set('La creación manual fue desactivada por el admin.');
+            this.alerts.info('La creacion manual esta desactivada por el administrador.');
             return;
           }
           this.apiAppointments
@@ -294,36 +317,43 @@ export class TenantAppointmentsComponent {
               next: () => {
                 this.creatingAppointment.set(false);
                 this.createMsg.set('Cita creada correctamente.');
+                this.alerts.success('Reserva creada correctamente.');
                 this.createForm.patchValue({ customer: '', service: '', time: '09:00' });
               },
               error: () => {
                 this.creatingAppointment.set(false);
                 this.createErr.set('No se pudo crear la cita. Revisa permisos o conexión.');
+                this.alerts.error('No se pudo crear la reserva. Revisa permisos o conexion.');
               },
             });
         },
         error: () => {
           this.creatingAppointment.set(false);
           this.createErr.set('No se pudo validar permisos en tiempo real.');
+          this.alerts.error('No se pudo validar permisos en tiempo real.');
         },
       });
       return;
     }
     if (!this.canCreateManualAppointment()) {
       this.createErr.set('No tienes permisos para crear citas manuales.');
+      this.alerts.warning('No tienes permisos para crear citas manuales.');
       return;
     }
     const slug = this.session.publicBookingSlug();
     if (!slug) {
       this.createErr.set('No hay negocio activo para registrar la cita.');
+      this.alerts.error('No hay negocio activo para registrar la cita.');
       return;
     }
     const created = this.data.recordBooking(v.customer.trim(), v.service.trim(), when, slug);
     if (!created) {
       this.createErr.set('Ya existe una cita en ese mismo día y hora.');
+      this.alerts.warning('Ya existe una cita en ese mismo dia y hora.');
       return;
     }
     this.createMsg.set('Cita creada (modo demo).');
+    this.alerts.success('Cita creada en modo demo.');
     this.createForm.patchValue({ customer: '', service: '', time: '09:00' });
   }
 }

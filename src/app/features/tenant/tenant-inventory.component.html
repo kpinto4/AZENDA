@@ -5,6 +5,11 @@
       <p class="az-page-sub">Un solo panel para administrar catálogo comercial e inventario operativo.</p>
     </div>
   </div>
+  @if (inventoryBlockedMessage(); as msg) {
+    <div class="tenant-warn" role="status">
+      <strong>Catálogo e inventario en solo lectura:</strong> {{ msg }}
+    </div>
+  }
 
   <div class="az-card toolbar-card az-adaptive-toolbar">
     <div class="view-switch">

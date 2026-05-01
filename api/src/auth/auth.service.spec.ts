@@ -19,8 +19,8 @@ describe('AuthService', () => {
   let service: AuthService;
   let jwtService: { sign: jest.Mock };
   let sqlDbService: {
-    findUserByCredentials: jest.Mock<AuthUser | undefined, [string, string]>;
-    findUserById: jest.Mock<AuthUser | undefined, [string]>;
+    findUserByCredentials: jest.Mock<Promise<AuthUser | undefined>, [string, string]>;
+    findUserById: jest.Mock<Promise<AuthUser | undefined>, [string]>;
   };
 
   beforeEach(async () => {
@@ -43,10 +43,10 @@ describe('AuthService', () => {
     service = moduleRef.get(AuthService);
   });
 
-  it('hace login y devuelve usuario sin password', () => {
-    sqlDbService.findUserByCredentials.mockReturnValue(activeUser);
+  it('hace login y devuelve usuario sin password', async () => {
+    sqlDbService.findUserByCredentials.mockResolvedValue(activeUser);
 
-    const res = service.login({ email: activeUser.email, password: 'secret' });
+    const res = await service.login({ email: activeUser.email, password: 'secret' });
 
     expect(sqlDbService.findUserByCredentials).toHaveBeenCalledWith(
       activeUser.email,
@@ -71,31 +71,31 @@ describe('AuthService', () => {
     expect((res.user as Partial<AuthUser>).password).toBeUndefined();
   });
 
-  it('rechaza credenciales invalidas', () => {
-    sqlDbService.findUserByCredentials.mockReturnValue(undefined);
+  it('rechaza credenciales invalidas', async () => {
+    sqlDbService.findUserByCredentials.mockResolvedValue(undefined);
 
-    expect(() =>
+    await expect(
       service.login({ email: 'missing@azenda.dev', password: 'bad' }),
-    ).toThrow(new UnauthorizedException('Credenciales invalidas'));
+    ).rejects.toThrow(new UnauthorizedException('Credenciales invalidas'));
     expect(jwtService.sign).not.toHaveBeenCalled();
   });
 
-  it('rechaza usuarios no activos', () => {
-    sqlDbService.findUserByCredentials.mockReturnValue({
+  it('rechaza usuarios no activos', async () => {
+    sqlDbService.findUserByCredentials.mockResolvedValue({
       ...activeUser,
       status: 'PAUSED',
     });
 
-    expect(() =>
-      service.login({ email: activeUser.email, password: 'secret' }),
-    ).toThrow(new UnauthorizedException('Usuario no activo'));
+    await expect(service.login({ email: activeUser.email, password: 'secret' })).rejects.toThrow(
+      new UnauthorizedException('Usuario no activo'),
+    );
     expect(jwtService.sign).not.toHaveBeenCalled();
   });
 
-  it('devuelve perfil en me sin password', () => {
-    sqlDbService.findUserById.mockReturnValue(activeUser);
+  it('devuelve perfil en me sin password', async () => {
+    sqlDbService.findUserById.mockResolvedValue(activeUser);
 
-    const me = service.me(activeUser.id);
+    const me = await service.me(activeUser.id);
 
     expect(sqlDbService.findUserById).toHaveBeenCalledWith(activeUser.id);
     expect(me).toEqual({
@@ -109,10 +109,10 @@ describe('AuthService', () => {
     expect((me as Partial<AuthUser>).password).toBeUndefined();
   });
 
-  it('falla en me cuando no existe el usuario', () => {
-    sqlDbService.findUserById.mockReturnValue(undefined);
+  it('falla en me cuando no existe el usuario', async () => {
+    sqlDbService.findUserById.mockResolvedValue(undefined);
 
-    expect(() => service.me('missing-user')).toThrow(
+    await expect(service.me('missing-user')).rejects.toThrow(
       new UnauthorizedException('Usuario no encontrado'),
     );
   });

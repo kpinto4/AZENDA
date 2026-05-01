@@ -193,6 +193,15 @@ export class TenantSettingsComponent {
 
   constructor() {
     effect(() => {
+      const canManage = this.canManageOperations();
+      const ctrl = this.form.controls.manualBookingEnabled;
+      if (canManage) {
+        ctrl.enable({ emitEvent: false });
+      } else {
+        ctrl.disable({ emitEvent: false });
+      }
+    });
+    effect(() => {
       const tenantId = this.session.tenantId();
       if (!tenantId) {
         return;

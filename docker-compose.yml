@@ -1,0 +1,25 @@
+# PostgreSQL local: datos persistentes en ./api/data/postgres
+# Flujo:
+#   npm run pg:up
+#   npm run db:create-db
+#   npm run db:bootstrap
+#   npm run dev
+services:
+  postgres:
+    image: postgres:16
+    container_name: azenda-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: azenda
+    volumes:
+      - ./api/data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d azenda']
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 15s
