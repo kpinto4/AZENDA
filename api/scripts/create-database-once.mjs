@@ -1,11 +1,31 @@
-﻿/**
- * Ejecutar UNA VEZ para crear la base de datos en PostgreSQL.
+/**
+ * Ejecutar UNA VEZ para crear la base de datos en PostgreSQL local.
  * Idempotente: si ya existe, no falla.
- * Luego ejecuta: npm run db:bootstrap
+ * Con Neon u otro remoto: define DATABASE_URL en api/.env y omite este script (Neon ya trae la base).
  *
  * Variables: PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE (default azenda)
  */
+import { existsSync } from 'node:fs';
+import { config as loadEnv } from 'dotenv';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const apiDir = resolve(scriptDir, '..');
+const monoRoot = resolve(apiDir, '..');
+if (existsSync(resolve(monoRoot, '.env'))) {
+  loadEnv({ path: resolve(monoRoot, '.env') });
+}
+loadEnv({ path: resolve(apiDir, '.env'), override: true });
+
+const dbUrl = process.env.DATABASE_URL?.trim();
+if (dbUrl) {
+  console.log(
+    'DATABASE_URL esta definida (p. ej. Neon): no aplica CREATE DATABASE local. Siguiente: npm run db:bootstrap',
+  );
+  process.exit(0);
+}
 
 const host = process.env.PGHOST ?? '127.0.0.1';
 const port = Number(process.env.PGPORT ?? 5432);

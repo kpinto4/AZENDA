@@ -38,4 +38,8 @@ export class UpdateTenantDto {
   @IsOptional()
   @IsBoolean()
   manualBookingEnabled?: boolean;
+
+  @IsOptional()
+  @IsIn(['MONTHLY', 'YEARLY'])
+  billingCycle?: 'MONTHLY' | 'YEARLY';
 }

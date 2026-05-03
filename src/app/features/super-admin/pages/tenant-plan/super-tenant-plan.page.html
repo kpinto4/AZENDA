@@ -1,0 +1,177 @@
+<div class="az-container az-page plan-page super-ui-page">
+  <header class="super-ui-header">
+    <div class="super-ui-header-main">
+      <p class="super-ui-back-row">
+        <a routerLink="/super/tenants" class="az-link-back">← Volver a Tenants</a>
+      </p>
+      <div class="super-ui-title-row">
+        <h1 class="super-ui-title">Plan y facturación</h1>
+        @if (tenant()) {
+          <span class="super-ui-badge super-ui-badge--live">Tenant</span>
+        }
+      </div>
+      @if (tenant(); as t) {
+        <p class="super-ui-lead">
+          <strong>{{ t.name }}</strong>
+          <span class="mono">· {{ t.id }}</span>
+          <span class="mono">· /{{ t.slug }}</span>
+        </p>
+      } @else if (!loading()) {
+        <p class="super-ui-lead">Asigna plan comercial y ciclo de cobro del negocio.</p>
+      }
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="super-ui-alert super-ui-alert--error" role="alert">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="super-ui-skeleton" aria-busy="true">
+      <div class="super-ui-sk-line super-ui-sk-line--40"></div>
+      <div class="super-ui-sk-line super-ui-sk-line--100"></div>
+      <div class="super-ui-sk-grid">
+        <div class="super-ui-sk-card"></div>
+      </div>
+    </div>
+  } @else {
+    @if (tenant(); as t) {
+      <div class="az-card summary-card">
+        <h3>Estado del periodo</h3>
+        <ul class="summary-list">
+          <li>Alta: <strong>{{ formatDate(t.subscriptionStartedAt) }}</strong></li>
+          <li>Periodo actual: {{ formatDate(t.currentPeriodStart) }} — {{ formatDate(t.currentPeriodEnd) }}</li>
+          <li>Próxima renovación: <strong>{{ formatDate(t.nextRenewalAt) }}</strong></li>
+          <li>Quedan <strong>{{ daysRemaining(t) }}</strong> día(s) en el ciclo actual</li>
+        </ul>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="az-card form-card">
+        <h3>Modificar plan y cobro</h3>
+        <p class="muted small">
+          El <strong>plan comercial</strong> define capacidades; el <strong>ciclo</strong> indica si este negocio paga
+          por mes o por año. Los <strong>importes de lista</strong> son globales: edítalos en
+          <a routerLink="/super/planes">Precios por plan</a> (mismo precio para todos los tenants con ese plan).
+        </p>
+
+        <div class="field">
+          <label class="field-label" for="plan-sel">Plan comercial</label>
+          <select id="plan-sel" class="az-select" formControlName="plan">
+            @for (p of plans; track p) {
+              <option [value]="p">{{ p }}</option>
+            }
+          </select>
+        </div>
+
+        @if (pricePreview(); as pp) {
+          <div class="az-card global-prices-hint">
+            <p class="muted small mb0">
+              <strong>Precios de lista</strong> para el plan seleccionado (globales):
+              <span class="nowrap"
+                >mensual {{ pp.monthly | number : '1.0-2' }} · anual {{ pp.yearly | number : '1.0-2' }}</span
+              >
+            </p>
+          </div>
+        }
+
+        <fieldset class="field cycle-field">
+          <legend class="field-label">Ciclo de facturación de este negocio</legend>
+          <div class="cycle-radios">
+            <label class="radio-pill">
+              <input type="radio" formControlName="billingCycle" value="MONTHLY" />
+              <span>Mensual</span>
+            </label>
+            <label class="radio-pill">
+              <input type="radio" formControlName="billingCycle" value="YEARLY" />
+              <span>Anual</span>
+            </label>
+          </div>
+          <p class="muted tiny">El negocio verá el periodo y fechas según este ciclo en su panel de configuración.</p>
+        </fieldset>
+
+        @if (formDiffersFromSaved()) {
+          <div class="preview-block">
+            <div class="preview-head">
+              <h4>Vista previa del cambio</h4>
+              <button
+                type="button"
+                class="az-btn az-btn-ghost small"
+                (click)="refreshQuoteNow()"
+                [disabled]="quoteLoading()"
+              >
+                Actualizar simulación
+              </button>
+            </div>
+            <p class="muted small change-line">
+              <strong>{{ t.plan }}</strong> ({{ cycleLabel(t.billingCycle) }}) →
+              <strong>{{ form.controls.plan.value }}</strong> ({{
+                cycleLabel($any(form.controls.billingCycle.value))
+              }})
+            </p>
+
+            <div class="cap-block">
+              <h5 class="cap-title">Capacidades nuevas (según plan)</h5>
+              @if (newCapabilityLines(t, $any(form.controls.plan.value)).length) {
+                <ul class="cap-list">
+                  @for (line of newCapabilityLines(t, $any(form.controls.plan.value)); track line) {
+                    <li>{{ line }}</li>
+                  }
+                </ul>
+              } @else {
+                <p class="muted small mb0">
+                  No hay módulos adicionales «por defecto» respecto a lo que ya tiene activo este negocio; el cambio
+                  puede ser sobre todo de <strong>precio de lista</strong> o <strong>ciclo</strong>.
+                </p>
+              }
+            </div>
+
+            @if (quoteError()) {
+              <div class="super-ui-alert super-ui-alert--error small-err" role="alert">{{ quoteError() }}</div>
+            } @else if (quoteLoading()) {
+              <p class="muted">Calculando prorrateo del periodo actual…</p>
+            } @else {
+              @if (quote(); as q) {
+                <div class="quote-grid">
+                  <div>
+                    <span class="lbl">Días restantes en el periodo</span>
+                    <strong>{{ q.period.remainingDays }} / {{ q.period.totalDays }}</strong>
+                  </div>
+                  <div>
+                    <span class="lbl">Crédito del plan/ciclo actual (no disfrutado)</span>
+                    <strong>{{ q.creditAmount | number : '1.2-2' }}</strong>
+                  </div>
+                  <div>
+                    <span class="lbl">Coste del nuevo plan en ese tramo</span>
+                    <strong>{{ q.targetCostForRemaining | number : '1.2-2' }}</strong>
+                  </div>
+                  <div class="highlight">
+                    <span class="lbl">Suplemento estimado ahora (prorrateo)</span>
+                    <strong>{{ q.amountDueNow | number : '1.2-2' }}</strong>
+                  </div>
+                  @if (q.carryOverBalance > 0) {
+                    <div>
+                      <span class="lbl">Saldo a favor (baja o ciclo más barato)</span>
+                      <strong>{{ q.carryOverBalance | number : '1.2-2' }}</strong>
+                    </div>
+                  }
+                </div>
+                <p class="muted tiny foot-quote">
+                  Simulación sobre el periodo actual ({{ formatDate(q.period.start) }} —
+                  {{ formatDate(q.period.end) }}). Al pulsar <strong>Guardar cambios</strong> se aplica el plan y ciclo
+                  en el API (ajuste contable fino queda fuera de esta pantalla).
+                </p>
+              }
+            }
+          </div>
+        }
+
+        <div class="super-ui-actions">
+          <button type="button" class="super-ui-btn-ghost" (click)="cancel()" [disabled]="saving()">Cancelar</button>
+          <button type="submit" class="super-ui-btn-primary" [disabled]="saving() || form.invalid">
+            {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+          </button>
+        </div>
+      </form>
+    }
+  }
+</div>

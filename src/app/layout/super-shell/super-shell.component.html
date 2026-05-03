@@ -9,16 +9,32 @@
       <div class="nav-group">
         <p class="nav-group-title">General</p>
         <div class="nav-links-grid">
-          <a routerLink="/super/panel" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Dashboard</a>
-          <a routerLink="/super/estadisticas" routerLinkActive="active">Estadísticas</a>
+          <a routerLink="/super/panel" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"
+            ><span class="nav-ico" aria-hidden="true">◆</span> Dashboard</a
+          >
+          <a routerLink="/super/estadisticas" routerLinkActive="active"
+            ><span class="nav-ico" aria-hidden="true">▤</span> Estadísticas</a
+          >
         </div>
       </div>
       <div class="nav-group">
         <p class="nav-group-title">Administración</p>
         <div class="nav-links-grid">
-          <a routerLink="/super/tenants" routerLinkActive="active">Tenants</a>
-          <a routerLink="/super/modulos" routerLinkActive="active">Módulos</a>
-          <a routerLink="/super/usuarios" routerLinkActive="active">Usuarios</a>
+          <a routerLink="/super/tenants" routerLinkActive="active"
+            ><span class="nav-ico" aria-hidden="true">▣</span> Tenants</a
+          >
+          <a routerLink="/super/planes" routerLinkActive="active"
+            ><span class="nav-ico" aria-hidden="true">$</span> Precios por plan</a
+          >
+          <a routerLink="/super/configuracion" routerLinkActive="active"
+            ><span class="nav-ico" aria-hidden="true">◇</span> Sitio y moneda</a
+          >
+          <a routerLink="/super/modulos" routerLinkActive="active"
+            ><span class="nav-ico" aria-hidden="true">⚙</span> Módulos</a
+          >
+          <a routerLink="/super/usuarios" routerLinkActive="active"
+            ><span class="nav-ico" aria-hidden="true">◎</span> Usuarios</a
+          >
         </div>
       </div>
     </nav>
@@ -41,6 +57,8 @@
       </button>
       <span class="mobile-shell-title">Super Admin</span>
     </header>
-    <router-outlet />
+    <div class="super-main-stage">
+      <router-outlet />
+    </div>
   </main>
 </div>

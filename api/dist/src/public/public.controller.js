@@ -30,6 +30,9 @@ let PublicController = class PublicController {
     constructor(sqlDb) {
         this.sqlDb = sqlDb;
     }
+    getSiteConfig() {
+        return this.sqlDb.getPlatformSiteConfig();
+    }
     async getPublicMeta(slug) {
         const tenant = await this.sqlDb.findTenantBySlug(slug);
         if (!tenant) {
@@ -113,6 +116,12 @@ let PublicController = class PublicController {
     }
 };
 exports.PublicController = PublicController;
+__decorate([
+    (0, common_1.Get)('site-config'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], PublicController.prototype, "getSiteConfig", null);
 __decorate([
     (0, common_1.Get)(':slug/meta'),
     __param(0, (0, common_1.Param)('slug')),

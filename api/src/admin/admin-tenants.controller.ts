@@ -18,6 +18,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
 import { TenantEntity } from '../infrastructure/sql-db/sql-db.types';
+import { AdminUpgradeQuoteDto } from './dto/admin-upgrade-quote.dto';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 
@@ -42,6 +43,22 @@ export class AdminTenantsController {
     return tenant;
   }
 
+  @Post(':tenantId/upgrade-quote')
+  async upgradeQuote(
+    @Param('tenantId') tenantId: string,
+    @Body() body: AdminUpgradeQuoteDto,
+  ) {
+    const quote = await this.sqlDbService.getUpgradeQuote({
+      tenantId,
+      targetPlan: body.targetPlan,
+      targetCycle: body.targetCycle,
+    });
+    if (!quote) {
+      throw new NotFoundException('Tenant no encontrado');
+    }
+    return quote;
+  }
+
   @Post()
   createTenant(@Body() body: CreateTenantDto) {
     return this.sqlDbService.createTenant({
@@ -52,6 +69,7 @@ export class AdminTenantsController {
       plan: body.plan ?? 'Trial',
       storefrontEnabled: body.storefrontEnabled ?? false,
       manualBookingEnabled: body.manualBookingEnabled ?? true,
+      billingCycle: body.billingCycle ?? 'MONTHLY',
       modules: {
         citas: body.citas ?? true,
         ventas: body.ventas ?? true,
@@ -83,6 +101,7 @@ export class AdminTenantsController {
       plan: body.plan,
       storefrontEnabled: body.storefrontEnabled,
       manualBookingEnabled: body.manualBookingEnabled,
+      billingCycle: body.billingCycle,
       ...(Object.keys(modPatch).length ? { modules: modPatch } : {}),
     });
     if (!updated) {

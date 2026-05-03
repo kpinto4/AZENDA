@@ -21,8 +21,12 @@ export class TenantStatusGuard implements CanActivate {
       return true;
     }
 
-    // Permite contexto para mostrar aviso en el panel.
-    if (req.method === 'GET' && req.path.endsWith('/tenant/context')) {
+    // Permite endpoints de contexto/facturacion para informar restricciones aun estando pausado.
+    const isAllowedInRestrictedTenant =
+      (req.method === 'GET' && req.path.endsWith('/tenant/context')) ||
+      (req.method === 'GET' && req.path.endsWith('/tenant/billing/status')) ||
+      (req.method === 'POST' && req.path.endsWith('/tenant/billing/upgrade-quote'));
+    if (isAllowedInRestrictedTenant) {
       return true;
     }
 

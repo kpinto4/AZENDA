@@ -1,3 +1,4 @@
+import { DecimalPipe } from '@angular/common';
 import {
   Component,
   computed,
@@ -10,7 +11,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
   ApiTenantsAdminService,
-  ApiTenantDto,
+  ApiTenantAdminDto,
 } from '../../core/services/api-tenants-admin.service';
 import {
   MockDataService,
@@ -22,7 +23,7 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-super-tenants',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, DecimalPipe],
   templateUrl: './super-tenants.component.html',
   styleUrl: './super-tenants.component.scss',
 })
@@ -32,7 +33,7 @@ export class SuperTenantsComponent {
   readonly session = inject(MockSessionService);
   private readonly apiTenantsAdmin = inject(ApiTenantsAdminService);
 
-  readonly apiRows = signal<ApiTenantDto[]>([]);
+  readonly apiRows = signal<ApiTenantAdminDto[]>([]);
   readonly apiError = signal<string>('');
 
   readonly useApiTenants = computed(
@@ -95,6 +96,7 @@ export class SuperTenantsComponent {
           slug,
           status: 'ACTIVE',
           plan: v.plan,
+          billingCycle: 'MONTHLY',
           citas: mods.citas,
           ventas: mods.ventas,
           inventario: mods.inventario,
@@ -115,7 +117,7 @@ export class SuperTenantsComponent {
     this.addForm.reset({ name: '', plan: 'Trial' });
   }
 
-  setApiTenantActive(t: ApiTenantDto, active: boolean): void {
+  setApiTenantActive(t: ApiTenantAdminDto, active: boolean): void {
     this.apiError.set('');
     this.apiTenantsAdmin
       .patch(t.id, { status: active ? 'ACTIVE' : 'PAUSED' })
@@ -125,15 +127,24 @@ export class SuperTenantsComponent {
       });
   }
 
-  setApiTenantPlan(t: ApiTenantDto, plan: string): void {
-    this.apiError.set('');
-    this.apiTenantsAdmin.patch(t.id, { plan }).subscribe({
-      next: () => this.reloadApiTenants(),
-      error: () => this.apiError.set('Error al actualizar el plan.'),
-    });
+  formatDate(value: string): string {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) {
+      return '—';
+    }
+    return d.toLocaleDateString();
   }
 
-  setApiTenantStorefront(t: ApiTenantDto, enabled: boolean): void {
+  daysRemaining(t: ApiTenantAdminDto): number {
+    const end = new Date(t.currentPeriodEnd).getTime();
+    if (Number.isNaN(end)) {
+      return 0;
+    }
+    const ms = end - Date.now();
+    return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+  }
+
+  setApiTenantStorefront(t: ApiTenantAdminDto, enabled: boolean): void {
     this.apiError.set('');
     this.apiTenantsAdmin.patch(t.id, { storefrontEnabled: enabled }).subscribe({
       next: () => this.reloadApiTenants(),
@@ -142,7 +153,7 @@ export class SuperTenantsComponent {
   }
 
   setApiTenantModule(
-    t: ApiTenantDto,
+    t: ApiTenantAdminDto,
     key: TenantModuleKey,
     enabled: boolean,
   ): void {
@@ -158,7 +169,7 @@ export class SuperTenantsComponent {
     });
   }
 
-  deleteApiTenant(row: ApiTenantDto): void {
+  deleteApiTenant(row: ApiTenantAdminDto): void {
     if (!confirm(`Eliminar tenant "${row.name}" (${row.id})?`)) {
       return;
     }

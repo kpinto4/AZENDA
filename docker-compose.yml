@@ -1,9 +1,9 @@
 # PostgreSQL local: datos persistentes en ./api/data/postgres
-# Flujo:
-#   npm run pg:up
-#   npm run db:create-db
-#   npm run db:bootstrap
-#   npm run dev
+# Primera vez: npm run db:setup  (Docker + create-db + bootstrap; requiere Docker)
+# Con Docker cada vez: npm run dev:docker  (npm run pg:up busca docker.exe en rutas tipicas de Windows)
+# Si sigue fallando: variable de entorno DOCKER_CLI_PATH = ruta completa a docker.exe
+# API+web (Postgres ya en marcha en 5432): npm run dev  (antes prueba TCP con npm run check:pg)
+# Sin Postgres: npm run dev:sqlite
 services:
   postgres:
     image: postgres:16

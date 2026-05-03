@@ -38,6 +38,25 @@ export interface ApiTenantContextResponse {
   message?: string;
 }
 
+export interface ApiTenantBillingStatusResponse {
+  tenantId: string;
+  plan: string;
+  status: 'ACTIVE' | 'PAUSED' | 'BLOCKED';
+  subscriptionStartedAt: string;
+  billing: {
+    cycle: 'MONTHLY' | 'YEARLY';
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+    nextRenewalAt: string;
+    monthlyPrice: number;
+    yearlyPrice: number;
+    daysTotal: number;
+    daysElapsed: number;
+    daysRemaining: number;
+    progressPct: number;
+  } | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiAuthService {
   private readonly http = inject(HttpClient);
@@ -68,6 +87,13 @@ export class ApiAuthService {
     return this.http.patch<ApiTenantContextResponse>(
       `${environment.apiBaseUrl}/tenant/settings`,
       body,
+    );
+  }
+
+  tenantBillingStatus(): Observable<ApiTenantBillingStatusResponse> {
+    return this.http.get<ApiTenantBillingStatusResponse>(
+      `${environment.apiBaseUrl}/tenant/billing/status`,
+      { params: { _: String(Date.now()) } },
     );
   }
 }

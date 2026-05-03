@@ -9,4 +9,5 @@ export declare class CreateTenantDto {
     plan?: string;
     storefrontEnabled?: boolean;
     manualBookingEnabled?: boolean;
+    billingCycle?: 'MONTHLY' | 'YEARLY';
 }

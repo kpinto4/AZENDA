@@ -1,4 +1,22 @@
 import { AppSystem, UserRole, UserStatus } from '../../auth/auth.types';
+export type BillingCycle = 'MONTHLY' | 'YEARLY';
+export interface PlanCatalogEntry {
+    planKey: string;
+    priceMonthly: number;
+    priceYearly: number;
+}
+export interface TenantBillingSnapshot {
+    cycle: BillingCycle;
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+    nextRenewalAt: string;
+    monthlyPrice: number;
+    yearlyPrice: number;
+    daysTotal: number;
+    daysElapsed: number;
+    daysRemaining: number;
+    progressPct: number;
+}
 export interface TenantEntity {
     id: string;
     name: string;
@@ -7,6 +25,13 @@ export interface TenantEntity {
     plan: string;
     storefrontEnabled: boolean;
     manualBookingEnabled: boolean;
+    billingCycle: BillingCycle;
+    planPriceMonthly: number;
+    planPriceYearly: number;
+    subscriptionStartedAt: string;
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+    nextRenewalAt: string;
     modules: {
         citas: boolean;
         ventas: boolean;
@@ -78,3 +103,28 @@ export interface TenantServiceEntity {
     promoLabel: string | null;
     catalogOrder: number;
 }
+export interface PlatformSiteLandingCopy {
+    navBrand: string;
+    eyebrow: string;
+    heroTitle: string;
+    heroLead: string;
+    sectionTitle: string;
+    sectionSub: string;
+    demoTitle: string;
+    demoSub: string;
+    plansSectionTitle: string;
+    plansSectionSub: string;
+    ctaTitle: string;
+    ctaLead: string;
+    footerNote: string;
+    demoBannerText: string;
+}
+export interface PlatformSiteConfig {
+    currencyCode: string;
+    currencySymbol: string;
+    planPriceBasic: number;
+    planPricePro: number;
+    planPriceBusiness: number;
+    landing: PlatformSiteLandingCopy;
+}
+export declare const DEFAULT_PLATFORM_SITE_CONFIG: PlatformSiteConfig;

@@ -28,6 +28,28 @@
     </div>
 
     <div class="az-card">
+      <h3>Plan y facturación</h3>
+      @if (billingSummary(); as b) {
+        <p class="muted">
+          Plan adquirido: <strong>{{ b.startedLabel }}</strong>
+        </p>
+        <p class="muted">
+          Ciclo <strong>{{ b.cycleLabel }}</strong> · Renovación: <strong>{{ b.renewalLabel }}</strong>
+        </p>
+        <p class="muted">
+          Periodo actual: <strong>{{ b.periodStartLabel }}</strong> → <strong>{{ b.periodEndLabel }}</strong>
+        </p>
+        <p class="muted">{{ b.daysLabel }}</p>
+        <p class="muted">{{ b.progressLabel }}</p>
+      } @else {
+        <p class="muted">El contador de plan estará disponible al conectar con el API.</p>
+      }
+      @if (billingMsg()) {
+        <p class="services-msg">{{ billingMsg() }}</p>
+      }
+    </div>
+
+    <div class="az-card">
       <h3>Operación de citas</h3>
       <p class="muted">
         Decide si tu equipo puede crear citas manualmente desde el panel. El enlace público de reservas sigue activo.

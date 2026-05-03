@@ -31,6 +31,12 @@ function catalogoPublicoActivo(t: TenantEntity): boolean {
 export class PublicController {
   constructor(private readonly sqlDb: SqlDbService) {}
 
+  /** Debe ir antes de `:slug/*` para que `site-config` no se interprete como slug. */
+  @Get('site-config')
+  getSiteConfig() {
+    return this.sqlDb.getPlatformSiteConfig();
+  }
+
   @Get(':slug/meta')
   async getPublicMeta(@Param('slug') slug: string) {
     const tenant = await this.sqlDb.findTenantBySlug(slug);

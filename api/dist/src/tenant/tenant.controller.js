@@ -27,6 +27,7 @@ const update_tenant_employee_dto_1 = require("./dto/update-tenant-employee.dto")
 const upsert_tenant_product_dto_1 = require("./dto/upsert-tenant-product.dto");
 const upsert_tenant_service_dto_1 = require("./dto/upsert-tenant-service.dto");
 const update_tenant_settings_dto_1 = require("./dto/update-tenant-settings.dto");
+const simulate_upgrade_dto_1 = require("./dto/simulate-upgrade.dto");
 const tenant_service_1 = require("./tenant.service");
 let TenantController = class TenantController {
     constructor(tenantService) {
@@ -40,6 +41,12 @@ let TenantController = class TenantController {
     }
     getCatalog(req) {
         return this.tenantService.listCatalog(req.user);
+    }
+    getBillingStatus(req) {
+        return this.tenantService.getBillingStatus(req.user);
+    }
+    getUpgradeQuote(req, dto) {
+        return this.tenantService.simulateUpgrade(req.user, dto);
     }
     createProduct(req, dto) {
         return this.tenantService.createProduct(req.user, dto);
@@ -105,6 +112,23 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], TenantController.prototype, "getCatalog", null);
+__decorate([
+    (0, common_1.Get)('billing/status'),
+    (0, roles_decorator_1.Roles)(auth_types_1.UserRole.ADMIN),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], TenantController.prototype, "getBillingStatus", null);
+__decorate([
+    (0, common_1.Post)('billing/upgrade-quote'),
+    (0, roles_decorator_1.Roles)(auth_types_1.UserRole.ADMIN),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, simulate_upgrade_dto_1.SimulateUpgradeDto]),
+    __metadata("design:returntype", void 0)
+], TenantController.prototype, "getUpgradeQuote", null);
 __decorate([
     (0, common_1.Post)('catalog/products'),
     (0, roles_decorator_1.Roles)(auth_types_1.UserRole.ADMIN),

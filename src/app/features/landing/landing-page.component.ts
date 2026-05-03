@@ -1,5 +1,10 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import {
+  ApiSiteConfigService,
+  DEFAULT_API_SITE_CONFIG,
+  mergeApiSiteConfig,
+} from '../../core/services/api-site-config.service';
 import { MockDataService } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
 
@@ -13,6 +18,27 @@ export class LandingPageComponent {
   private readonly router = inject(Router);
   private readonly session = inject(MockSessionService);
   private readonly data = inject(MockDataService);
+  private readonly siteApi = inject(ApiSiteConfigService);
+
+  readonly siteConfig = signal(mergeApiSiteConfig(DEFAULT_API_SITE_CONFIG));
+
+  /** Formato de importes para la landing (p. ej. pesos colombianos). */
+  formatMoney(n: number): string {
+    const v = Number(n);
+    if (Number.isNaN(v)) {
+      return '—';
+    }
+    return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 }).format(v);
+  }
+
+  constructor() {
+    this.siteApi.getPublic().subscribe({
+      next: (c) => this.siteConfig.set(mergeApiSiteConfig(c)),
+      error: () => {
+        /* se mantiene DEFAULT_API_SITE_CONFIG */
+      },
+    });
+  }
 
   enterSuperDemo(): void {
     this.session.loginAsSuperAdmin();

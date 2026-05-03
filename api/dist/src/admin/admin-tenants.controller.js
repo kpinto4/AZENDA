@@ -20,6 +20,7 @@ const systems_decorator_1 = require("../auth/decorators/systems.decorator");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
 const sql_db_service_1 = require("../infrastructure/sql-db/sql-db.service");
+const admin_upgrade_quote_dto_1 = require("./dto/admin-upgrade-quote.dto");
 const create_tenant_dto_1 = require("./dto/create-tenant.dto");
 const update_tenant_dto_1 = require("./dto/update-tenant.dto");
 let AdminTenantsController = class AdminTenantsController {
@@ -36,6 +37,17 @@ let AdminTenantsController = class AdminTenantsController {
         }
         return tenant;
     }
+    async upgradeQuote(tenantId, body) {
+        const quote = await this.sqlDbService.getUpgradeQuote({
+            tenantId,
+            targetPlan: body.targetPlan,
+            targetCycle: body.targetCycle,
+        });
+        if (!quote) {
+            throw new common_1.NotFoundException('Tenant no encontrado');
+        }
+        return quote;
+    }
     createTenant(body) {
         return this.sqlDbService.createTenant({
             id: body.id,
@@ -45,6 +57,7 @@ let AdminTenantsController = class AdminTenantsController {
             plan: body.plan ?? 'Trial',
             storefrontEnabled: body.storefrontEnabled ?? false,
             manualBookingEnabled: body.manualBookingEnabled ?? true,
+            billingCycle: body.billingCycle ?? 'MONTHLY',
             modules: {
                 citas: body.citas ?? true,
                 ventas: body.ventas ?? true,
@@ -70,6 +83,7 @@ let AdminTenantsController = class AdminTenantsController {
             plan: body.plan,
             storefrontEnabled: body.storefrontEnabled,
             manualBookingEnabled: body.manualBookingEnabled,
+            billingCycle: body.billingCycle,
             ...(Object.keys(modPatch).length ? { modules: modPatch } : {}),
         });
         if (!updated) {
@@ -98,6 +112,14 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], AdminTenantsController.prototype, "getTenantById", null);
+__decorate([
+    (0, common_1.Post)(':tenantId/upgrade-quote'),
+    __param(0, (0, common_1.Param)('tenantId')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, admin_upgrade_quote_dto_1.AdminUpgradeQuoteDto]),
+    __metadata("design:returntype", Promise)
+], AdminTenantsController.prototype, "upgradeQuote", null);
 __decorate([
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),

@@ -1,5 +1,5 @@
 import { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { AppointmentAttendance, AppointmentEntity, AppointmentStatus, StoreVisitLogEntity, TenantBrandingEntity, TenantEntity, TenantProductEntity, TenantServiceEntity, UserEntity } from './sql-db.types';
+import { AppointmentAttendance, AppointmentEntity, AppointmentStatus, BillingCycle, PlanCatalogEntry, PlatformSiteConfig, PlatformSiteLandingCopy, StoreVisitLogEntity, TenantBillingSnapshot, TenantBrandingEntity, TenantEntity, TenantProductEntity, TenantServiceEntity, UserEntity } from './sql-db.types';
 export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
     private readonly logger;
     private readonly dialect;
@@ -28,13 +28,44 @@ export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
     listTenants(): Promise<TenantEntity[]>;
     findTenantBySlug(slug: string): Promise<TenantEntity | undefined>;
     findTenantById(tenantId: string): Promise<TenantEntity | undefined>;
-    createTenant(data: Omit<TenantEntity, 'manualBookingEnabled'> & {
+    createTenant(data: Omit<TenantEntity, 'manualBookingEnabled' | 'billingCycle' | 'planPriceMonthly' | 'planPriceYearly' | 'subscriptionStartedAt' | 'currentPeriodStart' | 'currentPeriodEnd' | 'nextRenewalAt'> & {
         manualBookingEnabled?: boolean;
+        billingCycle?: BillingCycle;
+        planPriceMonthly?: number;
+        planPriceYearly?: number;
+        subscriptionStartedAt?: string;
+        currentPeriodStart?: string;
+        currentPeriodEnd?: string;
+        nextRenewalAt?: string;
     }): Promise<TenantEntity>;
     updateTenant(tenantId: string, patch: Omit<Partial<TenantEntity>, 'modules'> & {
         modules?: Partial<TenantEntity['modules']>;
     }): Promise<TenantEntity | undefined>;
     deleteTenant(tenantId: string): Promise<boolean>;
+    getTenantBillingSnapshot(tenantId: string): Promise<TenantBillingSnapshot | undefined>;
+    getUpgradeQuote(params: {
+        tenantId: string;
+        targetPlan: string;
+        targetCycle: BillingCycle;
+    }): Promise<{
+        tenantId: string;
+        currentPlan: string;
+        targetPlan: string;
+        currentCycle: BillingCycle;
+        targetCycle: BillingCycle;
+        period: {
+            start: string;
+            end: string;
+            totalDays: number;
+            remainingDays: number;
+        };
+        creditAmount: number;
+        targetCostForRemaining: number;
+        amountDueNow: number;
+        carryOverBalance: number;
+    } | undefined>;
+    listPlanCatalog(): Promise<PlanCatalogEntry[]>;
+    replacePlanCatalog(entries: PlanCatalogEntry[]): Promise<PlanCatalogEntry[]>;
     listAppointmentsByTenantId(tenantId: string): Promise<AppointmentEntity[]>;
     createAppointment(data: {
         tenantId: string;
@@ -70,10 +101,27 @@ export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
     private columnExists;
     private ensureSchemaMigrations;
     private createSchema;
+    private normalizeTenantBillingPeriods;
     private seedIfEmpty;
     private ensureSeedTenant;
     private ensureSeedUser;
     private ensureTenantBranding;
+    private computeCycleEnd;
+    private round2;
+    private mergeTenantWithCatalog;
+    private fetchPlanCatalogMap;
+    getPlanCatalogPrices(planKey: string): Promise<{
+        monthly: number;
+        yearly: number;
+    }>;
+    private syncTenantPlanPricesFromCatalog;
+    private ensurePlanCatalog;
+    private mergePlatformSiteConfig;
+    private ensurePlatformSiteConfig;
+    getPlatformSiteConfig(): Promise<PlatformSiteConfig>;
+    patchPlatformSiteConfig(patch: Partial<PlatformSiteConfig> & {
+        landing?: Partial<PlatformSiteLandingCopy>;
+    }): Promise<PlatformSiteConfig>;
     private mapUserRow;
     private mapTenantRow;
     private mapAppointmentRow;

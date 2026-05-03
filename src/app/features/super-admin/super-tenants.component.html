@@ -1,24 +1,31 @@
-<div class="az-container az-page">
-  <div class="az-page-head">
-    <div>
-      <h1 class="az-page-title">Tenants</h1>
+<div class="az-container az-page super-ui-page">
+  <header class="super-ui-header">
+    <div class="super-ui-header-main">
+      <div class="super-ui-title-row">
+        <h1 class="super-ui-title">Tenants</h1>
+        @if (useApiTenants()) {
+          <span class="super-ui-badge super-ui-badge--live">API</span>
+        } @else {
+          <span class="super-ui-badge super-ui-badge--neutral">Simulación</span>
+        }
+      </div>
       @if (useApiTenants()) {
-        <p class="az-page-sub">
-          Conectado al API: los cambios se guardan en SQLite. Cada negocio tiene un
+        <p class="super-ui-lead">
+          Conectado al API: los cambios se guardan en base de datos. Cada negocio tiene un
           <strong>id único</strong> y un <strong>slug único</strong> de reservas (pueden existir dos nombres iguales si el slug
           difiere).
         </p>
       } @else {
-        <p class="az-page-sub">
+        <p class="super-ui-lead">
           Simulación en memoria: alta, plan, pausa y módulos solo afectan al mock. Para persistir en base de datos, inicia
           sesión como super admin con el API activo (<code>super&#64;azenda.dev</code>).
         </p>
       }
     </div>
-  </div>
+  </header>
 
   @if (apiError()) {
-    <p class="api-err">{{ apiError() }}</p>
+    <div class="super-ui-alert super-ui-alert--error" role="alert">{{ apiError() }}</div>
   }
 
   <div class="az-card add-card">
@@ -51,7 +58,7 @@
             <th>Nombre</th>
             <th>Slug reservas (único)</th>
             <th>Estado</th>
-            <th>Plan</th>
+            <th>Plan / facturación</th>
             <th>Módulos</th>
             <th>Tienda pública</th>
             <th>Reserva</th>
@@ -76,15 +83,22 @@
                 }
               </td>
               <td>
-                <select
-                  class="az-select plan-inline"
-                  [value]="t.plan"
-                  (change)="setApiTenantPlan(t, $any($event.target).value)"
-                >
-                  @for (p of plans; track p) {
-                    <option [value]="p">{{ p }}</option>
-                  }
-                </select>
+                <div class="plan-bill-cell">
+                  <p class="plan-bill-line">
+                    <strong>{{ t.plan }}</strong>
+                    <span class="sep">·</span>
+                    <span>{{ t.billingCycle === 'YEARLY' ? 'Anual' : 'Mensual' }}</span>
+                    <span class="sep">·</span>
+                    <span class="nowrap">M {{ t.planPriceMonthly | number : '1.0-2' }} / A {{ t.planPriceYearly | number : '1.0-2' }}</span>
+                  </p>
+                  <p class="muted tiny">
+                    Alta: {{ formatDate(t.subscriptionStartedAt) }} · Renovación: {{ formatDate(t.nextRenewalAt) }} ·
+                    Quedan {{ daysRemaining(t) }} día(s)
+                  </p>
+                  <a class="az-btn az-btn-secondary small" [routerLink]="['/super/tenants', t.id, 'plan']">
+                    Editar plan y facturación
+                  </a>
+                </div>
               </td>
               <td>
                 <div class="mods">

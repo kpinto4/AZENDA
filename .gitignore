@@ -41,6 +41,10 @@ testem.log
 .DS_Store
 Thumbs.db
 
+# Variables de entorno (Neon DATABASE_URL, etc.)
+.env
+api/.env
+
 # SQLite local (USE_SQLITE=1)
 api/data/azenda.db
 

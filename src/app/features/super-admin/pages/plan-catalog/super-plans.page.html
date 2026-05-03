@@ -1,0 +1,68 @@
+<div class="az-container az-page super-ui-page">
+  <header class="super-ui-header">
+    <div class="super-ui-header-main">
+      <p class="super-ui-back-row">
+        <a routerLink="/super/tenants" class="az-link-back">← Tenants</a>
+      </p>
+      <div class="super-ui-title-row">
+        <h1 class="super-ui-title">Catálogo de precios (global)</h1>
+        <span class="super-ui-badge super-ui-badge--neutral">Facturación</span>
+      </div>
+      <p class="super-ui-lead">
+        Un mismo <strong>precio mensual y anual</strong> por plan comercial para todos los negocios. El ciclo (mensual/anual)
+        se asigna en <strong>Plan y facturación</strong> de cada tenant.
+      </p>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="super-ui-alert super-ui-alert--error" role="alert">{{ error() }}</div>
+  }
+  @if (okMsg()) {
+    <div class="super-ui-alert super-ui-alert--success" role="status">{{ okMsg() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="super-ui-skeleton" aria-busy="true">
+      <div class="super-ui-sk-line super-ui-sk-line--40"></div>
+      <div class="super-ui-sk-line super-ui-sk-line--100"></div>
+      <div class="super-ui-sk-line super-ui-sk-line--80"></div>
+      <div class="super-ui-sk-grid">
+        <div class="super-ui-sk-card"></div>
+        <div class="super-ui-sk-card"></div>
+      </div>
+    </div>
+  } @else if (rows.length) {
+    <form [formGroup]="form" (ngSubmit)="save()" class="super-ui-surface super-ui-plans-form">
+      <h3 class="super-ui-surface-title">Planes comerciales</h3>
+      <table class="az-table plans-table">
+        <thead>
+          <tr>
+            <th>Plan</th>
+            <th>Precio mensual (lista)</th>
+            <th>Precio anual (lista)</th>
+          </tr>
+        </thead>
+        <tbody formArrayName="rows">
+          @for (row of rows.controls; track $index; let i = $index) {
+            <tr [formGroupName]="i">
+              <td><strong>{{ row.value.planKey }}</strong></td>
+              <td>
+                <input class="az-input" type="number" min="0" step="0.01" formControlName="priceMonthly" />
+              </td>
+              <td>
+                <input class="az-input" type="number" min="0" step="0.01" formControlName="priceYearly" />
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <div class="super-ui-actions">
+        <button type="button" class="super-ui-btn-ghost" (click)="reload()" [disabled]="saving()">Recargar</button>
+        <button type="submit" class="super-ui-btn-primary" [disabled]="saving() || form.invalid">
+          {{ saving() ? 'Guardando…' : 'Guardar catálogo' }}
+        </button>
+      </div>
+    </form>
+  }
+</div>

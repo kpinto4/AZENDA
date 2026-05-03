@@ -71,8 +71,16 @@ export class LoginPageComponent {
               'Datos de acceso no validos (revisa el formato del correo y la contraseña).';
             return;
           }
+          if (err instanceof HttpErrorResponse) {
+            const s = err.status;
+            if (s === 0 || s >= 500) {
+              this.message =
+                'El API no respondio (revisa la terminal del backend). Con Postgres y Docker: npm run dev:docker. Postgres ya en marcha: npm run dev. Sin Postgres: npm run dev:sqlite.';
+              return;
+            }
+          }
           this.message =
-            'No se pudo conectar al API. Comprueba que el backend este en http://localhost:3000';
+            'No se pudo conectar al API. Arranca el backend (npm run dev, npm run start:api o npm run dev:sqlite) y recarga.';
         },
       });
       return;

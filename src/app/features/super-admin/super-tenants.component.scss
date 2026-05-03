@@ -1,7 +1,3 @@
-.az-page {
-  padding-top: 2rem;
-}
-
 .add-card h3 {
   margin-top: 0;
 }
@@ -52,6 +48,21 @@
   font-size: 0.8rem;
 }
 
+.plan-bill-cell {
+  max-width: 220px;
+}
+
+.plan-bill-line {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.plan-bill-line .sep {
+  margin: 0 0.15rem;
+  color: var(--az-muted);
+}
+
 .mods {
   display: flex;
   flex-wrap: wrap;
@@ -88,12 +99,6 @@
 .id-code {
   font-size: 0.75rem;
   word-break: break-all;
-}
-
-.api-err {
-  color: var(--az-danger);
-  font-size: 0.9rem;
-  margin: 0 0 1rem;
 }
 
 .small {

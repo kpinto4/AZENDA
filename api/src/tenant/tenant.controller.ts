@@ -23,6 +23,7 @@ import { UpdateTenantEmployeeDto } from './dto/update-tenant-employee.dto';
 import { UpsertTenantProductDto } from './dto/upsert-tenant-product.dto';
 import { UpsertTenantServiceDto } from './dto/upsert-tenant-service.dto';
 import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
+import { SimulateUpgradeDto } from './dto/simulate-upgrade.dto';
 import { TenantService } from './tenant.service';
 
 type AuthenticatedRequest = Request & { user: AuthUser };
@@ -51,6 +52,21 @@ export class TenantController {
   @Get('catalog')
   getCatalog(@Req() req: AuthenticatedRequest) {
     return this.tenantService.listCatalog(req.user);
+  }
+
+  @Get('billing/status')
+  @Roles(UserRole.ADMIN)
+  getBillingStatus(@Req() req: AuthenticatedRequest) {
+    return this.tenantService.getBillingStatus(req.user);
+  }
+
+  @Post('billing/upgrade-quote')
+  @Roles(UserRole.ADMIN)
+  getUpgradeQuote(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: SimulateUpgradeDto,
+  ) {
+    return this.tenantService.simulateUpgrade(req.user, dto);
   }
 
   @Post('catalog/products')

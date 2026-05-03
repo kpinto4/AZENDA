@@ -1,10 +1,16 @@
-<div class="az-container az-page">
-  <div class="az-page-head">
-    <div>
-      <h1 class="az-page-title">Dashboard plataforma</h1>
-      <p class="az-page-sub">Métricas leídas del mock en memoria (mismos datos que editas en Tenants, Citas, etc.).</p>
+<div class="az-container az-page super-ui-page">
+  <header class="super-ui-header">
+    <div class="super-ui-header-main">
+      <div class="super-ui-title-row">
+        <h1 class="super-ui-title">Dashboard plataforma</h1>
+        <span class="super-ui-badge super-ui-badge--neutral">Mock</span>
+      </div>
+      <p class="super-ui-lead">
+        Métricas leídas del mock en memoria (mismos datos que editas en Tenants, Citas, etc.).
+      </p>
     </div>
-  </div>
+  </header>
+
   <div class="az-grid cols-3">
     <div class="az-card kpi">
       <div class="az-kpi-label">Tenants activos</div>
@@ -22,11 +28,19 @@
 
   <div class="az-card quick-admin">
     <h3>Atajos de administración</h3>
-    <p class="az-page-sub">Vista tipo panel profesional: bloques por tarea en vez de menú largo.</p>
+    <p class="super-ui-lead" style="margin-top: 0.35rem">Vista tipo panel: bloques por tarea en vez de menú largo.</p>
     <div class="quick-grid">
       <a class="quick-card" routerLink="/super/tenants">
         <strong>Tenants</strong>
         <span>Altas, plan, módulos y estado</span>
+      </a>
+      <a class="quick-card" routerLink="/super/configuracion">
+        <strong>Sitio y moneda</strong>
+        <span>Landing pública y COP</span>
+      </a>
+      <a class="quick-card" routerLink="/super/planes">
+        <strong>Precios por plan</strong>
+        <span>Catálogo global de facturación</span>
       </a>
       <a class="quick-card" routerLink="/super/modulos">
         <strong>Módulos</strong>

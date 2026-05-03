@@ -63,4 +63,9 @@ __decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], CreateTenantDto.prototype, "manualBookingEnabled", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['MONTHLY', 'YEARLY']),
+    __metadata("design:type", String)
+], CreateTenantDto.prototype, "billingCycle", void 0);
 //# sourceMappingURL=create-tenant.dto.js.map

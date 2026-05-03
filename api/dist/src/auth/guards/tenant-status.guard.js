@@ -23,7 +23,10 @@ let TenantStatusGuard = class TenantStatusGuard {
         if (!user || user.role === auth_types_1.UserRole.SUPER_ADMIN || !user.tenantId) {
             return true;
         }
-        if (req.method === 'GET' && req.path.endsWith('/tenant/context')) {
+        const isAllowedInRestrictedTenant = (req.method === 'GET' && req.path.endsWith('/tenant/context')) ||
+            (req.method === 'GET' && req.path.endsWith('/tenant/billing/status')) ||
+            (req.method === 'POST' && req.path.endsWith('/tenant/billing/upgrade-quote'));
+        if (isAllowedInRestrictedTenant) {
             return true;
         }
         const tenant = await this.sqlDb.findTenantById(user.tenantId);

@@ -10,6 +10,13 @@ CREATE TABLE IF NOT EXISTS tenants (
   plan TEXT NOT NULL DEFAULT 'Trial',
   storefront_enabled INTEGER NOT NULL DEFAULT 0,
   manual_booking_enabled INTEGER NOT NULL DEFAULT 1,
+  billing_cycle TEXT NOT NULL DEFAULT 'MONTHLY',
+  plan_price_monthly REAL NOT NULL DEFAULT 0,
+  plan_price_yearly REAL NOT NULL DEFAULT 0,
+  subscription_started_at TEXT NOT NULL DEFAULT '2026-01-01T00:00:00.000Z',
+  current_period_start TEXT NOT NULL DEFAULT '2026-01-01T00:00:00.000Z',
+  current_period_end TEXT NOT NULL DEFAULT '2026-02-01T00:00:00.000Z',
+  next_renewal_at TEXT NOT NULL DEFAULT '2026-02-01T00:00:00.000Z',
   citas_enabled INTEGER NOT NULL DEFAULT 1,
   ventas_enabled INTEGER NOT NULL DEFAULT 1,
   inventario_enabled INTEGER NOT NULL DEFAULT 0
@@ -101,5 +108,10 @@ CREATE TABLE IF NOT EXISTS tenant_services (
 
 CREATE INDEX IF NOT EXISTS idx_tenant_services_tenant_order
   ON tenant_services(tenant_id, catalog_order);
+
+CREATE TABLE IF NOT EXISTS platform_site_config (
+  id TEXT PRIMARY KEY,
+  payload_json TEXT NOT NULL
+);
 `;
 //# sourceMappingURL=sqlite-schema.js.map

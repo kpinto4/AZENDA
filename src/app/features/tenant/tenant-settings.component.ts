@@ -3,7 +3,7 @@ import { Component, computed, effect, inject, signal, untracked } from '@angular
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { ApiAuthService } from '../../core/services/api-auth.service';
+import { ApiAuthService, ApiTenantBillingStatusResponse } from '../../core/services/api-auth.service';
 import { ApiTenantCatalogService } from '../../core/services/api-tenant-catalog.service';
 import { MockDataService } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
@@ -38,6 +38,8 @@ export class TenantSettingsComponent {
 
   readonly brandingMsg = signal('');
   readonly opsMsg = signal('');
+  readonly billingMsg = signal('');
+  readonly billingStatus = signal<ApiTenantBillingStatusResponse | null>(null);
   readonly brandingImageHint = signal<string | null>(null);
   readonly logoPreview = signal<string | null>(null);
   readonly colorPresets: ColorPreset[] = [
@@ -230,6 +232,25 @@ export class TenantSettingsComponent {
         this.logoPreview.set(branding.logoUrl ?? null);
       });
     });
+    effect(() => {
+      if (!environment.useLiveAuth || !this.session.accessToken() || !this.session.isTenantUser()) {
+        this.billingStatus.set(null);
+        this.billingMsg.set('');
+        return;
+      }
+      untracked(() => {
+        this.apiAuth.tenantBillingStatus().subscribe({
+          next: (res) => {
+            this.billingStatus.set(res);
+            this.billingMsg.set('');
+          },
+          error: () => {
+            this.billingStatus.set(null);
+            this.billingMsg.set('No se pudo cargar el estado de facturacion.');
+          },
+        });
+      });
+    });
   }
 
   onLogoSelected(ev: Event): void {
@@ -341,6 +362,21 @@ export class TenantSettingsComponent {
   }
 
   readonly canManageOperations = computed(() => this.session.role() === 'TENANT_ADMIN');
+  readonly billingSummary = computed(() => {
+    const billing = this.billingStatus()?.billing;
+    if (!billing) {
+      return null;
+    }
+    return {
+      cycleLabel: billing.cycle === 'YEARLY' ? 'Anual' : 'Mensual',
+      progressLabel: `${billing.progressPct.toFixed(0)}% del ciclo consumido`,
+      daysLabel: `${billing.daysRemaining} dia(s) restantes de ${billing.daysTotal}`,
+      startedLabel: new Date(this.billingStatus()!.subscriptionStartedAt).toLocaleDateString(),
+      periodStartLabel: new Date(billing.currentPeriodStart).toLocaleDateString(),
+      periodEndLabel: new Date(billing.currentPeriodEnd).toLocaleDateString(),
+      renewalLabel: new Date(billing.nextRenewalAt).toLocaleDateString(),
+    };
+  });
 
   saveOperationalSettings(): void {
     const tenantId = this.session.tenantId();

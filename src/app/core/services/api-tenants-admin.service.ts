@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 
 export type ApiTenantStatus = 'ACTIVE' | 'PAUSED' | 'BLOCKED';
 
+/** Fila mínima de tenant (p. ej. `/tenant/context`, sincronización al mock). */
 export interface ApiTenantDto {
   id: string;
   name: string;
@@ -14,6 +15,17 @@ export interface ApiTenantDto {
   storefrontEnabled: boolean;
   manualBookingEnabled: boolean;
   modules: { citas: boolean; ventas: boolean; inventario: boolean };
+}
+
+/** Respuesta de administración: incluye campos de facturación persistidos en `tenants`. */
+export interface ApiTenantAdminDto extends ApiTenantDto {
+  billingCycle: 'MONTHLY' | 'YEARLY';
+  planPriceMonthly: number;
+  planPriceYearly: number;
+  subscriptionStartedAt: string;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  nextRenewalAt: string;
 }
 
 export interface ApiCreateTenantBody {
@@ -27,6 +39,7 @@ export interface ApiCreateTenantBody {
   citas?: boolean;
   ventas?: boolean;
   inventario?: boolean;
+  billingCycle?: 'MONTHLY' | 'YEARLY';
 }
 
 export interface ApiPatchTenantBody {
@@ -39,27 +52,66 @@ export interface ApiPatchTenantBody {
   citas?: boolean;
   ventas?: boolean;
   inventario?: boolean;
+  billingCycle?: 'MONTHLY' | 'YEARLY';
+}
+
+/** Respuesta de simulación de upgrade (prorrateo en el periodo actual). */
+export interface ApiAdminUpgradeQuoteDto {
+  tenantId: string;
+  currentPlan: string;
+  targetPlan: string;
+  currentCycle: 'MONTHLY' | 'YEARLY';
+  targetCycle: 'MONTHLY' | 'YEARLY';
+  period: {
+    start: string;
+    end: string;
+    totalDays: number;
+    remainingDays: number;
+  };
+  creditAmount: number;
+  targetCostForRemaining: number;
+  amountDueNow: number;
+  carryOverBalance: number;
 }
 
 @Injectable({ providedIn: 'root' })
 export class ApiTenantsAdminService {
   private readonly http = inject(HttpClient);
 
-  list(): Observable<ApiTenantDto[]> {
-    return this.http.get<ApiTenantDto[]>(
+  list(): Observable<ApiTenantAdminDto[]> {
+    return this.http.get<ApiTenantAdminDto[]>(
       `${environment.apiBaseUrl}/admin/tenants`,
     );
   }
 
-  create(body: ApiCreateTenantBody): Observable<ApiTenantDto> {
-    return this.http.post<ApiTenantDto>(
+  getById(tenantId: string): Observable<ApiTenantAdminDto> {
+    return this.http.get<ApiTenantAdminDto>(
+      `${environment.apiBaseUrl}/admin/tenants/${encodeURIComponent(tenantId)}`,
+    );
+  }
+
+  upgradeQuote(
+    tenantId: string,
+    body: { targetPlan: string; targetCycle: 'MONTHLY' | 'YEARLY' },
+  ): Observable<ApiAdminUpgradeQuoteDto> {
+    return this.http.post<ApiAdminUpgradeQuoteDto>(
+      `${environment.apiBaseUrl}/admin/tenants/${encodeURIComponent(tenantId)}/upgrade-quote`,
+      body,
+    );
+  }
+
+  create(body: ApiCreateTenantBody): Observable<ApiTenantAdminDto> {
+    return this.http.post<ApiTenantAdminDto>(
       `${environment.apiBaseUrl}/admin/tenants`,
       body,
     );
   }
 
-  patch(tenantId: string, body: ApiPatchTenantBody): Observable<ApiTenantDto> {
-    return this.http.patch<ApiTenantDto>(
+  patch(
+    tenantId: string,
+    body: ApiPatchTenantBody,
+  ): Observable<ApiTenantAdminDto> {
+    return this.http.patch<ApiTenantAdminDto>(
       `${environment.apiBaseUrl}/admin/tenants/${tenantId}`,
       body,
     );

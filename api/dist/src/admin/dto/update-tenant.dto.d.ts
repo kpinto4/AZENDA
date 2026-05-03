@@ -8,4 +8,5 @@ export declare class UpdateTenantDto {
     plan?: string;
     storefrontEnabled?: boolean;
     manualBookingEnabled?: boolean;
+    billingCycle?: 'MONTHLY' | 'YEARLY';
 }

@@ -8,13 +8,26 @@ import {
   AppointmentAttendance,
   AppointmentEntity,
   AppointmentStatus,
+  BillingCycle,
+  DEFAULT_PLATFORM_SITE_CONFIG,
+  PlanCatalogEntry,
+  PlatformSiteConfig,
+  PlatformSiteLandingCopy,
   StoreVisitLogEntity,
+  TenantBillingSnapshot,
   TenantBrandingEntity,
   TenantEntity,
   TenantProductEntity,
   TenantServiceEntity,
   UserEntity,
 } from './sql-db.types';
+
+const DEFAULT_PLAN_CATALOG_SEED: PlanCatalogEntry[] = [
+  { planKey: 'Trial', priceMonthly: 0, priceYearly: 0 },
+  { planKey: 'Básico', priceMonthly: 29, priceYearly: 290 },
+  { planKey: 'Pro', priceMonthly: 59, priceYearly: 590 },
+  { planKey: 'Negocio', priceMonthly: 99, priceYearly: 990 },
+];
 
 function envIsTruthy(v: string | undefined): boolean {
   if (v == null || !String(v).trim()) {
@@ -81,6 +94,16 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
           ssl,
           max: 10,
         });
+    if (connectionString) {
+      let hostHint = 'remoto';
+      try {
+        const u = new URL(connectionString);
+        if (u.hostname) hostHint = u.hostname;
+      } catch {
+        /* URL de conexion no parseable */
+      }
+      this.logger.log(`Postgres por DATABASE_URL (${hostHint}; p. ej. Neon)`);
+    }
   }
 
   async onModuleInit(): Promise<void> {
@@ -91,16 +114,19 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
     }
     await this.pingOrThrow();
     if (this.dialect === 'sqlite') {
+      await this.createSchema();
+      await this.ensureSchemaMigrations();
       this.logger.log(
-        'SQLite: esquema/semilla no se ejecutan en cada arranque. Primera vez: npm run db:bootstrap (tambien aplica en SQLite).',
+        'SQLite: tablas y migraciones ligeras aplicadas en el arranque. Semilla (usuarios): npm run db:bootstrap si hace falta.',
       );
       return;
     }
+    await this.createSchema();
+    await this.ensureSchemaMigrations();
     this.logger.log(
-      'PostgreSQL conectado; esquema/semilla NO se ejecutan en cada arranque. ' +
-        'Primera vez o tras cambios: `npm run db:bootstrap` (raiz del repo). ' +
-        'Opcional: DB_BOOTSTRAP_ON_START=1 para hacerlo siempre al iniciar. ' +
-        'Sin PostgreSQL/Docker: USE_SQLITE=1 y archivo api/data/azenda.db.',
+      'PostgreSQL: tablas y migraciones ligeras verificadas en el arranque. ' +
+        'Semilla (usuarios demo): npm run db:bootstrap en la raiz si la base esta vacia. ' +
+        'Con Docker: npm run dev:docker. DB_BOOTSTRAP_ON_START=1 fuerza bootstrap en cada arranque.',
     );
   }
 
@@ -134,8 +160,9 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
       if (isConn) {
         this.logger.error(
           `No hay conexion a PostgreSQL en ${host}:${port} (base "${dbName}"). ` +
-            `Arranca PostgreSQL, crea la base (npm run db:create-db), credenciales PG*. ` +
-            `Sin PostgreSQL: desarrollo local con USE_SQLITE=1 (api/data/azenda.db).`,
+            `Neon u otro remoto: crea api/.env con DATABASE_URL=... (sslmode=require en la URL). ` +
+            `Local con Docker: npm run dev:docker o npm run pg:up. Semilla: npm run db:bootstrap. ` +
+            `Sin Postgres: npm run dev:sqlite. Quita USE_SQLITE=1 si usas Postgres.`,
         );
       }
       throw err;
@@ -359,57 +386,104 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
   }
 
   async listTenants(): Promise<TenantEntity[]> {
+    const catalog = await this.fetchPlanCatalogMap();
     const rows = await this.queryRows(
       `
         SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
+             , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
         FROM tenants
         ORDER BY name ASC
       `,
     );
-    return rows.map((row) => this.mapTenantRow(row as Record<string, unknown>));
+    return rows.map((row) =>
+      this.mergeTenantWithCatalog(this.mapTenantRow(row as Record<string, unknown>), catalog),
+    );
   }
 
   async findTenantBySlug(slug: string): Promise<TenantEntity | undefined> {
     const row = await this.queryOne(
       `
         SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
+             , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
         FROM tenants
         WHERE slug = ?
       `,
       [slug],
     );
-    return row ? this.mapTenantRow(row) : undefined;
+    if (!row) {
+      return undefined;
+    }
+    const t = this.mapTenantRow(row as Record<string, unknown>);
+    return this.mergeTenantWithCatalog(t, await this.fetchPlanCatalogMap());
   }
 
   async findTenantById(tenantId: string): Promise<TenantEntity | undefined> {
     const row = await this.queryOne(
       `
         SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
+             , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
         FROM tenants
         WHERE id = ?
       `,
       [tenantId],
     );
-    return row ? this.mapTenantRow(row) : undefined;
+    if (!row) {
+      return undefined;
+    }
+    const t = this.mapTenantRow(row as Record<string, unknown>);
+    return this.mergeTenantWithCatalog(t, await this.fetchPlanCatalogMap());
   }
 
   async createTenant(
-    data: Omit<TenantEntity, 'manualBookingEnabled'> & {
+    data: Omit<
+      TenantEntity,
+      | 'manualBookingEnabled'
+      | 'billingCycle'
+      | 'planPriceMonthly'
+      | 'planPriceYearly'
+      | 'subscriptionStartedAt'
+      | 'currentPeriodStart'
+      | 'currentPeriodEnd'
+      | 'nextRenewalAt'
+    > & {
       manualBookingEnabled?: boolean;
+      billingCycle?: BillingCycle;
+      planPriceMonthly?: number;
+      planPriceYearly?: number;
+      subscriptionStartedAt?: string;
+      currentPeriodStart?: string;
+      currentPeriodEnd?: string;
+      nextRenewalAt?: string;
     },
   ): Promise<TenantEntity> {
+    const now = new Date();
+    const defaultCycle: BillingCycle = data.billingCycle ?? 'MONTHLY';
+    const periodStart = data.currentPeriodStart ?? now.toISOString();
+    const periodEnd =
+      data.currentPeriodEnd ??
+      this.computeCycleEnd(periodStart, defaultCycle);
+    const plan = data.plan ?? 'Trial';
+    const catalogPrices = await this.getPlanCatalogPrices(plan);
     const row: TenantEntity = {
       ...data,
-      plan: data.plan ?? 'Trial',
+      plan,
       storefrontEnabled: data.storefrontEnabled ?? false,
       manualBookingEnabled: data.manualBookingEnabled ?? true,
+      billingCycle: defaultCycle,
+      planPriceMonthly: catalogPrices.monthly,
+      planPriceYearly: catalogPrices.yearly,
+      subscriptionStartedAt: data.subscriptionStartedAt ?? periodStart,
+      currentPeriodStart: periodStart,
+      currentPeriodEnd: periodEnd,
+      nextRenewalAt: data.nextRenewalAt ?? periodEnd,
     };
     await this.exec(
       `
         INSERT INTO tenants (
-          id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
+          id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled,
+          billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         row.id,
@@ -422,11 +496,18 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
         row.modules.citas ? true : false,
         row.modules.ventas ? true : false,
         row.modules.inventario ? true : false,
+        row.billingCycle,
+        row.planPriceMonthly,
+        row.planPriceYearly,
+        row.subscriptionStartedAt,
+        row.currentPeriodStart,
+        row.currentPeriodEnd,
+        row.nextRenewalAt,
       ],
     );
 
     await this.ensureTenantBranding(row.id, row.name);
-    return row;
+    return (await this.findTenantById(row.id)) ?? row;
   }
 
   async updateTenant(
@@ -452,17 +533,30 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
         patch.manualBookingEnabled !== undefined
           ? patch.manualBookingEnabled
           : current.manualBookingEnabled,
+      billingCycle: patch.billingCycle ?? current.billingCycle,
+      planPriceMonthly: current.planPriceMonthly,
+      planPriceYearly: current.planPriceYearly,
+      subscriptionStartedAt: patch.subscriptionStartedAt ?? current.subscriptionStartedAt,
+      currentPeriodStart: patch.currentPeriodStart ?? current.currentPeriodStart,
+      currentPeriodEnd: patch.currentPeriodEnd ?? current.currentPeriodEnd,
+      nextRenewalAt: patch.nextRenewalAt ?? current.nextRenewalAt,
       modules: {
         ...current.modules,
         ...(patch.modules ?? {}),
       },
     };
 
+    const catalogPrices = await this.getPlanCatalogPrices(next.plan);
+    next.planPriceMonthly = catalogPrices.monthly;
+    next.planPriceYearly = catalogPrices.yearly;
+
     await this.exec(
       `
         UPDATE tenants
         SET name = ?, slug = ?, status = ?, plan = ?, storefront_enabled = ?, manual_booking_enabled = ?,
-            citas_enabled = ?, ventas_enabled = ?, inventario_enabled = ?
+            citas_enabled = ?, ventas_enabled = ?, inventario_enabled = ?, billing_cycle = ?,
+            plan_price_monthly = ?, plan_price_yearly = ?, subscription_started_at = ?,
+            current_period_start = ?, current_period_end = ?, next_renewal_at = ?
         WHERE id = ?
       `,
       [
@@ -475,6 +569,13 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
         next.modules.citas ? true : false,
         next.modules.ventas ? true : false,
         next.modules.inventario ? true : false,
+        next.billingCycle,
+        next.planPriceMonthly,
+        next.planPriceYearly,
+        next.subscriptionStartedAt,
+        next.currentPeriodStart,
+        next.currentPeriodEnd,
+        next.nextRenewalAt,
         tenantId,
       ],
     );
@@ -489,6 +590,134 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
     }
     await this.exec(`DELETE FROM tenants WHERE id = ?`, [tenantId]);
     return true;
+  }
+
+  async getTenantBillingSnapshot(tenantId: string): Promise<TenantBillingSnapshot | undefined> {
+    const tenant = await this.findTenantById(tenantId);
+    if (!tenant) {
+      return undefined;
+    }
+    const currentPeriodStart = tenant.currentPeriodStart;
+    const currentPeriodEnd = tenant.currentPeriodEnd;
+    const msTotal = Math.max(0, new Date(currentPeriodEnd).getTime() - new Date(currentPeriodStart).getTime());
+    const nowMs = Date.now();
+    const elapsedMs = Math.max(0, Math.min(msTotal, nowMs - new Date(currentPeriodStart).getTime()));
+    const daysTotal = Math.max(1, Math.ceil(msTotal / (1000 * 60 * 60 * 24)));
+    const daysElapsed = Math.min(daysTotal, Math.max(0, Math.floor(elapsedMs / (1000 * 60 * 60 * 24))));
+    const daysRemaining = Math.max(0, daysTotal - daysElapsed);
+    const progressPct = Math.max(0, Math.min(100, Number(((daysElapsed / daysTotal) * 100).toFixed(2))));
+
+    return {
+      cycle: tenant.billingCycle,
+      currentPeriodStart,
+      currentPeriodEnd,
+      nextRenewalAt: tenant.nextRenewalAt,
+      monthlyPrice: tenant.planPriceMonthly,
+      yearlyPrice: tenant.planPriceYearly,
+      daysTotal,
+      daysElapsed,
+      daysRemaining,
+      progressPct,
+    };
+  }
+
+  async getUpgradeQuote(params: {
+    tenantId: string;
+    targetPlan: string;
+    targetCycle: BillingCycle;
+  }): Promise<{
+    tenantId: string;
+    currentPlan: string;
+    targetPlan: string;
+    currentCycle: BillingCycle;
+    targetCycle: BillingCycle;
+    period: { start: string; end: string; totalDays: number; remainingDays: number };
+    creditAmount: number;
+    targetCostForRemaining: number;
+    amountDueNow: number;
+    carryOverBalance: number;
+  } | undefined> {
+    const tenant = await this.findTenantById(params.tenantId);
+    if (!tenant) {
+      return undefined;
+    }
+    const snapshot = await this.getTenantBillingSnapshot(params.tenantId);
+    if (!snapshot) {
+      return undefined;
+    }
+    const currentPrices = await this.getPlanCatalogPrices(tenant.plan);
+    const targetPrices = await this.getPlanCatalogPrices(params.targetPlan);
+    const currentCyclePrice =
+      tenant.billingCycle === 'YEARLY' ? currentPrices.yearly : currentPrices.monthly;
+    const targetCyclePrice =
+      params.targetCycle === 'YEARLY' ? targetPrices.yearly : targetPrices.monthly;
+
+    const ratioRemaining = snapshot.daysTotal > 0 ? snapshot.daysRemaining / snapshot.daysTotal : 0;
+    const creditAmount = this.round2(currentCyclePrice * ratioRemaining);
+    const targetCostForRemaining = this.round2(targetCyclePrice * ratioRemaining);
+    const rawDue = this.round2(targetCostForRemaining - creditAmount);
+    const amountDueNow = rawDue > 0 ? rawDue : 0;
+    const carryOverBalance = rawDue < 0 ? this.round2(Math.abs(rawDue)) : 0;
+
+    return {
+      tenantId: params.tenantId,
+      currentPlan: tenant.plan,
+      targetPlan: params.targetPlan,
+      currentCycle: tenant.billingCycle,
+      targetCycle: params.targetCycle,
+      period: {
+        start: snapshot.currentPeriodStart,
+        end: snapshot.currentPeriodEnd,
+        totalDays: snapshot.daysTotal,
+        remainingDays: snapshot.daysRemaining,
+      },
+      creditAmount,
+      targetCostForRemaining,
+      amountDueNow,
+      carryOverBalance,
+    };
+  }
+
+  async listPlanCatalog(): Promise<PlanCatalogEntry[]> {
+    try {
+      const rows = await this.queryRows(
+        `SELECT plan_key, price_monthly, price_yearly FROM plan_catalog`,
+      );
+      const mapped: PlanCatalogEntry[] = rows.map((r) => ({
+        planKey: String(r.plan_key),
+        priceMonthly: Math.max(0, Number(r.price_monthly ?? 0)),
+        priceYearly: Math.max(0, Number(r.price_yearly ?? 0)),
+      }));
+      const order = ['Trial', 'Básico', 'Pro', 'Negocio'];
+      return mapped.sort((a, b) => order.indexOf(a.planKey) - order.indexOf(b.planKey));
+    } catch {
+      return [...DEFAULT_PLAN_CATALOG_SEED];
+    }
+  }
+
+  async replacePlanCatalog(entries: PlanCatalogEntry[]): Promise<PlanCatalogEntry[]> {
+    await this.ensurePlanCatalog();
+    for (const e of entries) {
+      if (this.dialect === 'sqlite') {
+        await this.exec(
+          `INSERT INTO plan_catalog (plan_key, price_monthly, price_yearly) VALUES (?, ?, ?)
+           ON CONFLICT(plan_key) DO UPDATE SET
+             price_monthly = excluded.price_monthly,
+             price_yearly = excluded.price_yearly`,
+          [e.planKey, e.priceMonthly, e.priceYearly],
+        );
+      } else {
+        await this.exec(
+          `INSERT INTO plan_catalog (plan_key, price_monthly, price_yearly) VALUES (?, ?, ?)
+           ON CONFLICT (plan_key) DO UPDATE SET
+             price_monthly = EXCLUDED.price_monthly,
+             price_yearly = EXCLUDED.price_yearly`,
+          [e.planKey, e.priceMonthly, e.priceYearly],
+        );
+      }
+    }
+    await this.syncTenantPlanPricesFromCatalog();
+    return this.listPlanCatalog();
   }
 
   async listAppointmentsByTenantId(tenantId: string): Promise<AppointmentEntity[]> {
@@ -1002,9 +1231,11 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
     }
     const row = await this.queryOne(
       `
-        SELECT COLUMN_NAME AS name
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE table_schema = current_schema() AND table_name = ? AND column_name = ?
+        SELECT 1 AS ok
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND lower(table_name) = lower(?)
+          AND lower(column_name) = lower(?)
       `,
       [table, column],
     );
@@ -1035,6 +1266,41 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
           `ALTER TABLE tenants ADD COLUMN manual_booking_enabled INTEGER NOT NULL DEFAULT 1`,
         );
       }
+      if (!tenantHasCol('billing_cycle')) {
+        this.sqliteDb!.exec(
+          `ALTER TABLE tenants ADD COLUMN billing_cycle TEXT NOT NULL DEFAULT 'MONTHLY'`,
+        );
+      }
+      if (!tenantHasCol('plan_price_monthly')) {
+        this.sqliteDb!.exec(
+          `ALTER TABLE tenants ADD COLUMN plan_price_monthly REAL NOT NULL DEFAULT 0`,
+        );
+      }
+      if (!tenantHasCol('plan_price_yearly')) {
+        this.sqliteDb!.exec(
+          `ALTER TABLE tenants ADD COLUMN plan_price_yearly REAL NOT NULL DEFAULT 0`,
+        );
+      }
+      if (!tenantHasCol('subscription_started_at')) {
+        this.sqliteDb!.exec(
+          `ALTER TABLE tenants ADD COLUMN subscription_started_at TEXT NOT NULL DEFAULT '2026-01-01T00:00:00.000Z'`,
+        );
+      }
+      if (!tenantHasCol('current_period_start')) {
+        this.sqliteDb!.exec(
+          `ALTER TABLE tenants ADD COLUMN current_period_start TEXT NOT NULL DEFAULT '2026-01-01T00:00:00.000Z'`,
+        );
+      }
+      if (!tenantHasCol('current_period_end')) {
+        this.sqliteDb!.exec(
+          `ALTER TABLE tenants ADD COLUMN current_period_end TEXT NOT NULL DEFAULT '2026-02-01T00:00:00.000Z'`,
+        );
+      }
+      if (!tenantHasCol('next_renewal_at')) {
+        this.sqliteDb!.exec(
+          `ALTER TABLE tenants ADD COLUMN next_renewal_at TEXT NOT NULL DEFAULT '2026-02-01T00:00:00.000Z'`,
+        );
+      }
       const tenants = this.sqliteDb!.prepare(`SELECT id, name FROM tenants`).all() as Array<{
         id: string;
         name: string;
@@ -1042,6 +1308,10 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
       for (const t of tenants) {
         await this.ensureTenantBranding(String(t.id), String(t.name));
       }
+      await this.ensurePlanCatalog();
+      await this.ensurePlatformSiteConfig();
+      await this.syncTenantPlanPricesFromCatalog();
+      await this.normalizeTenantBillingPeriods();
       return;
     }
     if (!(await this.columnExists('appointments', 'attendance'))) {
@@ -1063,11 +1333,50 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
         `ALTER TABLE tenants ADD COLUMN manual_booking_enabled BOOLEAN NOT NULL DEFAULT true`,
       );
     }
+    if (!(await this.columnExists('tenants', 'billing_cycle'))) {
+      await this.execScript(
+        `ALTER TABLE tenants ADD COLUMN billing_cycle TEXT NOT NULL DEFAULT 'MONTHLY'`,
+      );
+    }
+    if (!(await this.columnExists('tenants', 'plan_price_monthly'))) {
+      await this.execScript(
+        `ALTER TABLE tenants ADD COLUMN plan_price_monthly NUMERIC(12,2) NOT NULL DEFAULT 0`,
+      );
+    }
+    if (!(await this.columnExists('tenants', 'plan_price_yearly'))) {
+      await this.execScript(
+        `ALTER TABLE tenants ADD COLUMN plan_price_yearly NUMERIC(12,2) NOT NULL DEFAULT 0`,
+      );
+    }
+    if (!(await this.columnExists('tenants', 'subscription_started_at'))) {
+      await this.execScript(
+        `ALTER TABLE tenants ADD COLUMN subscription_started_at TEXT NOT NULL DEFAULT '2026-01-01T00:00:00.000Z'`,
+      );
+    }
+    if (!(await this.columnExists('tenants', 'current_period_start'))) {
+      await this.execScript(
+        `ALTER TABLE tenants ADD COLUMN current_period_start TEXT NOT NULL DEFAULT '2026-01-01T00:00:00.000Z'`,
+      );
+    }
+    if (!(await this.columnExists('tenants', 'current_period_end'))) {
+      await this.execScript(
+        `ALTER TABLE tenants ADD COLUMN current_period_end TEXT NOT NULL DEFAULT '2026-02-01T00:00:00.000Z'`,
+      );
+    }
+    if (!(await this.columnExists('tenants', 'next_renewal_at'))) {
+      await this.execScript(
+        `ALTER TABLE tenants ADD COLUMN next_renewal_at TEXT NOT NULL DEFAULT '2026-02-01T00:00:00.000Z'`,
+      );
+    }
 
     const tenantRows = await this.queryRows(`SELECT id, name FROM tenants`);
     for (const t of tenantRows) {
       await this.ensureTenantBranding(String(t.id), String(t.name));
     }
+    await this.ensurePlanCatalog();
+    await this.ensurePlatformSiteConfig();
+    await this.syncTenantPlanPricesFromCatalog();
+    await this.normalizeTenantBillingPeriods();
   }
 
   private async createSchema(): Promise<void> {
@@ -1085,6 +1394,13 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
         plan TEXT NOT NULL DEFAULT 'Trial',
         storefront_enabled BOOLEAN NOT NULL DEFAULT false,
         manual_booking_enabled BOOLEAN NOT NULL DEFAULT true,
+        billing_cycle TEXT NOT NULL DEFAULT 'MONTHLY',
+        plan_price_monthly NUMERIC(12,2) NOT NULL DEFAULT 0,
+        plan_price_yearly NUMERIC(12,2) NOT NULL DEFAULT 0,
+        subscription_started_at TEXT NOT NULL DEFAULT '2026-01-01T00:00:00.000Z',
+        current_period_start TEXT NOT NULL DEFAULT '2026-01-01T00:00:00.000Z',
+        current_period_end TEXT NOT NULL DEFAULT '2026-02-01T00:00:00.000Z',
+        next_renewal_at TEXT NOT NULL DEFAULT '2026-02-01T00:00:00.000Z',
         citas_enabled BOOLEAN NOT NULL DEFAULT true,
         ventas_enabled BOOLEAN NOT NULL DEFAULT true,
         inventario_enabled BOOLEAN NOT NULL DEFAULT false
@@ -1191,6 +1507,43 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
     await this.ensureIndex(
       `CREATE INDEX idx_tenant_services_tenant_order ON tenant_services (tenant_id, catalog_order)`,
     );
+
+    await this.execScript(`
+      CREATE TABLE IF NOT EXISTS platform_site_config (
+        id TEXT PRIMARY KEY,
+        payload_json TEXT NOT NULL
+      )
+    `);
+  }
+
+  private async normalizeTenantBillingPeriods(): Promise<void> {
+    const tenants = await this.listTenants();
+    const now = new Date();
+    for (const tenant of tenants) {
+      let start = new Date(tenant.currentPeriodStart);
+      let end = new Date(tenant.currentPeriodEnd);
+      const invalidRange = Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start;
+      if (invalidRange) {
+        start = now;
+        end = new Date(this.computeCycleEnd(start.toISOString(), tenant.billingCycle));
+      }
+      while (end < now) {
+        start = end;
+        end = new Date(this.computeCycleEnd(start.toISOString(), tenant.billingCycle));
+      }
+      const nextRenewalAt = end.toISOString();
+      const changed =
+        tenant.currentPeriodStart !== start.toISOString() ||
+        tenant.currentPeriodEnd !== end.toISOString() ||
+        tenant.nextRenewalAt !== nextRenewalAt;
+      if (!changed) {
+        continue;
+      }
+      await this.exec(
+        `UPDATE tenants SET current_period_start = ?, current_period_end = ?, next_renewal_at = ? WHERE id = ?`,
+        [start.toISOString(), end.toISOString(), nextRenewalAt, tenant.id],
+      );
+    }
   }
 
   private async seedIfEmpty(): Promise<void> {
@@ -1206,6 +1559,9 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
       slug: 'spa-relax',
       status: 'ACTIVE',
       plan: 'Básico',
+      billingCycle: 'MONTHLY',
+      planPriceMonthly: 29,
+      planPriceYearly: 290,
       storefrontEnabled: false,
       modules: { citas: true, ventas: true, inventario: false },
     });
@@ -1215,6 +1571,9 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
       slug: 'clinica-demo',
       status: 'PAUSED',
       plan: 'Pro',
+      billingCycle: 'MONTHLY',
+      planPriceMonthly: 59,
+      planPriceYearly: 590,
       storefrontEnabled: false,
       modules: { citas: true, ventas: true, inventario: true },
     });
@@ -1224,6 +1583,9 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
       slug: 'barberia-centro',
       status: 'ACTIVE',
       plan: 'Pro',
+      billingCycle: 'YEARLY',
+      planPriceMonthly: 59,
+      planPriceYearly: 590,
       storefrontEnabled: true,
       modules: { citas: true, ventas: true, inventario: true },
     });
@@ -1267,8 +1629,25 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async ensureSeedTenant(
-    row: Omit<TenantEntity, 'manualBookingEnabled'> & {
+    row: Omit<
+      TenantEntity,
+      | 'manualBookingEnabled'
+      | 'billingCycle'
+      | 'planPriceMonthly'
+      | 'planPriceYearly'
+      | 'subscriptionStartedAt'
+      | 'currentPeriodStart'
+      | 'currentPeriodEnd'
+      | 'nextRenewalAt'
+    > & {
       manualBookingEnabled?: boolean;
+      billingCycle?: BillingCycle;
+      planPriceMonthly?: number;
+      planPriceYearly?: number;
+      subscriptionStartedAt?: string;
+      currentPeriodStart?: string;
+      currentPeriodEnd?: string;
+      nextRenewalAt?: string;
     },
   ): Promise<void> {
     const exists = await this.findTenantById(row.id);
@@ -1311,6 +1690,219 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
     return await this.getTenantBranding(tenantId);
   }
 
+  private computeCycleEnd(startIso: string, cycle: BillingCycle): string {
+    const d = new Date(startIso);
+    if (cycle === 'YEARLY') {
+      d.setFullYear(d.getFullYear() + 1);
+    } else {
+      d.setMonth(d.getMonth() + 1);
+    }
+    return d.toISOString();
+  }
+
+  private round2(value: number): number {
+    return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+  }
+
+  private mergeTenantWithCatalog(
+    t: TenantEntity,
+    catalog: Map<string, { monthly: number; yearly: number }>,
+  ): TenantEntity {
+    const p = catalog.get(t.plan);
+    return {
+      ...t,
+      planPriceMonthly: p?.monthly ?? 0,
+      planPriceYearly: p?.yearly ?? 0,
+    };
+  }
+
+  private async fetchPlanCatalogMap(): Promise<Map<string, { monthly: number; yearly: number }>> {
+    try {
+      const rows = await this.queryRows(
+        `SELECT plan_key, price_monthly, price_yearly FROM plan_catalog`,
+      );
+      const m = new Map<string, { monthly: number; yearly: number }>();
+      for (const r of rows) {
+        m.set(String(r.plan_key), {
+          monthly: Math.max(0, Number(r.price_monthly ?? 0)),
+          yearly: Math.max(0, Number(r.price_yearly ?? 0)),
+        });
+      }
+      return m;
+    } catch {
+      return new Map(
+        DEFAULT_PLAN_CATALOG_SEED.map((e) => [
+          e.planKey,
+          { monthly: e.priceMonthly, yearly: e.priceYearly },
+        ]),
+      );
+    }
+  }
+
+  async getPlanCatalogPrices(planKey: string): Promise<{ monthly: number; yearly: number }> {
+    try {
+      const row = await this.queryOne(
+        `SELECT price_monthly, price_yearly FROM plan_catalog WHERE plan_key = ?`,
+        [planKey],
+      );
+      if (!row) {
+        const fallback = DEFAULT_PLAN_CATALOG_SEED.find((e) => e.planKey === planKey);
+        return {
+          monthly: fallback?.priceMonthly ?? 0,
+          yearly: fallback?.priceYearly ?? 0,
+        };
+      }
+      return {
+        monthly: Math.max(0, Number(row.price_monthly ?? 0)),
+        yearly: Math.max(0, Number(row.price_yearly ?? 0)),
+      };
+    } catch {
+      const fallback = DEFAULT_PLAN_CATALOG_SEED.find((e) => e.planKey === planKey);
+      return {
+        monthly: fallback?.priceMonthly ?? 0,
+        yearly: fallback?.priceYearly ?? 0,
+      };
+    }
+  }
+
+  private async syncTenantPlanPricesFromCatalog(): Promise<void> {
+    await this.exec(`
+      UPDATE tenants
+      SET plan_price_monthly = COALESCE(
+            (SELECT price_monthly FROM plan_catalog c WHERE c.plan_key = tenants.plan),
+            0
+          ),
+          plan_price_yearly = COALESCE(
+            (SELECT price_yearly FROM plan_catalog c WHERE c.plan_key = tenants.plan),
+            0
+          )
+    `);
+  }
+
+  private async ensurePlanCatalog(): Promise<void> {
+    if (this.dialect === 'sqlite') {
+      this.sqliteDb!.exec(`
+        CREATE TABLE IF NOT EXISTS plan_catalog (
+          plan_key TEXT PRIMARY KEY,
+          price_monthly REAL NOT NULL DEFAULT 0,
+          price_yearly REAL NOT NULL DEFAULT 0
+        )
+      `);
+      const stmt = this.sqliteDb!.prepare(
+        `INSERT OR IGNORE INTO plan_catalog (plan_key, price_monthly, price_yearly) VALUES (?, ?, ?)`,
+      );
+      for (const e of DEFAULT_PLAN_CATALOG_SEED) {
+        stmt.run(e.planKey, e.priceMonthly, e.priceYearly);
+      }
+      return;
+    }
+    await this.execScript(`
+      CREATE TABLE IF NOT EXISTS plan_catalog (
+        plan_key TEXT PRIMARY KEY,
+        price_monthly NUMERIC(12,2) NOT NULL DEFAULT 0,
+        price_yearly NUMERIC(12,2) NOT NULL DEFAULT 0
+      )
+    `);
+    await this.execScript(`
+      INSERT INTO plan_catalog (plan_key, price_monthly, price_yearly) VALUES
+        ('Trial', 0, 0),
+        ('Básico', 29, 290),
+        ('Pro', 59, 590),
+        ('Negocio', 99, 990)
+      ON CONFLICT (plan_key) DO NOTHING
+    `);
+  }
+
+  private mergePlatformSiteConfig(
+    base: PlatformSiteConfig,
+    patch: Partial<PlatformSiteConfig> & { landing?: Partial<PlatformSiteLandingCopy> },
+  ): PlatformSiteConfig {
+    const landing: PlatformSiteLandingCopy = { ...base.landing };
+    if (patch.landing) {
+      const keys = Object.keys(DEFAULT_PLATFORM_SITE_CONFIG.landing) as (keyof PlatformSiteLandingCopy)[];
+      for (const key of keys) {
+        const v = patch.landing[key];
+        if (v !== undefined) {
+          landing[key] = v;
+        }
+      }
+    }
+    const out: PlatformSiteConfig = { ...base, landing };
+    if (patch.currencyCode !== undefined) {
+      const t = String(patch.currencyCode).trim().slice(0, 12);
+      if (t.length) {
+        out.currencyCode = t;
+      }
+    }
+    if (patch.currencySymbol !== undefined) {
+      const t = String(patch.currencySymbol).slice(0, 8);
+      if (t.length) {
+        out.currencySymbol = t;
+      }
+    }
+    if (patch.planPriceBasic !== undefined) {
+      out.planPriceBasic = Math.min(1_000_000, Math.max(0, this.round2(Number(patch.planPriceBasic))));
+    }
+    if (patch.planPricePro !== undefined) {
+      out.planPricePro = Math.min(1_000_000, Math.max(0, this.round2(Number(patch.planPricePro))));
+    }
+    if (patch.planPriceBusiness !== undefined) {
+      out.planPriceBusiness = Math.min(1_000_000, Math.max(0, this.round2(Number(patch.planPriceBusiness))));
+    }
+    return out;
+  }
+
+  private async ensurePlatformSiteConfig(): Promise<void> {
+    const payload = JSON.stringify(DEFAULT_PLATFORM_SITE_CONFIG);
+    if (this.dialect === 'sqlite') {
+      this.sqliteDb!.exec(`
+        CREATE TABLE IF NOT EXISTS platform_site_config (
+          id TEXT PRIMARY KEY,
+          payload_json TEXT NOT NULL
+        )
+      `);
+      this.sqliteDb!.prepare(`INSERT OR IGNORE INTO platform_site_config (id, payload_json) VALUES (?, ?)`).run(
+        'default',
+        payload,
+      );
+      return;
+    }
+    await this.execScript(`
+      CREATE TABLE IF NOT EXISTS platform_site_config (
+        id TEXT PRIMARY KEY,
+        payload_json TEXT NOT NULL
+      )
+    `);
+    await this.exec(
+      `INSERT INTO platform_site_config (id, payload_json) VALUES ('default', ?) ON CONFLICT (id) DO NOTHING`,
+      [payload],
+    );
+  }
+
+  async getPlatformSiteConfig(): Promise<PlatformSiteConfig> {
+    await this.ensurePlatformSiteConfig();
+    const row = await this.queryOne(`SELECT payload_json FROM platform_site_config WHERE id = 'default'`);
+    if (!row?.payload_json) {
+      return structuredClone(DEFAULT_PLATFORM_SITE_CONFIG);
+    }
+    try {
+      const parsed = JSON.parse(String(row.payload_json)) as Partial<PlatformSiteConfig>;
+      return this.mergePlatformSiteConfig(structuredClone(DEFAULT_PLATFORM_SITE_CONFIG), parsed);
+    } catch {
+      return structuredClone(DEFAULT_PLATFORM_SITE_CONFIG);
+    }
+  }
+
+  async patchPlatformSiteConfig(
+    patch: Partial<PlatformSiteConfig> & { landing?: Partial<PlatformSiteLandingCopy> },
+  ): Promise<PlatformSiteConfig> {
+    const current = await this.getPlatformSiteConfig();
+    const next = this.mergePlatformSiteConfig(current, patch);
+    const json = JSON.stringify(next);
+    await this.exec(`UPDATE platform_site_config SET payload_json = ? WHERE id = 'default'`, [json]);
+    return next;
+  }
+
   private mapUserRow(row: Record<string, unknown>): UserEntity {
     return {
       id: String(row.id),
@@ -1326,6 +1918,11 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
   private mapTenantRow(row: Record<string, unknown>): TenantEntity {
     const planRaw = row.plan;
     const plan = typeof planRaw === 'string' && planRaw.length ? planRaw : 'Trial';
+    const billingCycleRaw = String(row.billing_cycle ?? 'MONTHLY');
+    const billingCycle: BillingCycle = billingCycleRaw === 'YEARLY' ? 'YEARLY' : 'MONTHLY';
+    const currentPeriodStart = String(row.current_period_start ?? '2026-01-01T00:00:00.000Z');
+    const currentPeriodEnd = String(row.current_period_end ?? '2026-02-01T00:00:00.000Z');
+    const nextRenewalAt = String(row.next_renewal_at ?? currentPeriodEnd);
     return {
       id: String(row.id),
       name: String(row.name),
@@ -1334,6 +1931,13 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
       plan,
       storefrontEnabled: Boolean(row.storefront_enabled),
       manualBookingEnabled: Boolean(row.manual_booking_enabled),
+      billingCycle,
+      planPriceMonthly: Math.max(0, Number(row.plan_price_monthly ?? 0)),
+      planPriceYearly: Math.max(0, Number(row.plan_price_yearly ?? 0)),
+      subscriptionStartedAt: String(row.subscription_started_at ?? currentPeriodStart),
+      currentPeriodStart,
+      currentPeriodEnd,
+      nextRenewalAt,
       modules: {
         citas: Boolean(row.citas_enabled),
         ventas: Boolean(row.ventas_enabled),

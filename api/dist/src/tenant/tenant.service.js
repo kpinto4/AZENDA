@@ -58,6 +58,33 @@ let TenantService = class TenantService {
             branding,
         };
     }
+    async getBillingStatus(currentUser) {
+        const tenantId = this.requireTenantId(currentUser);
+        const tenant = await this.sqlDbService.findTenantById(tenantId);
+        if (!tenant) {
+            throw new common_1.NotFoundException('Tenant no encontrado');
+        }
+        const snapshot = await this.sqlDbService.getTenantBillingSnapshot(tenantId);
+        return {
+            tenantId,
+            plan: tenant.plan,
+            status: tenant.status,
+            subscriptionStartedAt: tenant.subscriptionStartedAt,
+            billing: snapshot,
+        };
+    }
+    async simulateUpgrade(currentUser, dto) {
+        const tenantId = this.requireTenantId(currentUser);
+        const quote = await this.sqlDbService.getUpgradeQuote({
+            tenantId,
+            targetPlan: dto.targetPlan,
+            targetCycle: dto.targetCycle,
+        });
+        if (!quote) {
+            throw new common_1.NotFoundException('Tenant no encontrado');
+        }
+        return quote;
+    }
     async createProduct(currentUser, dto) {
         const tenantId = this.requireTenantId(currentUser);
         return this.sqlDbService.createTenantProduct(tenantId, {

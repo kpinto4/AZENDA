@@ -60,23 +60,44 @@ nav {
 }
 
 nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.55rem 0.85rem;
   border-radius: 8px;
   color: #94a3b8;
   font-weight: 600;
   font-size: 0.9rem;
   text-decoration: none;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.nav-ico {
+  width: 1.35rem;
+  text-align: center;
+  font-size: 0.85rem;
+  opacity: 0.9;
+  flex-shrink: 0;
 }
 
 nav a:hover {
   color: #f8fafc;
-  background: rgb(255 255 255 / 0.06);
+  background: rgb(255 255 255 / 0.08);
   text-decoration: none;
+  transform: translateX(2px);
 }
 
 nav a.active {
   color: #fff;
   background: linear-gradient(90deg, #4f46e5, #06b6d4);
+  box-shadow: 0 4px 16px rgb(79 70 229 / 0.35);
+}
+
+nav a.active .nav-ico {
+  opacity: 1;
 }
 
 .foot {
@@ -113,12 +134,28 @@ nav a.active {
 .super-main {
   flex: 1;
   min-width: 0;
-  background: #f1f5f9;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse 100% 60% at 50% -15%, rgb(79 70 229 / 0.14), transparent 52%),
+    radial-gradient(ellipse 80% 50% at 100% 50%, rgb(6 182 212 / 0.06), transparent 45%),
+    linear-gradient(180deg, #eef2f7 0%, #f1f5f9 45%, #e8edf4 100%);
   color: #0f172a;
 }
 
+.super-main-stage {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
 [data-theme="dark"] .super-main {
-  background: #0f172a;
+  background:
+    radial-gradient(ellipse 100% 55% at 50% -10%, rgb(79 70 229 / 0.18), transparent 50%),
+    linear-gradient(180deg, #0f172a 0%, #020617 100%);
   color: #f1f5f9;
 }
 

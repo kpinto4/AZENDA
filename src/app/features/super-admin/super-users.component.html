@@ -1,13 +1,16 @@
-<div class="az-container az-page">
-  <div class="az-page-head">
-    <div>
-      <h1 class="az-page-title">Usuarios globales</h1>
-      <p class="az-page-sub">Simulación: alta en memoria. En producción: invitaciones, verificación y permisos reales.</p>
+<div class="az-container az-page super-ui-page">
+  <header class="super-ui-header">
+    <div class="super-ui-header-main">
+      <div class="super-ui-title-row">
+        <h1 class="super-ui-title">Usuarios globales</h1>
+        <span class="super-ui-badge super-ui-badge--neutral">Mock</span>
+      </div>
+      <p class="super-ui-lead">Simulación: alta en memoria. En producción: invitaciones, verificación y permisos reales.</p>
     </div>
-  </div>
+  </header>
 
-  <div class="az-card">
-    <h3>Añadir usuario (mock)</h3>
+  <div class="super-ui-surface">
+    <h3 class="super-ui-surface-title">Añadir usuario (mock)</h3>
     <form [formGroup]="form" (ngSubmit)="add()" class="user-form">
       <div>
         <label class="az-label" for="em">Correo</label>

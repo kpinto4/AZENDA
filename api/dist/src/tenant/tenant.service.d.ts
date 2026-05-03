@@ -7,6 +7,7 @@ import { UpdateTenantEmployeeDto } from './dto/update-tenant-employee.dto';
 import { UpsertTenantProductDto } from './dto/upsert-tenant-product.dto';
 import { UpsertTenantServiceDto } from './dto/upsert-tenant-service.dto';
 import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
+import { SimulateUpgradeDto } from './dto/simulate-upgrade.dto';
 export declare class TenantService {
     private readonly sqlDbService;
     constructor(sqlDbService: SqlDbService);
@@ -24,6 +25,30 @@ export declare class TenantService {
         products: import("../infrastructure/sql-db/sql-db.types").TenantProductEntity[];
         services: import("../infrastructure/sql-db/sql-db.types").TenantServiceEntity[];
         branding: import("../infrastructure/sql-db/sql-db.types").TenantBrandingEntity;
+    }>;
+    getBillingStatus(currentUser: AuthUser): Promise<{
+        tenantId: string;
+        plan: string;
+        status: "ACTIVE" | "PAUSED" | "BLOCKED";
+        subscriptionStartedAt: string;
+        billing: import("../infrastructure/sql-db/sql-db.types").TenantBillingSnapshot | undefined;
+    }>;
+    simulateUpgrade(currentUser: AuthUser, dto: SimulateUpgradeDto): Promise<{
+        tenantId: string;
+        currentPlan: string;
+        targetPlan: string;
+        currentCycle: import("../infrastructure/sql-db/sql-db.types").BillingCycle;
+        targetCycle: import("../infrastructure/sql-db/sql-db.types").BillingCycle;
+        period: {
+            start: string;
+            end: string;
+            totalDays: number;
+            remainingDays: number;
+        };
+        creditAmount: number;
+        targetCostForRemaining: number;
+        amountDueNow: number;
+        carryOverBalance: number;
     }>;
     createProduct(currentUser: AuthUser, dto: UpsertTenantProductDto): Promise<import("../infrastructure/sql-db/sql-db.types").TenantProductEntity>;
     updateProduct(currentUser: AuthUser, productId: string, dto: UpsertTenantProductDto): Promise<import("../infrastructure/sql-db/sql-db.types").TenantProductEntity>;

@@ -8,6 +8,7 @@ import { UpdateTenantEmployeeDto } from './dto/update-tenant-employee.dto';
 import { UpsertTenantProductDto } from './dto/upsert-tenant-product.dto';
 import { UpsertTenantServiceDto } from './dto/upsert-tenant-service.dto';
 import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
+import { SimulateUpgradeDto } from './dto/simulate-upgrade.dto';
 
 @Injectable()
 export class TenantService {
@@ -58,6 +59,35 @@ export class TenantService {
       services,
       branding,
     };
+  }
+
+  async getBillingStatus(currentUser: AuthUser) {
+    const tenantId = this.requireTenantId(currentUser);
+    const tenant = await this.sqlDbService.findTenantById(tenantId);
+    if (!tenant) {
+      throw new NotFoundException('Tenant no encontrado');
+    }
+    const snapshot = await this.sqlDbService.getTenantBillingSnapshot(tenantId);
+    return {
+      tenantId,
+      plan: tenant.plan,
+      status: tenant.status,
+      subscriptionStartedAt: tenant.subscriptionStartedAt,
+      billing: snapshot,
+    };
+  }
+
+  async simulateUpgrade(currentUser: AuthUser, dto: SimulateUpgradeDto) {
+    const tenantId = this.requireTenantId(currentUser);
+    const quote = await this.sqlDbService.getUpgradeQuote({
+      tenantId,
+      targetPlan: dto.targetPlan,
+      targetCycle: dto.targetCycle,
+    });
+    if (!quote) {
+      throw new NotFoundException('Tenant no encontrado');
+    }
+    return quote;
   }
 
   async createProduct(currentUser: AuthUser, dto: UpsertTenantProductDto) {

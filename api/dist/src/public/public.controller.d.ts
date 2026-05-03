@@ -5,6 +5,7 @@ import { CreatePublicStoreVisitDto } from './dto/create-public-store-visit.dto';
 export declare class PublicController {
     private readonly sqlDb;
     constructor(sqlDb: SqlDbService);
+    getSiteConfig(): Promise<import("../infrastructure/sql-db/sql-db.types").PlatformSiteConfig>;
     getPublicMeta(slug: string): Promise<{
         slug: string;
         name: string;

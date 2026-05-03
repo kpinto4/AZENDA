@@ -1,0 +1,313 @@
+<div class="az-container az-page super-ui-page">
+  <header class="super-ui-header">
+    <div class="super-ui-header-main">
+      <p class="super-ui-back-row">
+        <a routerLink="/super/tenants" class="az-link-back">← Tenants</a>
+      </p>
+      <div class="super-ui-title-row">
+        <h1 class="super-ui-title">Configuración del sitio público</h1>
+        <span class="super-ui-badge" title="Moneda por defecto de la plataforma en esta vista"
+          >{{ form.controls.currencyCode.value }} · Landing</span
+        >
+      </div>
+      <p class="super-ui-lead">
+        Define la moneda de referencia, los importes que se muestran en la página de inicio y los textos públicos.
+        Los precios de <strong>facturación</strong> de tenants siguen en
+        <a routerLink="/super/planes">Precios por plan</a>.
+      </p>
+    </div>
+    @if (loadOk()) {
+      <div class="super-ui-header-actions">
+        <button
+          type="button"
+          class="super-ui-btn-ghost"
+          (click)="reload()"
+          [disabled]="saving() || loading()"
+          title="Descartar cambios no guardados y volver a leer del servidor"
+        >
+          Recargar
+        </button>
+        <button type="submit" form="site-config-form" class="super-ui-btn-primary" [disabled]="saving() || form.invalid">
+          {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
+      </div>
+    }
+  </header>
+
+  @if (error()) {
+    <div class="super-ui-alert super-ui-alert--error" role="alert">{{ error() }}</div>
+  }
+  @if (okMsg()) {
+    <div class="super-ui-alert super-ui-alert--success" role="status">{{ okMsg() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="super-ui-skeleton" aria-busy="true">
+      <div class="super-ui-sk-line super-ui-sk-line--40"></div>
+      <div class="super-ui-sk-line super-ui-sk-line--100"></div>
+      <div class="super-ui-sk-line super-ui-sk-line--80"></div>
+      <div class="super-ui-sk-grid">
+        <div class="super-ui-sk-card"></div>
+        <div class="super-ui-sk-card"></div>
+      </div>
+    </div>
+  } @else {
+    @if (!sessionBlocked()) {
+      @if (!loadOk()) {
+        <div class="super-ui-retry-card">
+          <p class="super-ui-retry-text">No se pudo cargar la configuración.</p>
+          <button type="button" class="super-ui-btn-primary" (click)="reload()">Reintentar</button>
+        </div>
+        } @else {
+          <form id="site-config-form" [formGroup]="form" (ngSubmit)="save()" class="config-layout" novalidate>
+            <p class="site-config-key-hint" role="note">
+              <kbd>←</kbd> <kbd>→</kbd> o <kbd>↑</kbd> <kbd>↓</kbd> para cambiar de sección (sin foco en un campo).
+            </p>
+            <nav class="section-rail" role="tablist" aria-label="Secciones del formulario">
+              <button
+                type="button"
+                role="tab"
+                class="rail-item"
+                [attr.aria-selected]="activeSection() === 'regional'"
+                [class.rail-item-active]="activeSection() === 'regional'"
+                (click)="setSection('regional')"
+              >
+                <span class="rail-icon" aria-hidden="true">◇</span>
+                <span class="rail-label">Moneda y precios</span>
+                <span class="rail-hint">COP, símbolo, tarjetas de planes</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                class="rail-item"
+                [attr.aria-selected]="activeSection() === 'hero'"
+                [class.rail-item-active]="activeSection() === 'hero'"
+                (click)="setSection('hero')"
+              >
+                <span class="rail-icon" aria-hidden="true">◆</span>
+                <span class="rail-label">Cabecera y héroe</span>
+                <span class="rail-hint">Marca, titular, mensaje principal</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                class="rail-item"
+                [attr.aria-selected]="activeSection() === 'sections'"
+                [class.rail-item-active]="activeSection() === 'sections'"
+                (click)="setSection('sections')"
+              >
+                <span class="rail-icon" aria-hidden="true">▣</span>
+                <span class="rail-label">Bloques de contenido</span>
+                <span class="rail-hint">Funciones, demo, planes</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                class="rail-item"
+                [attr.aria-selected]="activeSection() === 'closing'"
+                [class.rail-item-active]="activeSection() === 'closing'"
+                (click)="setSection('closing')"
+              >
+                <span class="rail-icon" aria-hidden="true">○</span>
+                <span class="rail-label">Cierre y avisos</span>
+                <span class="rail-hint">CTA, pie, banner superior</span>
+              </button>
+            </nav>
+
+            <div class="config-panels">
+              @if (activeSection() === 'regional') {
+                <section class="panel" role="tabpanel" aria-labelledby="panel-regional-title">
+                  <div class="panel-head">
+                    <h2 id="panel-regional-title" class="panel-title">Moneda y precios en la landing</h2>
+                    <p class="panel-desc">
+                      Valores orientativos para la página pública. En Colombia suele usarse
+                      <strong>COP</strong> y el símbolo <strong>$</strong> (sin confundir con USD).
+                    </p>
+                  </div>
+                  <div class="panel-card">
+                    <h3 class="card-title">Moneda</h3>
+                    <div class="field-grid field-grid-2">
+                      <label class="field">
+                        <span class="field-label">Código ISO</span>
+                        <input class="field-input" type="text" formControlName="currencyCode" maxlength="12" />
+                        <span class="field-help">Ej. COP, USD, EUR</span>
+                      </label>
+                      <label class="field">
+                        <span class="field-label">Símbolo mostrado</span>
+                        <input class="field-input" type="text" formControlName="currencySymbol" maxlength="8" />
+                        <span class="field-help">Ej. $, US$, €</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="panel-card">
+                    <h3 class="card-title">Importes mensuales (marketing)</h3>
+                    <p class="card-sub">Enteros en pesos colombianos o la moneda configurada.</p>
+                    <div class="field-grid field-grid-3">
+                      <label class="field">
+                        <span class="field-label">Plan Básico</span>
+                        <input class="field-input" type="number" min="0" step="1" formControlName="planPriceBasic" />
+                        <span class="field-preview"
+                          >Vista: {{ form.controls.currencySymbol.value
+                          }}{{ formatAmount(form.controls.planPriceBasic.value) }} / mes</span
+                        >
+                      </label>
+                      <label class="field">
+                        <span class="field-label">Plan Pro</span>
+                        <input class="field-input" type="number" min="0" step="1" formControlName="planPricePro" />
+                        <span class="field-preview"
+                          >Vista: {{ form.controls.currencySymbol.value
+                          }}{{ formatAmount(form.controls.planPricePro.value) }} / mes</span
+                        >
+                      </label>
+                      <label class="field">
+                        <span class="field-label">Plan Negocio</span>
+                        <input
+                          class="field-input"
+                          type="number"
+                          min="0"
+                          step="1"
+                          formControlName="planPriceBusiness"
+                        />
+                        <span class="field-preview"
+                          >Vista: {{ form.controls.currencySymbol.value
+                          }}{{ formatAmount(form.controls.planPriceBusiness.value) }} / mes</span
+                        >
+                      </label>
+                    </div>
+                  </div>
+                </section>
+              }
+
+              @if (activeSection() === 'hero') {
+                <section class="panel" role="tabpanel" formGroupName="landing" aria-labelledby="panel-hero-title">
+                  <div class="panel-head">
+                    <h2 id="panel-hero-title" class="panel-title">Cabecera y héroe</h2>
+                    <p class="panel-desc">Primera impresión: barra superior y bloque principal de la landing.</p>
+                  </div>
+                  <div class="panel-card">
+                    <div class="field-grid">
+                      <label class="field">
+                        <span class="field-label">Marca en la barra</span>
+                        <input class="field-input" type="text" formControlName="navBrand" />
+                      </label>
+                      <label class="field">
+                        <span class="field-label">Antetítulo</span>
+                        <input class="field-input" type="text" formControlName="eyebrow" />
+                      </label>
+                      <label class="field">
+                        <span class="field-label">Título principal</span>
+                        <input class="field-input" type="text" formControlName="heroTitle" />
+                      </label>
+                      <label class="field">
+                        <span class="field-label">Texto principal</span>
+                        <textarea class="field-input field-textarea" rows="4" formControlName="heroLead"></textarea>
+                      </label>
+                    </div>
+                  </div>
+                </section>
+              }
+
+              @if (activeSection() === 'sections') {
+                <section class="panel" role="tabpanel" formGroupName="landing" aria-labelledby="panel-sections-title">
+                  <div class="panel-head">
+                    <h2 id="panel-sections-title" class="panel-title">Bloques de contenido</h2>
+                    <p class="panel-desc">Secciones intermedias de la página pública.</p>
+                  </div>
+                  <div class="panel-card">
+                    <h3 class="card-title">Funciones</h3>
+                    <div class="field-grid">
+                      <label class="field">
+                        <span class="field-label">Título</span>
+                        <input class="field-input" type="text" formControlName="sectionTitle" />
+                      </label>
+                      <label class="field">
+                        <span class="field-label">Subtítulo</span>
+                        <textarea class="field-input field-textarea" rows="2" formControlName="sectionSub"></textarea>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="panel-card">
+                    <h3 class="card-title">Demo</h3>
+                    <div class="field-grid">
+                      <label class="field">
+                        <span class="field-label">Título</span>
+                        <input class="field-input" type="text" formControlName="demoTitle" />
+                      </label>
+                      <label class="field">
+                        <span class="field-label">Texto</span>
+                        <textarea class="field-input field-textarea" rows="3" formControlName="demoSub"></textarea>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="panel-card">
+                    <h3 class="card-title">Planes (titulares de sección)</h3>
+                    <div class="field-grid">
+                      <label class="field">
+                        <span class="field-label">Título</span>
+                        <input class="field-input" type="text" formControlName="plansSectionTitle" />
+                      </label>
+                      <label class="field">
+                        <span class="field-label">Subtítulo</span>
+                        <textarea
+                          class="field-input field-textarea"
+                          rows="2"
+                          formControlName="plansSectionSub"
+                        ></textarea>
+                      </label>
+                    </div>
+                  </div>
+                </section>
+              }
+
+              @if (activeSection() === 'closing') {
+                <section class="panel" role="tabpanel" formGroupName="landing" aria-labelledby="panel-closing-title">
+                  <div class="panel-head">
+                    <h2 id="panel-closing-title" class="panel-title">Cierre, pie y banner</h2>
+                    <p class="panel-desc">Call to action final, pie de página y aviso superior opcional.</p>
+                  </div>
+                  <div class="panel-card">
+                    <div class="field-grid">
+                      <label class="field">
+                        <span class="field-label">CTA final · título</span>
+                        <input class="field-input" type="text" formControlName="ctaTitle" />
+                      </label>
+                      <label class="field">
+                        <span class="field-label">CTA final · texto</span>
+                        <textarea class="field-input field-textarea" rows="2" formControlName="ctaLead"></textarea>
+                      </label>
+                      <label class="field">
+                        <span class="field-label">Pie de página</span>
+                        <input class="field-input" type="text" formControlName="footerNote" />
+                      </label>
+                      <label class="field">
+                        <span class="field-label">Banner superior</span>
+                        <textarea
+                          class="field-input field-textarea"
+                          rows="2"
+                          formControlName="demoBannerText"
+                          placeholder="Vacío = texto por defecto de entorno demo"
+                        ></textarea>
+                        <span class="field-help">Sustituye el aviso gris superior si escribes algo aquí.</span>
+                      </label>
+                    </div>
+                  </div>
+                </section>
+              }
+
+              <div class="super-ui-toolbar-footer site-config-footer">
+                <p class="super-ui-hint">Los visitantes verán los cambios al recargar la landing.</p>
+                <div class="super-ui-actions">
+                  <button type="button" class="super-ui-btn-ghost" (click)="reload()" [disabled]="saving()">
+                    Descartar y recargar
+                  </button>
+                  <button type="submit" class="super-ui-btn-primary" [disabled]="saving() || form.invalid">
+                    {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        }
+      }
+    }
+</div>

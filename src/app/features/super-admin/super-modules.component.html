@@ -1,13 +1,16 @@
-<div class="az-container az-page">
-  <div class="az-page-head">
-    <div>
-      <h1 class="az-page-title">Módulos del catálogo</h1>
-      <p class="az-page-sub">
+<div class="az-container az-page super-ui-page">
+  <header class="super-ui-header">
+    <div class="super-ui-header-main">
+      <div class="super-ui-title-row">
+        <h1 class="super-ui-title">Módulos del catálogo</h1>
+        <span class="super-ui-badge super-ui-badge--neutral">Mock</span>
+      </div>
+      <p class="super-ui-lead">
         Simulación de interruptores globales (solo afecta a esta vista y al estado mock). Los menús del panel cliente
         siguen el <strong>tenant</strong> en Tenants.
       </p>
     </div>
-  </div>
+  </header>
   <div class="az-grid cols-3">
     @for (m of data.platformModuleCatalog(); track m.key) {
       <div class="az-card">

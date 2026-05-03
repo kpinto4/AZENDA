@@ -84,6 +84,27 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'planes',
+        loadComponent: () =>
+          import('./features/super-admin/pages/plan-catalog/super-plans.page').then(
+            (m) => m.SuperPlansPageComponent,
+          ),
+      },
+      {
+        path: 'configuracion',
+        loadComponent: () =>
+          import('./features/super-admin/pages/site-config/super-site-config.page').then(
+            (m) => m.SuperSiteConfigPageComponent,
+          ),
+      },
+      {
+        path: 'tenants/:tenantId/plan',
+        loadComponent: () =>
+          import('./features/super-admin/pages/tenant-plan/super-tenant-plan.page').then(
+            (m) => m.SuperTenantPlanPageComponent,
+          ),
+      },
+      {
         path: 'tenants',
         loadComponent: () =>
           import('./features/super-admin/pages/tenants/super-tenants.page').then(
