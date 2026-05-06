@@ -1,6 +1,11 @@
 import { Component, ElementRef, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { ApiAppointmentsService, mapApiAppointmentToMock } from '../../core/services/api-appointments.service';
+import { ApiTenantCatalogService, ApiTenantProductDto } from '../../core/services/api-tenant-catalog.service';
+import type { ApiTenantEmployeeDto } from '../../core/services/api-tenant-employees.service';
+import { ApiTenantEmployeesService } from '../../core/services/api-tenant-employees.service';
+import { ApiTenantSaleDto, ApiTenantSalesService } from '../../core/services/api-tenant-sales.service';
 import { MockAppointment, MockDataService } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
 
@@ -22,6 +27,8 @@ interface DashboardCalDay {
 
 const MESES_CORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const EMPLOYEE_COLORS = ['#2563eb', '#8b5cf6', '#db2777', '#0d9488', '#ea580c', '#4f46e5'];
+/** Igual que en demo mock: stock menor que este umbral cuenta como alerta. */
+const LOW_STOCK_BELOW = 5;
 
 function toYmdLocal(d: Date): string {
   const y = d.getFullYear();
@@ -82,13 +89,113 @@ export class TenantDashboardComponent {
   readonly data = inject(MockDataService);
   readonly session = inject(MockSessionService);
   private readonly apiAppointments = inject(ApiAppointmentsService);
+  private readonly apiSales = inject(ApiTenantSalesService);
+  private readonly apiCatalog = inject(ApiTenantCatalogService);
+  private readonly apiEmployees = inject(ApiTenantEmployeesService);
+
+  readonly dashboardSalesLive = signal<ApiTenantSaleDto[]>([]);
+  readonly dashboardProductsLive = signal<ApiTenantProductDto[]>([]);
+  readonly dashboardEmployeesLive = signal<ApiTenantEmployeeDto[]>([]);
+
+  constructor() {
+    effect(() => {
+      this.dashboardCalendar();
+      queueMicrotask(() => this.scrollAgendaToToday());
+    });
+
+    effect((onCleanup) => {
+      if (!this.apiAppointments.useRemote()) {
+        this.dashboardSalesLive.set([]);
+        this.dashboardProductsLive.set([]);
+        this.dashboardEmployeesLive.set([]);
+        return;
+      }
+      const salesOn = this.session.modules().sales;
+      const inventoryOn = this.session.modules().inventory;
+      const isTenantAdmin = this.session.role() === 'TENANT_ADMIN';
+
+      const subs: Subscription[] = [];
+      if (salesOn) {
+        subs.push(
+          this.apiSales.list().subscribe({
+            next: (rows) => this.dashboardSalesLive.set(rows),
+            error: () => this.dashboardSalesLive.set([]),
+          }),
+        );
+      } else {
+        this.dashboardSalesLive.set([]);
+      }
+      if (inventoryOn) {
+        subs.push(
+          this.apiCatalog.getCatalog().subscribe({
+            next: (c) => this.dashboardProductsLive.set(c.products),
+            error: () => this.dashboardProductsLive.set([]),
+          }),
+        );
+      } else {
+        this.dashboardProductsLive.set([]);
+      }
+      if (isTenantAdmin) {
+        subs.push(
+          this.apiEmployees.list().subscribe({
+            next: (rows) => this.dashboardEmployeesLive.set(rows),
+            error: () => this.dashboardEmployeesLive.set([]),
+          }),
+        );
+      } else {
+        this.dashboardEmployeesLive.set([]);
+      }
+      onCleanup(() => subs.forEach((s) => s.unsubscribe()));
+    });
+  }
+
+  readonly panelSubtitle = computed(() => {
+    const name = this.session.tenantName();
+    return this.apiAppointments.useRemote()
+      ? `Resumen operativo de ${name}.`
+      : `Resumen operativo de ${name} (demo en memoria).`;
+  });
+
   readonly lowStockCount = computed(() => {
     const tid = this.session.tenantId();
-    if (!tid) {
+    if (!tid || !this.session.modules().inventory) {
       return 0;
+    }
+    if (this.apiAppointments.useRemote()) {
+      return this.dashboardProductsLive().filter((p) => p.stock < LOW_STOCK_BELOW).length;
     }
     return this.data.productsForTenant(tid).filter((p) => p.lowStock).length;
   });
+
+  readonly recentSalesTotalCount = computed(() => {
+    if (!this.session.modules().sales) {
+      return 0;
+    }
+    if (this.apiAppointments.useRemote()) {
+      return this.dashboardSalesLive().length;
+    }
+    return this.data.sales().length;
+  });
+
+  readonly ventasRecientesLabel = computed(() => {
+    if (!this.session.modules().sales) {
+      return 'Ventas (módulo inactivo)';
+    }
+    return this.apiAppointments.useRemote() ? 'Ventas registradas' : 'Ventas recientes (demo)';
+  });
+
+  readonly ultimasVentasSectionTitle = computed(() => {
+    if (!this.session.modules().sales) {
+      return 'Últimas ventas';
+    }
+    return this.apiAppointments.useRemote() ? 'Últimas ventas registradas' : 'Últimas ventas (demo)';
+  });
+
+  readonly dashboardUsesLiveApi = computed(() => this.apiAppointments.useRemote());
+
+  readonly stockAlertsLabel = computed(() =>
+    this.session.modules().inventory ? 'Alertas stock bajo' : 'Alertas stock (módulo inventario inactivo)',
+  );
 
   readonly myAppointments = computed(() => {
     if (this.apiAppointments.useRemote()) {
@@ -98,15 +205,42 @@ export class TenantDashboardComponent {
     return this.data.appointmentsForBookingSlug(this.session.publicBookingSlug());
   });
 
+  /** Misma fecha local que usa la vista semanal (no total de citas del tenant). */
+  readonly appointmentsTodayCount = computed(() => {
+    const todayYmd = toYmdLocal(new Date());
+    return this.myAppointments().filter((a) => parseWhenLocal(a.when)?.ymd === todayYmd).length;
+  });
+
+  readonly citasHoyKpiLabel = computed(() =>
+    this.apiAppointments.useRemote() ? 'Citas hoy' : 'Citas hoy (demo)',
+  );
+
   private readonly employeeColorByName = computed(() => {
     const map = new Map<string, string>();
-    this.data.employees().forEach((e, idx) => {
-      map.set(e.name, EMPLOYEE_COLORS[idx % EMPLOYEE_COLORS.length]);
-    });
+    const apiEm = this.dashboardEmployeesLive();
+    if (this.apiAppointments.useRemote() && this.session.role() === 'TENANT_ADMIN' && apiEm.length) {
+      apiEm.forEach((e, idx) => map.set(e.name, EMPLOYEE_COLORS[idx % EMPLOYEE_COLORS.length]));
+      return map;
+    }
+    if (!this.apiAppointments.useRemote()) {
+      this.data.employees().forEach((e, idx) => {
+        map.set(e.name, EMPLOYEE_COLORS[idx % EMPLOYEE_COLORS.length]);
+      });
+    }
     return map;
   });
 
   private employeeForAppointment(appt: MockAppointment): string {
+    if (this.apiAppointments.useRemote() && this.session.role() === 'TENANT_ADMIN') {
+      const employees = this.dashboardEmployeesLive();
+      if (!employees.length) {
+        return 'Sin asignar';
+      }
+      const seed = `${appt.id}|${appt.customer}|${appt.service}`
+        .split('')
+        .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+      return employees[seed % employees.length].name;
+    }
     const employees = this.data.employees();
     if (!employees.length) {
       return 'Sin asignar';
@@ -119,10 +253,20 @@ export class TenantDashboardComponent {
 
   readonly employeeLegend = computed(() => {
     const colors = this.employeeColorByName();
-    return this.data.employees().map((e) => ({
-      name: e.name,
-      color: colors.get(e.name) ?? '#64748b',
-    }));
+    const apiEm = this.dashboardEmployeesLive();
+    if (this.apiAppointments.useRemote() && this.session.role() === 'TENANT_ADMIN') {
+      return apiEm.map((e) => ({
+        name: e.name,
+        color: colors.get(e.name) ?? '#64748b',
+      }));
+    }
+    if (!this.apiAppointments.useRemote()) {
+      return this.data.employees().map((e) => ({
+        name: e.name,
+        color: colors.get(e.name) ?? '#64748b',
+      }));
+    }
+    return [];
   });
 
   readonly dashboardCalendar = computed(() => {
@@ -176,13 +320,6 @@ export class TenantDashboardComponent {
   readonly dashboardBoardMinWidth = computed(() =>
     Math.max(860, this.dashboardCalendar().days.reduce((acc, d) => acc + (d.events.length ? 150 : 92), 0)),
   );
-
-  constructor() {
-    effect(() => {
-      this.dashboardCalendar();
-      queueMicrotask(() => this.scrollAgendaToToday());
-    });
-  }
 
   private scrollAgendaToToday(): void {
     const host = this.agendaScrollEl?.nativeElement;

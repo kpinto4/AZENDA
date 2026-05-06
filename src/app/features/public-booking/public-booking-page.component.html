@@ -7,32 +7,102 @@
     <span class="slug">/{{ slug() }}</span>
   </header>
 
-  <nav class="client-tabs az-fluid-shell az-adaptive-tabs mobile-4" aria-label="Área de cliente">
+  <section class="booksy-hero az-fluid-shell">
+    <div class="hero-cover"></div>
+    <div class="hero-body">
+      <div class="hero-ident">
+        @if (branding().logoUrl; as logo) {
+          <img class="hero-logo" [src]="logo" [alt]="branding().displayName" />
+        } @else {
+          <div class="hero-logo ph" aria-hidden="true"></div>
+        }
+        <div>
+          <h1 class="hero-title">{{ branding().displayName || slug() }}</h1>
+          <p class="hero-sub">Reserva, confirma asistencia y solicita productos en una sola vista.</p>
+        </div>
+      </div>
+      <div class="hero-metrics">
+        <span class="metric-chip">⭐ 4.9</span>
+        <span class="metric-chip">📍 Centro</span>
+        <span class="metric-chip">🕒 Hoy abierto</span>
+      </div>
+    </div>
+  </section>
+
+  <nav
+    class="client-tabs az-fluid-shell az-adaptive-tabs"
+    [class.mobile-3]="catalogoVisible()"
+    [class.mobile-2]="!catalogoVisible()"
+    aria-label="Área de cliente"
+  >
     <button type="button" class="tab az-adaptive-tab" [class.active]="clientTab() === 'reserva'" (click)="goTab('reserva')">
       Reservar cita
     </button>
     <button type="button" class="tab az-adaptive-tab" [class.active]="clientTab() === 'asistencia'" (click)="goTab('asistencia')">
       Confirmar asistencia
     </button>
-    <button type="button" class="tab az-adaptive-tab" [class.active]="clientTab() === 'tienda'" (click)="goTab('tienda')">
-      Compra / tienda
-    </button>
     @if (catalogoVisible()) {
-      <button type="button" class="tab az-adaptive-tab" [class.active]="clientTab() === 'catalogo'" (click)="goTab('catalogo')">
-        Catálogo
+      <button
+        type="button"
+        class="tab az-adaptive-tab"
+        [class.active]="clientTab() === 'catalogo'"
+        (click)="goTab('catalogo')"
+        title="Tienda / catálogo"
+      >
+        Tienda
       </button>
     }
   </nav>
 
+  <section class="booksy-stage az-fluid-shell">
+    <div class="stage-main">
   @if (clientTab() === 'catalogo') {
     <div class="az-card panel tab-panel catalog-panel">
-      <h1>Catálogo (mini tienda)</h1>
+      <h1>Catálogo del negocio</h1>
       <p class="muted">
-        Disponible en planes <strong>Pro</strong> o <strong>Negocio</strong> con inventario, ventas y tienda pública
-        activada por el negocio. El pago y el envío los concretáis fuera de Azenda; aquí dejas el interés.
+        Elige lo que te interesa y pulsa <strong>Solicitar</strong>. El negocio recibirá tu petición por este canal y os
+        podréis coordinar fuera de Azenda para pago u entrega. No hace falta describir aquí datos de cobro ni “registrar
+        compra”.
       </p>
       @if (environment.useLiveAuth && publicMeta() && !publicMeta()!.active) {
         <p class="muted field-error">Este negocio no está activo; el catálogo no está disponible.</p>
+      }
+      @if (catalogRequestMsg()) {
+        <p class="muted success-line">{{ catalogRequestMsg() }}</p>
+      }
+      @if (catalogRequestErr()) {
+        <p class="muted field-error">{{ catalogRequestErr() }}</p>
+      }
+      @if (catalogRequestTarget(); as solicitProduct) {
+        <div class="catalog-request-panel">
+          <h2 class="catalog-request-head">Solicitud: {{ solicitProduct }}</h2>
+          <p class="muted small-block">Deja tu nombre y, si quieres, una nota. El negocio verá esta solicitud en su panel.</p>
+          <form [formGroup]="catalogRequestForm" (ngSubmit)="submitCatalogRequest()" class="catalog-request-form">
+            <label class="az-label" for="crcust">Tu nombre</label>
+            <input id="crcust" class="az-input wide" formControlName="customer" autocomplete="name" />
+            <label class="az-label" for="crnote">Comentario (opcional)</label>
+            <textarea
+              id="crnote"
+              class="az-input wide services-ta"
+              rows="3"
+              formControlName="note"
+              placeholder="Ej.: Color talla M, urgencia viernes…"
+            ></textarea>
+            <div class="row-btns">
+              <button
+                type="button"
+                class="az-btn az-btn-ghost"
+                (click)="cancelCatalogRequest()"
+                [disabled]="catalogRequestSubmitting()"
+              >
+                Cancelar
+              </button>
+              <button type="submit" class="az-btn az-btn-primary" [disabled]="catalogRequestSubmitting()">
+                {{ catalogRequestSubmitting() ? 'Enviando…' : 'Enviar solicitud' }}
+              </button>
+            </div>
+          </form>
+        </div>
       }
       <ul class="catalog-list" [class.catalog-grid]="catalogLayout() === 'grid'">
         @for (p of catalogProducts(); track p.id) {
@@ -52,7 +122,7 @@
               }
               <span class="muted small-block">SKU {{ p.sku }} · stock {{ p.stock }}</span>
             </div>
-            <button type="button" class="az-btn az-btn-secondary" (click)="solicitarProducto(p.name)">
+            <button type="button" class="az-btn az-btn-secondary" (click)="openCatalogRequest(p.name)">
               Solicitar
             </button>
           </li>
@@ -80,37 +150,6 @@
         <div class="row-btns">
           <button type="submit" class="az-btn az-btn-primary" [disabled]="attendanceSubmitting()">
             {{ attendanceSubmitting() ? 'Enviando…' : 'Confirmar que asistí' }}
-          </button>
-        </div>
-      </form>
-    </div>
-  } @else if (clientTab() === 'tienda') {
-    <div class="az-card panel tab-panel">
-      <h1>Registro de compra o visita en tienda</h1>
-      <p class="muted">
-        Para equipos de ventas: el cliente puede dejar aquí un breve registro (pedido, recogida, incidencia). El negocio
-        lo revisa en <strong>Ventas</strong> (panel interno).
-      </p>
-      @if (storeMsg()) {
-        <p class="muted success-line">{{ storeMsg() }}</p>
-      }
-      @if (storeErr()) {
-        <p class="muted field-error">{{ storeErr() }}</p>
-      }
-      <form [formGroup]="storeForm" (ngSubmit)="submitStore()">
-        <label class="az-label" for="sname">Tu nombre</label>
-        <input id="sname" class="az-input wide" formControlName="customer" autocomplete="name" />
-        <label class="az-label" for="sdetail">Detalle</label>
-        <textarea
-          id="sdetail"
-          class="az-input wide services-ta"
-          rows="4"
-          formControlName="detail"
-          placeholder="Ej.: Recogí pedido #123, compré champú, reservé segunda visita…"
-        ></textarea>
-        <div class="row-btns">
-          <button type="submit" class="az-btn az-btn-primary" [disabled]="storeSubmitting()">
-            {{ storeSubmitting() ? 'Enviando…' : 'Enviar registro' }}
           </button>
         </div>
       </form>
@@ -216,5 +255,31 @@
         </form>
       }
     </div>
+  }
+    </div>
+    <aside class="stage-side">
+      <div class="az-card side-card">
+        <h3>Información</h3>
+        <p class="muted">Selecciona una pestaña para gestionar tu cita o solicitud.</p>
+        <ul class="side-list">
+          <li><strong>Reservar:</strong> elige servicio, fecha y hora.</li>
+          <li><strong>Asistencia:</strong> confirma que acudiste.</li>
+          @if (catalogoVisible()) {
+            <li><strong>Tienda:</strong> solicita productos del catálogo.</li>
+          }
+        </ul>
+      </div>
+      <div class="az-card side-card">
+        <h3>Contacto rápido</h3>
+        <p class="muted">Si necesitas ayuda inmediata, escribe por WhatsApp del negocio.</p>
+        <a class="az-btn az-btn-primary side-cta" routerLink="/">Volver al inicio</a>
+      </div>
+    </aside>
+  </section>
+
+  @if (showMobileReserveCta()) {
+    <button type="button" class="mobile-book-cta" (click)="jumpToReserve()">
+      Reservar ahora
+    </button>
   }
 </div>

@@ -107,6 +107,21 @@ CREATE TABLE IF NOT EXISTS tenant_services (
 CREATE INDEX IF NOT EXISTS idx_tenant_services_tenant_order
   ON tenant_services(tenant_id, catalog_order);
 
+CREATE TABLE IF NOT EXISTS tenant_sales (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  sale_date TEXT NOT NULL,
+  total REAL NOT NULL,
+  method TEXT NOT NULL,
+  linked_appointment_id TEXT,
+  stock_note TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_tenant_sales_tenant_created
+  ON tenant_sales(tenant_id, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS platform_site_config (
   id TEXT PRIMARY KEY,
   payload_json TEXT NOT NULL

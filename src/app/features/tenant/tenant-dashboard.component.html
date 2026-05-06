@@ -2,7 +2,7 @@
   <div class="az-page-head">
     <div>
       <h1 class="az-page-title">Panel</h1>
-      <p class="az-page-sub">Resumen operativo de {{ session.tenantName() }} (datos simulados en memoria).</p>
+      <p class="az-page-sub">{{ panelSubtitle() }}</p>
     </div>
     <div class="head-actions">
       <a
@@ -18,15 +18,15 @@
 
   <div class="az-grid cols-3">
     <div class="az-card">
-      <div class="az-kpi-label">Citas hoy (mock)</div>
-      <div class="az-kpi">{{ myAppointments().length }}</div>
+      <div class="az-kpi-label">{{ citasHoyKpiLabel() }}</div>
+      <div class="az-kpi">{{ appointmentsTodayCount() }}</div>
     </div>
     <div class="az-card">
-      <div class="az-kpi-label">Ventas recientes</div>
-      <div class="az-kpi">{{ data.sales().length }}</div>
+      <div class="az-kpi-label">{{ ventasRecientesLabel() }}</div>
+      <div class="az-kpi">{{ recentSalesTotalCount() }}</div>
     </div>
     <div class="az-card">
-      <div class="az-kpi-label">Alertas stock bajo</div>
+      <div class="az-kpi-label">{{ stockAlertsLabel() }}</div>
       <div class="az-kpi">{{ lowStockCount() }}</div>
     </div>
   </div>
@@ -36,7 +36,7 @@
     <div class="agenda-head">
       <div>
         <h3>Agenda principal</h3>
-        <p class="muted">{{ cal.weekLabel }} · {{ cal.total }} cita(s)</p>
+        <p class="muted">{{ cal.weekLabel }} · {{ cal.total }} cita(s) esta semana</p>
       </div>
       <div class="agenda-head-actions">
         <div class="agenda-nav">
@@ -142,15 +142,32 @@
       </ul>
     </div>
     <div class="az-card">
-      <h3>Últimas ventas</h3>
-      <ul class="list">
-        @for (s of data.sales().slice(0, 4); track s.id) {
-          <li>
-            <strong>{{ s.total }} €</strong> · {{ s.method }}
-            <span class="muted">{{ s.date }}</span>
-          </li>
-        }
-      </ul>
+      <h3>{{ ultimasVentasSectionTitle() }}</h3>
+      @if (session.modules().sales && dashboardUsesLiveApi()) {
+        <ul class="list">
+          @for (s of dashboardSalesLive().slice(0, 4); track s.id) {
+            <li>
+              <strong>{{ s.total }}</strong> · {{ s.method }}
+              <span class="muted">{{ s.saleDate }}</span>
+            </li>
+          } @empty {
+            <li class="muted">Aún no hay ventas registradas.</li>
+          }
+        </ul>
+      } @else if (session.modules().sales) {
+        <ul class="list">
+          @for (s of data.sales().slice(0, 4); track s.id) {
+            <li>
+              <strong>{{ s.total }} €</strong> · {{ s.method }}
+              <span class="muted">{{ s.date }}</span>
+            </li>
+          } @empty {
+            <li class="muted">Aún no hay ventas en la demo.</li>
+          }
+        </ul>
+      } @else {
+        <p class="muted">Activa el módulo ventas para ver registros desde el panel.</p>
+      }
     </div>
   </div>
 </div>

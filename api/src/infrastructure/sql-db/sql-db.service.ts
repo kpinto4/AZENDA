@@ -18,6 +18,7 @@ import {
   TenantBrandingEntity,
   TenantEntity,
   TenantProductEntity,
+  TenantSaleEntity,
   TenantServiceEntity,
   UserEntity,
 } from './sql-db.types';
@@ -901,6 +902,57 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
+  async listTenantSalesByTenantId(tenantId: string): Promise<TenantSaleEntity[]> {
+    const rows = await this.queryRows(
+      `
+        SELECT id, tenant_id, sale_date, total, method, linked_appointment_id, stock_note, created_at
+        FROM tenant_sales
+        WHERE tenant_id = ?
+        ORDER BY created_at DESC
+      `,
+      [tenantId],
+    );
+    return rows.map((row) => this.mapTenantSaleRow(row as Record<string, unknown>));
+  }
+
+  async insertTenantSale(data: {
+    tenantId: string;
+    saleDate: string;
+    total: number;
+    method: string;
+    linkedAppointmentId: string | null;
+    stockNote: string | null;
+  }): Promise<TenantSaleEntity> {
+    const id = `sale_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const createdAt = new Date().toISOString();
+    await this.exec(
+      `
+        INSERT INTO tenant_sales (id, tenant_id, sale_date, total, method, linked_appointment_id, stock_note, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        id,
+        data.tenantId,
+        data.saleDate,
+        this.round2(Math.max(0, Number(data.total) || 0)),
+        data.method.trim(),
+        data.linkedAppointmentId,
+        data.stockNote,
+        createdAt,
+      ],
+    );
+    return {
+      id,
+      tenantId: data.tenantId,
+      saleDate: data.saleDate,
+      total: this.round2(Math.max(0, Number(data.total) || 0)),
+      method: data.method.trim(),
+      linkedAppointmentId: data.linkedAppointmentId,
+      stockNote: data.stockNote,
+      createdAt,
+    };
+  }
+
   async getTenantBranding(tenantId: string): Promise<TenantBrandingEntity> {
     const row = await this.queryOne(
       `
@@ -1310,6 +1362,7 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
       }
       await this.ensurePlanCatalog();
       await this.ensurePlatformSiteConfig();
+      await this.ensureTenantSalesTable();
       await this.syncTenantPlanPricesFromCatalog();
       await this.normalizeTenantBillingPeriods();
       return;
@@ -1375,6 +1428,7 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
     }
     await this.ensurePlanCatalog();
     await this.ensurePlatformSiteConfig();
+    await this.ensureTenantSalesTable();
     await this.syncTenantPlanPricesFromCatalog();
     await this.normalizeTenantBillingPeriods();
   }
@@ -1506,6 +1560,23 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
 
     await this.ensureIndex(
       `CREATE INDEX idx_tenant_services_tenant_order ON tenant_services (tenant_id, catalog_order)`,
+    );
+
+    await this.execScript(`
+      CREATE TABLE IF NOT EXISTS tenant_sales (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL,
+        sale_date TEXT NOT NULL,
+        total NUMERIC(12,2) NOT NULL,
+        method TEXT NOT NULL,
+        linked_appointment_id TEXT NULL,
+        stock_note TEXT NULL,
+        created_at TEXT NOT NULL,
+        CONSTRAINT fk_sale_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+      )
+    `);
+    await this.ensureIndex(
+      `CREATE INDEX idx_tenant_sales_tenant_created ON tenant_sales (tenant_id, created_at DESC)`,
     );
 
     await this.execScript(`
@@ -1879,6 +1950,48 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
+  private async ensureTenantSalesTable(): Promise<void> {
+    if (this.dialect === 'sqlite') {
+      this.sqliteDb!.exec(`
+        CREATE TABLE IF NOT EXISTS tenant_sales (
+          id TEXT PRIMARY KEY,
+          tenant_id TEXT NOT NULL,
+          sale_date TEXT NOT NULL,
+          total REAL NOT NULL,
+          method TEXT NOT NULL,
+          linked_appointment_id TEXT,
+          stock_note TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+        )
+      `);
+      try {
+        this.sqliteDb!.exec(
+          `CREATE INDEX IF NOT EXISTS idx_tenant_sales_tenant_created ON tenant_sales(tenant_id, created_at DESC)`,
+        );
+      } catch {
+        /* indice ya existe */
+      }
+      return;
+    }
+    await this.execScript(`
+      CREATE TABLE IF NOT EXISTS tenant_sales (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL,
+        sale_date TEXT NOT NULL,
+        total NUMERIC(12,2) NOT NULL,
+        method TEXT NOT NULL,
+        linked_appointment_id TEXT NULL,
+        stock_note TEXT NULL,
+        created_at TEXT NOT NULL,
+        CONSTRAINT fk_sale_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+      )
+    `);
+    await this.ensureIndex(
+      `CREATE INDEX IF NOT EXISTS idx_tenant_sales_tenant_created ON tenant_sales (tenant_id, created_at DESC)`,
+    );
+  }
+
   async getPlatformSiteConfig(): Promise<PlatformSiteConfig> {
     await this.ensurePlatformSiteConfig();
     const row = await this.queryOne(`SELECT payload_json FROM platform_site_config WHERE id = 'default'`);
@@ -1971,6 +2084,19 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
       tenantId: String(row.tenant_id),
       customer: String(row.customer),
       detail: String(row.detail),
+      createdAt: String(row.created_at),
+    };
+  }
+
+  private mapTenantSaleRow(row: Record<string, unknown>): TenantSaleEntity {
+    return {
+      id: String(row.id),
+      tenantId: String(row.tenant_id),
+      saleDate: String(row.sale_date),
+      total: Math.max(0, Number(row.total) || 0),
+      method: String(row.method),
+      linkedAppointmentId: row.linked_appointment_id == null ? null : String(row.linked_appointment_id),
+      stockNote: row.stock_note == null ? null : String(row.stock_note),
       createdAt: String(row.created_at),
     };
   }

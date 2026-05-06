@@ -153,7 +153,6 @@ export class TenantSettingsComponent {
     return {
       reserva: base,
       asistencia: `${base}?tab=asistencia`,
-      tienda: `${base}?tab=tienda`,
       catalogo: `${base}?tab=catalogo`,
     };
   });

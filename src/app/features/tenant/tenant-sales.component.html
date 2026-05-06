@@ -13,10 +13,10 @@
 
   <div class="tenant-cards-grid">
     <div class="az-card form-card">
-      <h3>Registrar venta (mock)</h3>
+      <h3>{{ isSalesLiveApi() ? 'Registrar venta' : 'Registrar venta (demo)' }}</h3>
       <form [formGroup]="form" (ngSubmit)="add()" class="row">
       <div>
-        <label class="az-label" for="total">Importe (€)</label>
+        <label class="az-label" for="total">Importe</label>
         <input id="total" class="az-input" type="number" formControlName="total" />
       </div>
       <div>
@@ -32,7 +32,9 @@
         <input id="linked" class="az-input wide" formControlName="linked" placeholder="ej. a1" />
       </div>
       <div class="grow full-row">
-        <label class="az-label" for="prod">Descontar stock (opcional, simulado)</label>
+        <label class="az-label" for="prod">
+          Descontar stock (opcional){{ !isSalesLiveApi() ? ', simulado' : '' }}
+        </label>
         <div class="stock-row">
           <select id="prod" class="az-select wide" formControlName="productId">
             <option value="">— Sin descuento —</option>
@@ -43,18 +45,24 @@
           <input class="az-input qty" type="number" min="1" formControlName="stockQty" title="Unidades" />
         </div>
       </div>
-        <button type="submit" class="az-btn az-btn-primary end full-row-btn" [disabled]="!canCreateSales()">Registrar</button>
+        <button
+          type="submit"
+          class="az-btn az-btn-primary end full-row-btn"
+          [disabled]="!canCreateSales() || savingSale()"
+        >
+          Registrar
+        </button>
       </form>
     </div>
 
-    @if (environment.useLiveAuth && session.accessToken() && session.modules().sales) {
+    @if (isSalesLiveApi()) {
       <div class="az-card">
         <div class="public-logs-head">
-          <h3>Registros desde enlace público</h3>
+          <h3>Solicitudes desde catálogo público</h3>
           <button type="button" class="az-btn az-btn-secondary" (click)="refreshPublicLogs()">Actualizar</button>
         </div>
         <p class="muted small">
-          Datos enviados por clientes desde «Compra / tienda».
+          Mensajes que el cliente envía al pulsar Solicitar en el catálogo público.
         </p>
         <div class="az-table-wrap">
           <table class="az-table">
@@ -83,7 +91,7 @@
       </div>
     } @else if (session.publicBookingSlug()) {
       <div class="az-card">
-        <h3>Registros públicos (demo sin API)</h3>
+        <h3>Solicitudes públicas (demo sin API)</h3>
         <div class="az-table-wrap">
           <table class="az-table">
             <thead>
@@ -113,6 +121,14 @@
   </div>
 
   <div class="az-table-wrap mt">
+    <div class="public-logs-head">
+      <h3>Ventas registradas</h3>
+      @if (isSalesLiveApi()) {
+        <button type="button" class="az-btn az-btn-secondary" (click)="refreshSalesLive()">
+          Actualizar
+        </button>
+      }
+    </div>
     <table class="az-table">
       <thead>
         <tr>
@@ -120,18 +136,38 @@
           <th>Total</th>
           <th>Método</th>
           <th>Cita vinculada</th>
-          <th>Stock (sim.)</th>
+          <th>Stock</th>
         </tr>
       </thead>
       <tbody>
-        @for (s of data.sales(); track s.id) {
-          <tr>
-            <td>{{ s.date }}</td>
-            <td>{{ s.total }} €</td>
-            <td>{{ s.method }}</td>
-            <td>{{ s.linkedAppointment || '—' }}</td>
-            <td>{{ s.stockNote || '—' }}</td>
-          </tr>
+        @if (isSalesLiveApi()) {
+          @for (s of tenantSalesLive(); track s.id) {
+            <tr>
+              <td>{{ s.saleDate }}</td>
+              <td>{{ s.total }}</td>
+              <td>{{ s.method }}</td>
+              <td>{{ s.linkedAppointmentId || '—' }}</td>
+              <td>{{ s.stockNote || '—' }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5">Aún no hay ventas registradas.</td>
+            </tr>
+          }
+        } @else {
+          @for (s of data.sales(); track s.id) {
+            <tr>
+              <td>{{ s.date }}</td>
+              <td>{{ s.total }} €</td>
+              <td>{{ s.method }}</td>
+              <td>{{ s.linkedAppointment || '—' }}</td>
+              <td>{{ s.stockNote || '—' }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5">Aún no hay ventas.</td>
+            </tr>
+          }
         }
       </tbody>
     </table>

@@ -103,6 +103,16 @@ export interface TenantServiceEntity {
     promoLabel: string | null;
     catalogOrder: number;
 }
+export interface TenantSaleEntity {
+    id: string;
+    tenantId: string;
+    saleDate: string;
+    total: number;
+    method: string;
+    linkedAppointmentId: string | null;
+    stockNote: string | null;
+    createdAt: string;
+}
 export interface PlatformSiteLandingCopy {
     navBrand: string;
     eyebrow: string;

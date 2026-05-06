@@ -16,9 +16,12 @@ import { MockDataService } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
 import { UiAlertService } from '../../core/services/ui-alert.service';
 
-function tabFromQuery(tab: string | null): 'reserva' | 'asistencia' | 'tienda' | 'catalogo' {
+function tabFromQuery(tab: string | null): 'reserva' | 'asistencia' | 'catalogo' {
   const t = (tab ?? '').toLowerCase();
-  if (t === 'asistencia' || t === 'tienda' || t === 'catalogo') {
+  if (t === 'tienda') {
+    return 'catalogo';
+  }
+  if (t === 'asistencia' || t === 'catalogo') {
     return t;
   }
   return 'reserva';
@@ -157,9 +160,10 @@ export class PublicBookingPageComponent {
   readonly attendanceErr = signal<string | null>(null);
   readonly attendanceSubmitting = signal(false);
 
-  readonly storeMsg = signal<string | null>(null);
-  readonly storeErr = signal<string | null>(null);
-  readonly storeSubmitting = signal(false);
+  readonly catalogRequestTarget = signal<string | null>(null);
+  readonly catalogRequestMsg = signal<string | null>(null);
+  readonly catalogRequestErr = signal<string | null>(null);
+  readonly catalogRequestSubmitting = signal(false);
 
   readonly selectedService = signal('');
   readonly selectedDate = signal('');
@@ -175,10 +179,14 @@ export class PublicBookingPageComponent {
     customer: ['', Validators.required],
   });
 
-  readonly storeForm = this.fb.nonNullable.group({
+  readonly catalogRequestForm = this.fb.nonNullable.group({
     customer: ['', Validators.required],
-    detail: ['', [Validators.required, Validators.minLength(3)]],
+    note: [''],
   });
+
+  readonly showMobileReserveCta = computed(
+    () => this.clientTab() !== 'reserva' && !this.done() && !this.bookingSubmitting(),
+  );
 
   constructor() {
     effect(() => {
@@ -212,18 +220,53 @@ export class PublicBookingPageComponent {
     });
   }
 
-  goTab(tab: 'reserva' | 'asistencia' | 'tienda' | 'catalogo'): void {
+  goTab(tab: 'reserva' | 'asistencia' | 'catalogo'): void {
     const slug = this.slug();
+    if (tab !== 'catalogo') {
+      this.catalogRequestTarget.set(null);
+    }
     const q = tab === 'reserva' ? {} : { tab };
-    void this.router.navigate(['/reservar', slug], { queryParams: q });
+    void this.router.navigate(['/reservar', slug], { queryParams: q }).then(() => {
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
   }
 
-  solicitarProducto(productName: string): void {
-    this.storeForm.patchValue({
-      customer: '',
-      detail: `Interés en producto: ${productName}. Indica tu nombre y envía el registro.`,
-    });
-    this.goTab('tienda');
+  jumpToReserve(): void {
+    this.goTab('reserva');
+  }
+
+  openCatalogRequest(productName: string): void {
+    this.catalogRequestMsg.set(null);
+    this.catalogRequestErr.set(null);
+    this.catalogRequestTarget.set(productName);
+    this.catalogRequestForm.reset({ customer: '', note: '' });
+  }
+
+  cancelCatalogRequest(): void {
+    this.catalogRequestTarget.set(null);
+    this.catalogRequestErr.set(null);
+  }
+
+  submitCatalogRequest(): void {
+    this.catalogRequestMsg.set(null);
+    this.catalogRequestErr.set(null);
+    const product = this.catalogRequestTarget();
+    if (!product) {
+      return;
+    }
+    if (this.catalogRequestForm.invalid) {
+      this.catalogRequestForm.markAllAsTouched();
+      return;
+    }
+    const v = this.catalogRequestForm.getRawValue();
+    let detail = `Solicitud desde catálogo: «${product}».`;
+    const note = v.note.trim();
+    if (note) {
+      detail += ` Comentario: ${note}`;
+    }
+    this.sendPublicCatalogRequest(v.customer.trim(), detail);
   }
 
   pickService(s: string): void {
@@ -354,42 +397,40 @@ export class PublicBookingPageComponent {
     }
   }
 
-  submitStore(): void {
-    this.storeMsg.set(null);
-    this.storeErr.set(null);
-    if (this.storeForm.invalid) {
-      this.storeForm.markAllAsTouched();
-      return;
-    }
-    const v = this.storeForm.getRawValue();
+  /** Envío al mismo endpoint público que el negocio consulta en Ventas (mensaje tipo solicitud cliente). */
+  private sendPublicCatalogRequest(customer: string, detail: string): void {
     if (environment.useLiveAuth) {
-      this.storeSubmitting.set(true);
+      this.catalogRequestSubmitting.set(true);
       this.apiAppointments
         .createPublicStoreVisit(this.slug(), {
-          customer: v.customer.trim(),
-          detail: v.detail.trim(),
+          customer,
+          detail,
         })
         .subscribe({
           next: () => {
-            this.storeSubmitting.set(false);
-            this.storeMsg.set('Registro enviado. El negocio lo verá en Ventas.');
-            this.storeForm.reset({ customer: '', detail: '' });
+            this.catalogRequestSubmitting.set(false);
+            this.catalogRequestMsg.set(
+              'Solicitud enviada. El negocio la verá en su panel y puede contactarte.',
+            );
+            this.catalogRequestForm.reset({ customer: '', note: '' });
+            this.catalogRequestTarget.set(null);
           },
           error: (err: unknown) => {
-            this.storeSubmitting.set(false);
-            this.storeErr.set(this.formatHttpError(err));
+            this.catalogRequestSubmitting.set(false);
+            this.catalogRequestErr.set(this.formatHttpError(err));
           },
         });
       return;
     }
     const t = this.data.tenantByBookingSlug(this.slug());
     if (!t?.modules.includes('ventas')) {
-      this.storeErr.set('Este negocio no tiene activado el módulo de ventas en la demo.');
+      this.catalogRequestErr.set('Este negocio no tiene activado el módulo de ventas en la demo.');
       return;
     }
-    this.data.addPublicStoreVisitMock(this.slug(), v.customer.trim(), v.detail.trim());
-    this.storeMsg.set('Registro guardado (solo en este navegador, modo demo).');
-    this.storeForm.reset({ customer: '', detail: '' });
+    this.data.addPublicStoreVisitMock(this.slug(), customer, detail);
+    this.catalogRequestMsg.set('Solicitud guardada en esta demo del navegador.');
+    this.catalogRequestForm.reset({ customer: '', note: '' });
+    this.catalogRequestTarget.set(null);
   }
 
   back(): void {

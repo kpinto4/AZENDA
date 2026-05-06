@@ -1,5 +1,5 @@
 import { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { AppointmentAttendance, AppointmentEntity, AppointmentStatus, BillingCycle, PlanCatalogEntry, PlatformSiteConfig, PlatformSiteLandingCopy, StoreVisitLogEntity, TenantBillingSnapshot, TenantBrandingEntity, TenantEntity, TenantProductEntity, TenantServiceEntity, UserEntity } from './sql-db.types';
+import { AppointmentAttendance, AppointmentEntity, AppointmentStatus, BillingCycle, PlanCatalogEntry, PlatformSiteConfig, PlatformSiteLandingCopy, StoreVisitLogEntity, TenantBillingSnapshot, TenantBrandingEntity, TenantEntity, TenantProductEntity, TenantSaleEntity, TenantServiceEntity, UserEntity } from './sql-db.types';
 export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
     private readonly logger;
     private readonly dialect;
@@ -86,6 +86,15 @@ export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
         customer: string;
         detail: string;
     }): Promise<StoreVisitLogEntity>;
+    listTenantSalesByTenantId(tenantId: string): Promise<TenantSaleEntity[]>;
+    insertTenantSale(data: {
+        tenantId: string;
+        saleDate: string;
+        total: number;
+        method: string;
+        linkedAppointmentId: string | null;
+        stockNote: string | null;
+    }): Promise<TenantSaleEntity>;
     getTenantBranding(tenantId: string): Promise<TenantBrandingEntity>;
     updateTenantBranding(tenantId: string, patch: Partial<Omit<TenantBrandingEntity, 'tenantId'>>): Promise<TenantBrandingEntity>;
     listProductsByTenantId(tenantId: string): Promise<TenantProductEntity[]>;
@@ -118,6 +127,7 @@ export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
     private ensurePlanCatalog;
     private mergePlatformSiteConfig;
     private ensurePlatformSiteConfig;
+    private ensureTenantSalesTable;
     getPlatformSiteConfig(): Promise<PlatformSiteConfig>;
     patchPlatformSiteConfig(patch: Partial<PlatformSiteConfig> & {
         landing?: Partial<PlatformSiteLandingCopy>;
@@ -126,6 +136,7 @@ export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
     private mapTenantRow;
     private mapAppointmentRow;
     private mapStoreVisitRow;
+    private mapTenantSaleRow;
     private mapTenantBrandingRow;
     private mapTenantProductRow;
     private mapTenantServiceRow;

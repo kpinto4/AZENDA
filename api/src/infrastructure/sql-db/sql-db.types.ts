@@ -123,6 +123,18 @@ export interface TenantServiceEntity {
   catalogOrder: number;
 }
 
+/** Venta registrada desde el panel del tenant (POS ligero). */
+export interface TenantSaleEntity {
+  id: string;
+  tenantId: string;
+  saleDate: string;
+  total: number;
+  method: string;
+  linkedAppointmentId: string | null;
+  stockNote: string | null;
+  createdAt: string;
+}
+
 /** Textos de la landing y moneda global (Super Admin + lectura pública). */
 export interface PlatformSiteLandingCopy {
   navBrand: string;

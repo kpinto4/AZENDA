@@ -1,24 +1,20 @@
 .booking {
   min-height: 100vh;
-  background:
-    radial-gradient(900px 420px at 70% -10%, color-mix(in srgb, var(--az-primary) 18%, transparent), transparent),
-    radial-gradient(700px 360px at 0% 0%, color-mix(in srgb, var(--az-accent) 18%, transparent), transparent),
-    var(--az-page-gradient, var(--az-bg));
-  padding: 1.5rem 1rem 3rem;
+  background: #f5f7fb;
+  color: #111827;
+  padding: 1rem 0 2.5rem;
 }
 
 .top {
-  margin: 0 auto 1rem;
+  margin: 0 auto 0.8rem;
   display: flex;
   align-items: baseline;
   gap: clamp(0.35rem, 1.1vw, 0.6rem);
   flex-wrap: wrap;
-  padding: 0.45rem 0.6rem;
-  border-radius: var(--az-radius-sm);
-  background: color-mix(in srgb, var(--az-surface) 82%, transparent);
-  border: 1px solid color-mix(in srgb, var(--az-border) 72%, transparent);
-  box-shadow: 0 2px 12px rgb(0 0 0 / 0.16);
-  backdrop-filter: blur(2px);
+  padding: 0.4rem 0.2rem;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .top-logo {
@@ -64,27 +60,37 @@
 
 .client-tabs {
   margin: 0 auto 1rem;
+  padding: 0.3rem;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 8px 20px rgb(15 23 42 / 0.08);
+  animation: fade-up 360ms ease both;
 }
 
 .client-tabs .tab {
-  border-radius: 8px;
-  border: 1px solid var(--az-border);
+  border-radius: 11px;
+  border: 1px solid transparent;
   font: inherit;
   font-weight: 700;
-  color: var(--az-muted);
-  background: var(--az-surface);
+  color: #4b5563;
+  background: transparent;
   cursor: pointer;
+  transition: 180ms ease;
 }
 
 .client-tabs .tab:hover {
-  color: var(--az-text);
+  color: #111827;
+  background: #f3f4f6;
 }
 
 .client-tabs .tab.active {
-  border-color: color-mix(in srgb, var(--az-primary) 45%, var(--az-border));
-  color: var(--az-primary);
-  background: color-mix(in srgb, var(--az-primary) 10%, var(--az-surface));
+  border-color: transparent;
+  color: #fff;
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+  box-shadow: 0 6px 14px rgb(37 99 235 / 0.35);
 }
+
 
 .tab-panel h1 {
   margin-top: 0;
@@ -114,6 +120,13 @@
   border: 1px solid var(--az-border);
   border-radius: 8px;
   background: var(--az-surface);
+  transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease;
+}
+
+.catalog-row:hover {
+  transform: translateY(-2px);
+  border-color: #bfdbfe;
+  box-shadow: 0 10px 20px rgb(15 23 42 / 0.08);
 }
 
 .catalog-row .az-btn {
@@ -167,12 +180,16 @@
 }
 
 .panel {
-  max-width: min(1100px, 96vw);
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 12px 28px rgb(15 23 42 / 0.08);
+  animation: fade-up 260ms ease both;
 }
 
 .catalog-panel {
-  max-width: min(1100px, 96vw);
+  max-width: none;
 }
 
 @media (min-width: 700px) {
@@ -243,7 +260,7 @@ h1 {
 }
 
 .muted {
-  color: var(--az-muted);
+  color: #6b7280;
   margin: 0 0 1rem;
 }
 
@@ -286,9 +303,9 @@ h1 {
 }
 
 .slot.pick {
-  border-color: var(--az-primary);
-  color: var(--az-primary);
-  background: color-mix(in srgb, var(--az-primary) 10%, transparent);
+  border-color: #2563eb;
+  color: #1d4ed8;
+  background: #dbeafe;
 }
 
 .az-input.wide {
@@ -326,4 +343,193 @@ form {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+
+.catalog-request-panel {
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--az-radius-sm);
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+}
+
+.catalog-request-head {
+  font-size: 1.05rem;
+  margin: 0 0 0.35rem;
+}
+
+.catalog-request-form .row-btns {
+  margin-top: 0.65rem;
+}
+
+.catalog-request-panel .small-block {
+  margin-bottom: 0.75rem;
+}
+
+.booksy-hero {
+  margin: 0 auto 1rem;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  box-shadow: 0 10px 26px rgb(15 23 42 / 0.1);
+  animation: fade-up 320ms ease both;
+}
+
+.hero-cover {
+  height: 120px;
+  background:
+    linear-gradient(140deg, rgb(14 165 233 / 0.9), rgb(37 99 235 / 0.9)),
+    radial-gradient(circle at 78% 10%, rgb(255 255 255 / 0.45), transparent 35%);
+}
+
+.hero-body {
+  padding: 0.9rem 1rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.hero-ident {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.hero-logo {
+  width: 54px;
+  height: 54px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 14px rgb(15 23 42 / 0.18);
+}
+
+.hero-logo.ph {
+  background: #d1d5db;
+}
+
+.hero-title {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #0f172a;
+}
+
+.hero-sub {
+  margin: 0.2rem 0 0;
+  color: #64748b;
+  font-size: 0.86rem;
+}
+
+.hero-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.metric-chip {
+  border: 1px solid #dbeafe;
+  background: #f0f9ff;
+  color: #0f172a;
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.booksy-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.9rem;
+}
+
+.stage-main {
+  min-width: 0;
+}
+
+.stage-side {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.side-card {
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 24px rgb(15 23 42 / 0.07);
+}
+
+.side-card h3 {
+  margin-top: 0;
+}
+
+.side-list {
+  margin: 0;
+  padding-left: 1rem;
+  color: #4b5563;
+  font-size: 0.9rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.side-cta {
+  width: 100%;
+  justify-content: center;
+}
+
+.mobile-book-cta {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 30;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.78rem 1.2rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+  box-shadow: 0 14px 28px rgb(37 99 235 / 0.42);
+  animation: cta-in 220ms ease both;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cta-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (min-width: 980px) {
+  .booksy-stage {
+    grid-template-columns: minmax(0, 1fr) 290px;
+    align-items: start;
+  }
+
+  .stage-side {
+    position: sticky;
+    top: 14px;
+  }
+}
+
+@media (min-width: 820px) {
+  .mobile-book-cta {
+    display: none;
+  }
 }

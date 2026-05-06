@@ -11,6 +11,8 @@ const common_1 = require("@nestjs/common");
 const tenant_appointments_controller_1 = require("./tenant-appointments.controller");
 const tenant_appointments_service_1 = require("./tenant-appointments.service");
 const tenant_store_visits_controller_1 = require("./tenant-store-visits.controller");
+const tenant_sales_controller_1 = require("./tenant-sales.controller");
+const tenant_sales_service_1 = require("./tenant-sales.service");
 const tenant_controller_1 = require("./tenant.controller");
 const tenant_service_1 = require("./tenant.service");
 const tenant_status_guard_1 = require("../auth/guards/tenant-status.guard");
@@ -19,8 +21,13 @@ let TenantModule = class TenantModule {
 exports.TenantModule = TenantModule;
 exports.TenantModule = TenantModule = __decorate([
     (0, common_1.Module)({
-        controllers: [tenant_controller_1.TenantController, tenant_appointments_controller_1.TenantAppointmentsController, tenant_store_visits_controller_1.TenantStoreVisitsController],
-        providers: [tenant_service_1.TenantService, tenant_appointments_service_1.TenantAppointmentsService, tenant_status_guard_1.TenantStatusGuard],
+        controllers: [
+            tenant_controller_1.TenantController,
+            tenant_appointments_controller_1.TenantAppointmentsController,
+            tenant_store_visits_controller_1.TenantStoreVisitsController,
+            tenant_sales_controller_1.TenantSalesController,
+        ],
+        providers: [tenant_service_1.TenantService, tenant_appointments_service_1.TenantAppointmentsService, tenant_sales_service_1.TenantSalesService, tenant_status_guard_1.TenantStatusGuard],
     })
 ], TenantModule);
 //# sourceMappingURL=tenant.module.js.map

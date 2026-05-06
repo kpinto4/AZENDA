@@ -73,11 +73,11 @@
 
     @if (session.publicBookingSlug()) {
       <div class="az-card span-2">
-        <h3>Enlace público de cliente (reservas, asistencia y tienda)</h3>
+        <h3>Enlace público de cliente (reservas, asistencia y catálogo)</h3>
         <p class="muted">
-          Es la <strong>misma base</strong> para reservar cita, que el cliente confirme que acudió, y para dejar un registro
-          breve de compra o visita en tienda (útil para ventas). Puedes compartir la URL general o enlaces directos a cada
-          pestaña.
+          Tu cliente usa la <strong>misma página</strong> para pedir cita, confirmar que asistió y, si tienes catálogo y
+          tienda pública activados, <strong>solicitar productos</strong> (solo interés y contacto; el negocio gestiona pago
+          y entrega fuera de Azenda). Puedes copiar la URL general o el enlace con pestaña.
         </p>
         <p class="booking-actions">
           <a class="az-btn az-btn-primary" [routerLink]="['/reservar', session.publicBookingSlug()]">Vista previa</a>
@@ -91,12 +91,7 @@
             <input class="az-input wide" type="text" readonly [value]="urls.asistencia" />
             <button type="button" class="az-btn az-btn-secondary" (click)="copyUrl(urls.asistencia)">Copiar</button>
           </div>
-          <label class="az-label lbl-top">Compra / tienda (misma página, pestaña)</label>
-          <div class="url-row">
-            <input class="az-input wide" type="text" readonly [value]="urls.tienda" />
-            <button type="button" class="az-btn az-btn-secondary" (click)="copyUrl(urls.tienda)">Copiar</button>
-          </div>
-          <label class="az-label lbl-top">Catálogo público (planes Pro+ con tienda activada)</label>
+          <label class="az-label lbl-top">Catálogo y solicitudes (planes Pro+ con tienda activada)</label>
           <div class="url-row">
             <input class="az-input wide" type="text" readonly [value]="urls.catalogo" />
             <button type="button" class="az-btn az-btn-secondary" (click)="copyUrl(urls.catalogo)">Copiar</button>

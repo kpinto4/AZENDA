@@ -669,6 +669,42 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             createdAt,
         };
     }
+    async listTenantSalesByTenantId(tenantId) {
+        const rows = await this.queryRows(`
+        SELECT id, tenant_id, sale_date, total, method, linked_appointment_id, stock_note, created_at
+        FROM tenant_sales
+        WHERE tenant_id = ?
+        ORDER BY created_at DESC
+      `, [tenantId]);
+        return rows.map((row) => this.mapTenantSaleRow(row));
+    }
+    async insertTenantSale(data) {
+        const id = `sale_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        const createdAt = new Date().toISOString();
+        await this.exec(`
+        INSERT INTO tenant_sales (id, tenant_id, sale_date, total, method, linked_appointment_id, stock_note, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+            id,
+            data.tenantId,
+            data.saleDate,
+            this.round2(Math.max(0, Number(data.total) || 0)),
+            data.method.trim(),
+            data.linkedAppointmentId,
+            data.stockNote,
+            createdAt,
+        ]);
+        return {
+            id,
+            tenantId: data.tenantId,
+            saleDate: data.saleDate,
+            total: this.round2(Math.max(0, Number(data.total) || 0)),
+            method: data.method.trim(),
+            linkedAppointmentId: data.linkedAppointmentId,
+            stockNote: data.stockNote,
+            createdAt,
+        };
+    }
     async getTenantBranding(tenantId) {
         const row = await this.queryOne(`
         SELECT tenant_id, display_name, logo_url, catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
@@ -980,6 +1016,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             }
             await this.ensurePlanCatalog();
             await this.ensurePlatformSiteConfig();
+            await this.ensureTenantSalesTable();
             await this.syncTenantPlanPricesFromCatalog();
             await this.normalizeTenantBillingPeriods();
             return;
@@ -1023,6 +1060,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         }
         await this.ensurePlanCatalog();
         await this.ensurePlatformSiteConfig();
+        await this.ensureTenantSalesTable();
         await this.syncTenantPlanPricesFromCatalog();
         await this.normalizeTenantBillingPeriods();
     }
@@ -1138,6 +1176,20 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
       )
     `);
         await this.ensureIndex(`CREATE INDEX idx_tenant_services_tenant_order ON tenant_services (tenant_id, catalog_order)`);
+        await this.execScript(`
+      CREATE TABLE IF NOT EXISTS tenant_sales (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL,
+        sale_date TEXT NOT NULL,
+        total NUMERIC(12,2) NOT NULL,
+        method TEXT NOT NULL,
+        linked_appointment_id TEXT NULL,
+        stock_note TEXT NULL,
+        created_at TEXT NOT NULL,
+        CONSTRAINT fk_sale_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+      )
+    `);
+        await this.ensureIndex(`CREATE INDEX idx_tenant_sales_tenant_created ON tenant_sales (tenant_id, created_at DESC)`);
         await this.execScript(`
       CREATE TABLE IF NOT EXISTS platform_site_config (
         id TEXT PRIMARY KEY,
@@ -1443,6 +1495,43 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     `);
         await this.exec(`INSERT INTO platform_site_config (id, payload_json) VALUES ('default', ?) ON CONFLICT (id) DO NOTHING`, [payload]);
     }
+    async ensureTenantSalesTable() {
+        if (this.dialect === 'sqlite') {
+            this.sqliteDb.exec(`
+        CREATE TABLE IF NOT EXISTS tenant_sales (
+          id TEXT PRIMARY KEY,
+          tenant_id TEXT NOT NULL,
+          sale_date TEXT NOT NULL,
+          total REAL NOT NULL,
+          method TEXT NOT NULL,
+          linked_appointment_id TEXT,
+          stock_note TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+        )
+      `);
+            try {
+                this.sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_tenant_sales_tenant_created ON tenant_sales(tenant_id, created_at DESC)`);
+            }
+            catch {
+            }
+            return;
+        }
+        await this.execScript(`
+      CREATE TABLE IF NOT EXISTS tenant_sales (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL,
+        sale_date TEXT NOT NULL,
+        total NUMERIC(12,2) NOT NULL,
+        method TEXT NOT NULL,
+        linked_appointment_id TEXT NULL,
+        stock_note TEXT NULL,
+        created_at TEXT NOT NULL,
+        CONSTRAINT fk_sale_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+      )
+    `);
+        await this.ensureIndex(`CREATE INDEX IF NOT EXISTS idx_tenant_sales_tenant_created ON tenant_sales (tenant_id, created_at DESC)`);
+    }
     async getPlatformSiteConfig() {
         await this.ensurePlatformSiteConfig();
         const row = await this.queryOne(`SELECT payload_json FROM platform_site_config WHERE id = 'default'`);
@@ -1528,6 +1617,18 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             tenantId: String(row.tenant_id),
             customer: String(row.customer),
             detail: String(row.detail),
+            createdAt: String(row.created_at),
+        };
+    }
+    mapTenantSaleRow(row) {
+        return {
+            id: String(row.id),
+            tenantId: String(row.tenant_id),
+            saleDate: String(row.sale_date),
+            total: Math.max(0, Number(row.total) || 0),
+            method: String(row.method),
+            linkedAppointmentId: row.linked_appointment_id == null ? null : String(row.linked_appointment_id),
+            stockNote: row.stock_note == null ? null : String(row.stock_note),
             createdAt: String(row.created_at),
         };
     }
