@@ -51,7 +51,23 @@ export interface PublicCatalogDto {
     promoLabel: string | null;
     catalogOrder: number;
   }>;
+  employees: Array<{
+    id: string;
+    name: string;
+    role: 'ADMIN' | 'EMPLEADO';
+  }>;
   branding: NonNullable<PublicTenantMetaDto['branding']>;
+}
+
+export interface PublicAvailabilityDto {
+  date: string;
+  slotsByEmployee: Record<string, string[]>;
+  allSlots: string[];
+  employees: Array<{
+    id: string;
+    name: string;
+    role: 'ADMIN' | 'EMPLEADO';
+  }>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -67,6 +83,12 @@ export class ApiPublicMetaService {
   getCatalog(slug: string): Observable<PublicCatalogDto> {
     return this.http.get<PublicCatalogDto>(
       `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/catalog`,
+    );
+  }
+
+  getAvailability(slug: string, date: string): Observable<PublicAvailabilityDto> {
+    return this.http.get<PublicAvailabilityDto>(
+      `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/availability?date=${encodeURIComponent(date)}`,
     );
   }
 }

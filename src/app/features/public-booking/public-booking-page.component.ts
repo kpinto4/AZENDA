@@ -9,6 +9,7 @@ import { environment } from '../../../environments/environment';
 import { ApiAppointmentsService } from '../../core/services/api-appointments.service';
 import {
   ApiPublicMetaService,
+  PublicAvailabilityDto,
   PublicCatalogDto,
   PublicTenantMetaDto,
 } from '../../core/services/api-public-meta.service';
@@ -26,6 +27,29 @@ function tabFromQuery(tab: string | null): 'reserva' | 'asistencia' | 'catalogo'
   }
   return 'reserva';
 }
+
+interface PublicBookingServiceRow {
+  id: string;
+  name: string;
+  description: string | null;
+  priceLabel: string | null;
+  promoLabel: string | null;
+  fullValue: string;
+}
+
+interface PublicBookingDayChip {
+  isoDate: string;
+  dayShort: string;
+  dayNum: string;
+}
+
+interface PublicBookingEmployeeOption {
+  id: string;
+  name: string;
+  subtitle: string;
+}
+
+type PublicBookingPeriod = 'manana' | 'tarde' | 'noche';
 
 @Component({
   selector: 'app-public-booking-page',
@@ -47,6 +71,7 @@ export class PublicBookingPageComponent {
 
   readonly publicMeta = signal<PublicTenantMetaDto | null>(null);
   readonly publicCatalog = signal<PublicCatalogDto | null>(null);
+  readonly publicAvailability = signal<PublicAvailabilityDto | null>(null);
   readonly blockedAlertShownForSlug = signal<string | null>(null);
 
   readonly slug = toSignal(
@@ -80,6 +105,99 @@ export class PublicBookingPageComponent {
       return [];
     }
     return this.data.servicesForBookingSlug(this.slug());
+  });
+
+  /** Tarjetas enriquecidas para el selector de servicio (API estructurada o texto plano). */
+  readonly serviceRows = computed((): PublicBookingServiceRow[] => {
+    if (environment.useLiveAuth) {
+      const services = this.publicCatalog()?.services ?? [];
+      if (services.length) {
+        return services.map((s) => {
+          const priceLabel = `$${Number(s.price).toFixed(2)}`;
+          let promoLabel: string | null = null;
+          let full = `${s.name} · ${priceLabel}`;
+          if (s.promoPrice != null) {
+            const promo = `$${Number(s.promoPrice).toFixed(2)}`;
+            promoLabel = s.promoLabel ? `${s.promoLabel} · ${promo}` : `Promo ${promo}`;
+            full += ` · Promo ${promo}${s.promoLabel ? ` (${s.promoLabel})` : ''}`;
+          }
+          return {
+            id: s.id,
+            name: s.name,
+            description: s.description?.trim() ? s.description.trim() : null,
+            priceLabel,
+            promoLabel,
+            fullValue: full,
+          };
+        });
+      }
+    }
+    return this.tenantServices().map((line, i) => {
+      const sep = ' · ';
+      const parts = line.split(sep);
+      const name = (parts[0] ?? line).trim();
+      const tailParts = parts.slice(1);
+      const promoAt = tailParts.findIndex((p) => /promo/i.test(p));
+      let priceLabel: string | null = null;
+      let promoLabel: string | null = null;
+      if (promoAt >= 0) {
+        priceLabel =
+          tailParts
+            .slice(0, promoAt)
+            .join(sep)
+            .trim() || null;
+        promoLabel =
+          tailParts
+            .slice(promoAt)
+            .join(sep)
+            .trim() || null;
+      } else {
+        const tail = tailParts.join(sep).trim();
+        priceLabel = tail || null;
+      }
+      return {
+        id: `line_${i}`,
+        name,
+        description: null,
+        priceLabel,
+        promoLabel,
+        fullValue: line,
+      };
+    });
+  });
+
+  /** Mini galería bajo la cabecera (logo + fotos de producto). */
+  readonly heroGalleryUrls = computed(() => {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    const push = (u: string | null | undefined) => {
+      const v = u?.trim();
+      if (!v || seen.has(v)) {
+        return;
+      }
+      seen.add(v);
+      out.push(v);
+    };
+    push(this.branding().logoUrl);
+    for (const p of this.catalogProducts()) {
+      push(p.imageUrl);
+      if (out.length >= 10) {
+        break;
+      }
+    }
+    return out;
+  });
+
+  readonly heroCoverUrl = computed(() => this.heroGalleryUrls()[0] ?? null);
+  readonly heroThumbUrls = computed(() => this.heroGalleryUrls().slice(0, 8));
+  readonly heroCoverStyle = computed(() => {
+    const cover = this.heroCoverUrl();
+    if (!cover) {
+      return null;
+    }
+    return {
+      backgroundImage: `linear-gradient(15deg, rgb(2 6 23 / 0.35), rgb(2 6 23 / 0.05)), url('${cover}')`,
+    };
   });
 
   readonly catalogoVisible = computed(() => {
@@ -130,7 +248,80 @@ export class PublicBookingPageComponent {
     this.data.brandingCssVars(this.branding(), this.session.darkMode()),
   );
 
-  readonly slots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30'];
+  readonly slots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '15:00', '15:30', '16:00', '16:30', '18:30', '19:00', '19:30'];
+  readonly employeeOptions = computed((): PublicBookingEmployeeOption[] => {
+    const base: PublicBookingEmployeeOption[] = [
+      { id: 'any', name: 'Cualquiera', subtitle: 'Mayor disponibilidad' },
+    ];
+    if (environment.useLiveAuth) {
+      const fromApi = (this.publicCatalog()?.employees ?? []).map((e) => ({
+        id: e.id,
+        name: e.name,
+        subtitle: e.role === 'ADMIN' ? 'Director · Disponible' : 'Profesional · Disponible',
+      }));
+      if (fromApi.length) {
+        return [...base, ...fromApi];
+      }
+    }
+    const fromMock = this.data.employees().map((e) => ({
+      id: e.id,
+      name: e.name,
+      subtitle: e.panelRole === 'ADMIN' ? 'Director · Disponible' : 'Profesional · Disponible',
+    }));
+    return [...base, ...fromMock];
+  });
+  readonly selectedEmployeeLabel = computed(
+    () =>
+      this.employeeOptions().find((e) => e.id === this.selectedEmployeeId())?.name ?? 'Sin seleccionar',
+  );
+  readonly selectedServicePriceLabel = computed(() => {
+    const selected = this.selectedService();
+    if (!selected) {
+      return null;
+    }
+    return this.serviceRows().find((s) => s.fullValue === selected)?.priceLabel ?? null;
+  });
+  readonly selectedPeriod = signal<PublicBookingPeriod>('manana');
+  readonly availableSlotsForSelection = computed(() => {
+    const period = this.selectedPeriod();
+    const date = this.selectedDate().trim();
+    let sourceSlots = this.slots;
+    if (environment.useLiveAuth && date && this.publicAvailability()?.date === date) {
+      const data = this.publicAvailability()!;
+      const emp = this.selectedEmployeeId().trim();
+      sourceSlots =
+        emp && emp !== 'any'
+          ? (data.slotsByEmployee[emp] ?? [])
+          : data.allSlots;
+    }
+    return sourceSlots.filter((s) => {
+      const hour = Number(s.split(':')[0] ?? 0);
+      if (period === 'manana') {
+        return hour < 13;
+      }
+      if (period === 'tarde') {
+        return hour >= 13 && hour < 18;
+      }
+      return hour >= 18;
+    });
+  });
+  readonly dayChips = computed((): PublicBookingDayChip[] => {
+    const out: PublicBookingDayChip[] = [];
+    const base = new Date();
+    const fmtWeek = new Intl.DateTimeFormat('es-ES', { weekday: 'short' });
+    const today = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+    for (let i = 0; i < 7; i += 1) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const dayShort = fmtWeek.format(d).replace('.', '');
+      const dayNum = String(d.getDate());
+      const isoDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+        d.getDate(),
+      ).padStart(2, '0')}`;
+      out.push({ isoDate, dayShort, dayNum });
+    }
+    return out;
+  });
   readonly publicBookingBlockedMessage = computed(() => {
     if (!environment.useLiveAuth) {
       return null;
@@ -148,7 +339,7 @@ export class PublicBookingPageComponent {
     return null;
   });
 
-  step = signal<1 | 2 | 3 | 4>(1);
+  step = signal<1 | 2 | 3>(1);
   readonly done = signal(false);
   readonly bookedWithLiveApi = signal(false);
   readonly bookingError = signal<string | null>(null);
@@ -168,6 +359,7 @@ export class PublicBookingPageComponent {
   readonly selectedService = signal('');
   readonly selectedDate = signal('');
   readonly selectedSlot = signal('');
+  readonly selectedEmployeeId = signal('');
 
   readonly confirmForm = this.fb.nonNullable.group({
     name: ['', Validators.required],
@@ -203,6 +395,20 @@ export class PublicBookingPageComponent {
         this.apiPublic.getCatalog(slug).subscribe({
           next: (c) => this.publicCatalog.set(c),
           error: () => this.publicCatalog.set(null),
+        });
+      });
+    });
+    effect(() => {
+      const slug = this.slug();
+      const date = this.selectedDate().trim();
+      if (!environment.useLiveAuth || !date) {
+        this.publicAvailability.set(null);
+        return;
+      }
+      untracked(() => {
+        this.apiPublic.getAvailability(slug, date).subscribe({
+          next: (rows) => this.publicAvailability.set(rows),
+          error: () => this.publicAvailability.set(null),
         });
       });
     });
@@ -278,7 +484,7 @@ export class PublicBookingPageComponent {
     this.step.set(2);
   }
 
-  continueFromDate(): void {
+  continueToSchedule(): void {
     if (this.publicBookingBlockedMessage()) {
       this.alerts.warning(this.publicBookingBlockedMessage()!, 'Acceso restringido');
       return;
@@ -288,7 +494,7 @@ export class PublicBookingPageComponent {
       return;
     }
     this.dateStepError.set(null);
-    this.step.set(3);
+    this.step.set(2);
   }
 
   pickSlot(s: string): void {
@@ -297,7 +503,37 @@ export class PublicBookingPageComponent {
       return;
     }
     this.selectedSlot.set(s);
-    this.step.set(4);
+  }
+
+  pickEmployee(employeeId: string): void {
+    if (this.publicBookingBlockedMessage()) {
+      this.alerts.warning(this.publicBookingBlockedMessage()!, 'Acceso restringido');
+      return;
+    }
+    this.selectedEmployeeId.set(employeeId);
+    this.selectedSlot.set('');
+  }
+
+  goToSummaryStep(): void {
+    if (this.publicBookingBlockedMessage()) {
+      this.alerts.warning(this.publicBookingBlockedMessage()!, 'Acceso restringido');
+      return;
+    }
+    if (!this.selectedDate().trim()) {
+      this.dateStepError.set('Selecciona una fecha.');
+      return;
+    }
+    if (!this.selectedEmployeeId().trim()) {
+      this.bookingError.set('Selecciona un profesional.');
+      return;
+    }
+    if (!this.selectedSlot().trim()) {
+      this.bookingError.set('Selecciona un horario.');
+      return;
+    }
+    this.dateStepError.set(null);
+    this.bookingError.set(null);
+    this.step.set(3);
   }
 
   confirm(): void {
@@ -327,6 +563,7 @@ export class PublicBookingPageComponent {
           customer: v.name,
           service: this.selectedService(),
           when,
+          employeeId: this.selectedEmployeeId() === 'any' ? undefined : this.selectedEmployeeId(),
         })
         .subscribe({
           next: (row) => {
@@ -343,7 +580,12 @@ export class PublicBookingPageComponent {
       return;
     }
     this.bookedWithLiveApi.set(false);
-    const wasCreated = this.data.recordBooking(v.name, this.selectedService(), when, this.slug());
+    const wasCreated = this.data.recordBooking(
+      v.name,
+      `${this.selectedService()} · Empleado: ${this.selectedEmployeeLabel()}`,
+      when,
+      this.slug(),
+    );
     if (!wasCreated) {
       this.bookingError.set('Ese horario ya está ocupado. Elige otra hora.');
       return;
@@ -437,16 +679,26 @@ export class PublicBookingPageComponent {
     if (this.done()) {
       this.done.set(false);
       this.bookedWithLiveApi.set(false);
-      this.step.set(4);
+      this.step.set(3);
       return;
     }
     this.dateStepError.set(null);
-    this.step.update((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3 | 4) : s));
+    this.step.update((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3) : s));
   }
 
   updateDate(value: string): void {
     this.selectedDate.set(value);
+    this.selectedSlot.set('');
     this.dateStepError.set(null);
+  }
+
+  pickDateFromChip(value: string): void {
+    this.updateDate(value);
+  }
+
+  setPeriod(period: PublicBookingPeriod): void {
+    this.selectedPeriod.set(period);
+    this.selectedSlot.set('');
   }
 
   anotherReservation(): void {
@@ -457,6 +709,8 @@ export class PublicBookingPageComponent {
     this.selectedService.set('');
     this.selectedDate.set('');
     this.selectedSlot.set('');
+    this.selectedEmployeeId.set('');
+    this.selectedPeriod.set('manana');
     this.confirmForm.reset({ name: '', phone: '' });
     this.bookingError.set(null);
     this.dateStepError.set(null);
@@ -479,4 +733,5 @@ export class PublicBookingPageComponent {
     }
     return msg;
   }
+
 }

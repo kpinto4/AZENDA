@@ -29,4 +29,10 @@ __decorate([
     (0, class_validator_1.MinLength)(4),
     __metadata("design:type", String)
 ], CreatePublicAppointmentDto.prototype, "when", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MinLength)(1),
+    __metadata("design:type", String)
+], CreatePublicAppointmentDto.prototype, "employeeId", void 0);
 //# sourceMappingURL=create-public-appointment.dto.js.map

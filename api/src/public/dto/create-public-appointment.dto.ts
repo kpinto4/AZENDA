@@ -1,4 +1,4 @@
-import { IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreatePublicAppointmentDto {
   @IsString()
@@ -12,4 +12,9 @@ export class CreatePublicAppointmentDto {
   @IsString()
   @MinLength(4)
   when!: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  employeeId?: string;
 }

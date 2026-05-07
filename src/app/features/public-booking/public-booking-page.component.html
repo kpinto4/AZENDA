@@ -1,4 +1,9 @@
-<div class="booking" [class.catalog-active]="clientTab() === 'catalogo'" [ngStyle]="styleVars()">
+<div
+  class="booking"
+  [class.catalog-active]="clientTab() === 'catalogo'"
+  [class.booking--fab-pad]="showMobileReserveCta()"
+  [ngStyle]="styleVars()"
+>
   <header class="top az-fluid-shell">
     @if (branding().logoUrl; as logo) {
       <img class="top-logo" [src]="logo" [alt]="branding().displayName" />
@@ -8,7 +13,14 @@
   </header>
 
   <section class="booksy-hero az-fluid-shell">
-    <div class="hero-cover"></div>
+    <div class="hero-cover" [ngStyle]="heroCoverStyle()"></div>
+    <div class="hero-gallery-strip" aria-label="Imágenes del negocio">
+      <div class="hero-gallery-inner">
+        @for (src of heroThumbUrls(); track src) {
+          <img class="hero-gallery-thumb" [src]="src" alt="" loading="lazy" />
+        }
+      </div>
+    </div>
     <div class="hero-body">
       <div class="hero-ident">
         @if (branding().logoUrl; as logo) {
@@ -17,14 +29,28 @@
           <div class="hero-logo ph" aria-hidden="true"></div>
         }
         <div>
+          <p class="hero-kicker">Reserva en línea</p>
           <h1 class="hero-title">{{ branding().displayName || slug() }}</h1>
-          <p class="hero-sub">Reserva, confirma asistencia y solicita productos en una sola vista.</p>
+          <p class="hero-sub">
+            Elige horario, confirma asistencia y, si lo permite el negocio, solicita productos sin fricción.
+          </p>
         </div>
       </div>
-      <div class="hero-metrics">
-        <span class="metric-chip">⭐ 4.9</span>
-        <span class="metric-chip">📍 Centro</span>
-        <span class="metric-chip">🕒 Hoy abierto</span>
+      <div class="hero-trust" role="presentation">
+        <div class="hero-stars-row" aria-label="Valoraciones de ejemplo">
+          <span class="hero-stars" aria-hidden="true">
+            @for (_ of [1, 2, 3, 4, 5]; track _) {
+              <span class="star on"></span>
+            }
+          </span>
+          <span class="hero-rating-score">4,9</span>
+          <span class="hero-rating-muted">excelente</span>
+        </div>
+        <div class="hero-trust-chips">
+          <span class="metric-chip subtle">Sin registro para reservar</span>
+          <span class="metric-chip subtle">Confirmación instantánea</span>
+          <span class="metric-chip subtle">Catálogo bajo solicitud</span>
+        </div>
       </div>
     </div>
   </section>
@@ -120,7 +146,6 @@
               } @else {
                 <span class="muted small-block">Precio ${{ p.price.toFixed(2) }}</span>
               }
-              <span class="muted small-block">SKU {{ p.sku }} · stock {{ p.stock }}</span>
             </div>
             <button type="button" class="az-btn az-btn-secondary" (click)="openCatalogRequest(p.name)">
               Solicitar
@@ -175,82 +200,170 @@
       </button>
     </div>
   } @else {
-    <div class="az-card panel">
-      <div class="steps">
-        <span [class.on]="step() >= 1">1 · Servicio</span>
-        <span [class.on]="step() >= 2">2 · Fecha</span>
-        <span [class.on]="step() >= 3">3 · Hora</span>
-        <span [class.on]="step() >= 4">4 · Datos</span>
-      </div>
-
+    <div class="az-card panel panel-booking">
       @if (step() === 1) {
-        <h1>Elige un servicio</h1>
-        <p class="muted">Negocio: <strong>{{ slug() }}</strong> · servicios de este negocio</p>
-        @if (tenantServices().length === 0) {
+        <h1 class="panel-lead">1. Servicio</h1>
+        <p class="muted lead-caption">Elige el servicio. Al seleccionarlo pasas a configurar profesional, fecha y hora.</p>
+        @if (serviceRows().length === 0) {
           <p class="muted">Este negocio aún no tiene servicios en el catálogo para reservar.</p>
         } @else {
-          <div class="options">
-            @for (s of tenantServices(); track s) {
-              <button type="button" class="opt" (click)="pickService(s)">{{ s }}</button>
+          <ul class="service-row-list">
+            @for (row of serviceRows(); track row.id) {
+              <li class="service-row" [class.service-row--pick]="selectedService() === row.fullValue">
+                <div class="service-row-main">
+                  <span class="service-card-name">{{ row.name }}</span>
+                  @if (row.description) {
+                    <span class="service-card-desc">{{ row.description }}</span>
+                  }
+                </div>
+                <div class="service-row-price">
+                  @if (row.priceLabel) {
+                    <span class="service-card-price">{{ row.priceLabel }}</span>
+                  }
+                  @if (row.promoLabel) {
+                    <span class="service-card-promo">{{ row.promoLabel }}</span>
+                  }
+                </div>
+                <button type="button" class="az-btn az-btn-primary service-book-btn" (click)="pickService(row.fullValue)">
+                  Reservar
+                </button>
+              </li>
             }
-          </div>
+          </ul>
         }
       }
 
       @if (step() === 2) {
-        <h1>Elige fecha</h1>
-        <label class="az-label" for="d">Día</label>
-        <input
-          id="d"
-          class="az-input wide"
-          type="date"
-          [value]="selectedDate()"
-          (input)="updateDate(($any($event.target).value))"
-        />
-        @if (dateStepError()) {
-          <p class="muted field-error">{{ dateStepError() }}</p>
+        <h1 class="panel-lead">2. Profesional, fecha y hora</h1>
+        <p class="muted lead-caption">Define quién te atiende y en qué momento.</p>
+
+        <section class="booking-section">
+          <header class="booking-section-head">
+            <h2>Fecha</h2>
+          </header>
+          <div class="day-chip-list">
+            @for (d of dayChips(); track d.isoDate) {
+              <button
+                type="button"
+                class="day-chip"
+                [class.day-chip--on]="selectedDate() === d.isoDate"
+                (click)="pickDateFromChip(d.isoDate)"
+              >
+                <span>{{ d.dayShort }}</span>
+                <strong>{{ d.dayNum }}</strong>
+              </button>
+            }
+          </div>
+          <label class="az-label" for="d">O escribe día exacto</label>
+          <input
+            id="d"
+            class="az-input wide"
+            type="date"
+            [value]="selectedDate()"
+            (input)="updateDate(($any($event.target).value))"
+          />
+          @if (dateStepError()) {
+            <p class="muted field-error">{{ dateStepError() }}</p>
+          }
+        </section>
+
+        <section class="booking-section">
+          <header class="booking-section-head">
+            <h2>Profesional</h2>
+          </header>
+          <ul class="employee-list">
+            @for (emp of employeeOptions(); track emp.id) {
+              <li>
+                <button
+                  type="button"
+                  class="employee-opt"
+                  [class.employee-opt--on]="selectedEmployeeId() === emp.id"
+                  (click)="pickEmployee(emp.id)"
+                >
+                  <span class="employee-avatar">{{ emp.name.charAt(0) }}</span>
+                  <span class="employee-meta">
+                    <strong>{{ emp.name }}</strong>
+                    <small>{{ emp.subtitle }}</small>
+                  </span>
+                  <span class="employee-state">{{ selectedEmployeeId() === emp.id ? 'Seleccionado' : 'Disponible' }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        </section>
+
+        <section class="booking-section">
+          <header class="booking-section-head">
+            <h2>Hora</h2>
+          </header>
+          <div class="period-tabs">
+            <button type="button" class="period-tab" [class.on]="selectedPeriod() === 'manana'" (click)="setPeriod('manana')">Mañana</button>
+            <button type="button" class="period-tab" [class.on]="selectedPeriod() === 'tarde'" (click)="setPeriod('tarde')">Tarde</button>
+            <button type="button" class="period-tab" [class.on]="selectedPeriod() === 'noche'" (click)="setPeriod('noche')">Noche</button>
+          </div>
+          @if (!selectedDate()) {
+            <p class="muted field-error">Selecciona antes una fecha para ver horarios.</p>
+          } @else if (!selectedEmployeeId()) {
+            <p class="muted field-error">Selecciona un profesional para cargar disponibilidad.</p>
+          } @else if (availableSlotsForSelection().length === 0) {
+            <p class="muted field-error">No hay horas en esta franja para ese profesional. Cambia franja o profesional.</p>
+          } @else {
+            <div class="slots">
+              @for (t of availableSlotsForSelection(); track t) {
+                <button type="button" class="slot" [class.pick]="t === selectedSlot()" (click)="pickSlot(t)">
+                  {{ t }}
+                </button>
+              }
+            </div>
+          }
+        </section>
+
+        @if (bookingError()) {
+          <p class="muted field-error">{{ bookingError() }}</p>
         }
         <div class="row-btns">
           <button type="button" class="az-btn az-btn-ghost" (click)="back()">Atrás</button>
-          <button type="button" class="az-btn az-btn-primary" (click)="continueFromDate()">Continuar</button>
+          <button type="button" class="az-btn az-btn-primary" (click)="goToSummaryStep()">Continuar</button>
         </div>
       }
 
       @if (step() === 3) {
-        <h1>Elige hora</h1>
-        <p class="muted">Selecciona una franja. La disponibilidad definitiva la define el negocio.</p>
-        <div class="slots">
-          @for (t of slots; track t) {
-            <button type="button" class="slot" [class.pick]="t === selectedSlot()" (click)="pickSlot(t)">
-              {{ t }}
-            </button>
-          }
-        </div>
-        <button type="button" class="az-btn az-btn-ghost" (click)="back()">Atrás</button>
-      }
-
-      @if (step() === 4) {
-        <h1>Tus datos</h1>
+        <h1 class="panel-lead">3. Resumen y datos</h1>
+        <p class="muted lead-caption">Revisa tu selección y confirma con tus datos.</p>
         @if (bookingError()) {
           <p class="muted field-error">{{ bookingError() }}</p>
         }
         <form [formGroup]="confirmForm" (ngSubmit)="confirm()">
-          <label class="az-label" for="name">Nombre</label>
-          <input id="name" class="az-input wide" formControlName="name" />
-          <label class="az-label" for="phone">Teléfono</label>
-          <input id="phone" class="az-input wide" formControlName="phone" />
-          <div class="summary">
-            <div><span>Servicio</span><strong>{{ selectedService() }}</strong></div>
+          <div class="summary summary--pro">
+            <div><span>Servicio</span><strong>{{ selectedService() || '—' }}</strong></div>
             <div>
               <span>Fecha</span>
               <strong>{{ selectedDate() || '—' }} {{ selectedSlot() || '—' }}</strong>
             </div>
+            <div>
+              <span>Empleado</span>
+              <strong>{{ selectedEmployeeLabel() || '—' }}</strong>
+            </div>
           </div>
-          <div class="row-btns">
-            <button type="button" class="az-btn az-btn-ghost" (click)="back()">Atrás</button>
-            <button type="submit" class="az-btn az-btn-primary" [disabled]="bookingSubmitting()">
-              {{ bookingSubmitting() ? 'Enviando…' : 'Confirmar' }}
-            </button>
+          <label class="az-label" for="name">Nombre</label>
+          <input id="name" class="az-input wide" formControlName="name" />
+          <label class="az-label" for="phone">Teléfono</label>
+          <input id="phone" class="az-input wide" formControlName="phone" />
+          <div class="booking-bottom-bar">
+            <div class="booking-total">
+              <span>Total</span>
+              <strong>{{ selectedServicePriceLabel() || '—' }}</strong>
+            </div>
+            <div class="row-btns">
+              <button type="button" class="az-btn az-btn-ghost" (click)="back()">Atrás</button>
+              <button
+                type="submit"
+                class="az-btn az-btn-primary booking-confirm-btn"
+                [disabled]="bookingSubmitting() || !selectedService() || !selectedDate() || !selectedSlot() || !selectedEmployeeId()"
+              >
+                {{ bookingSubmitting() ? 'Enviando…' : 'Confirmar reserva' }}
+              </button>
+            </div>
           </div>
         </form>
       }
@@ -258,21 +371,49 @@
   }
     </div>
     <aside class="stage-side">
-      <div class="az-card side-card">
-        <h3>Información</h3>
-        <p class="muted">Selecciona una pestaña para gestionar tu cita o solicitud.</p>
-        <ul class="side-list">
-          <li><strong>Reservar:</strong> elige servicio, fecha y hora.</li>
-          <li><strong>Asistencia:</strong> confirma que acudiste.</li>
-          @if (catalogoVisible()) {
-            <li><strong>Tienda:</strong> solicita productos del catálogo.</li>
-          }
+      <div class="az-card side-card side-card--reviews">
+        <h3>Opiniones recientes</h3>
+        <p class="side-reviews-intro muted">Ejemplo de confianza (el negocio puede sustituirlo por reseñas reales más adelante).</p>
+        <div class="side-rating-block">
+          <span class="side-rating-big">4,9</span>
+          <div class="side-rating-meta">
+            <span class="hero-stars small" aria-hidden="true">
+              @for (_ of [1, 2, 3, 4, 5]; track _) {
+                <span class="star on"></span>
+              }
+            </span>
+            <span class="muted tiny">128 valoraciones</span>
+          </div>
+        </div>
+        <ul class="review-bars" aria-hidden="true">
+          <li><span class="rb-label">Servicio</span><span class="rb-track"><span class="rb-fill" style="width: 96%"></span></span></li>
+          <li><span class="rb-label">Puntualidad</span><span class="rb-track"><span class="rb-fill" style="width: 94%"></span></span></li>
+          <li><span class="rb-label">Limpieza</span><span class="rb-track"><span class="rb-fill" style="width: 98%"></span></span></li>
         </ul>
+        <blockquote class="review-quote">
+          «Muy clara la reserva desde el móvil. En 1 minuto tenía día y hora.»
+          <footer>Cliente verificado · hace 2 semanas</footer>
+        </blockquote>
+        <blockquote class="review-quote">
+          «Me gustó poder pedir info del catálogo sin exponer datos de pago aquí.»
+          <footer>Cliente verificado · hace 5 días</footer>
+        </blockquote>
       </div>
       <div class="az-card side-card">
-        <h3>Contacto rápido</h3>
-        <p class="muted">Si necesitas ayuda inmediata, escribe por WhatsApp del negocio.</p>
-        <a class="az-btn az-btn-primary side-cta" routerLink="/">Volver al inicio</a>
+        <h3>Cómo funciona</h3>
+        <ol class="side-steps">
+          <li><strong>Reservar:</strong> servicio, fecha y franja disponible.</li>
+          <li><strong>Referencia:</strong> guarda el código que verás al confirmar.</li>
+          <li><strong>Asistencia:</strong> confirma tu visita con referencia y nombre.</li>
+          @if (catalogoVisible()) {
+            <li><strong>Tienda:</strong> solicita productos; el negocio te responde fuera de Azenda.</li>
+          }
+        </ol>
+      </div>
+      <div class="az-card side-card side-card--soft">
+        <h3>¿Necesitas el inicio?</h3>
+        <p class="muted">Vuelve a la página principal de Azenda cuando quieras.</p>
+        <a class="az-btn az-btn-secondary side-cta" routerLink="/">Ir al inicio</a>
       </div>
     </aside>
   </section>

@@ -90,7 +90,7 @@ export class ApiAppointmentsService {
 
   createPublic(
     slug: string,
-    body: { customer: string; service: string; when: string },
+    body: { customer: string; service: string; when: string; employeeId?: string },
   ): Observable<ApiAppointmentDto> {
     return this.http.post<ApiAppointmentDto>(
       `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/appointments`,

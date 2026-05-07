@@ -82,6 +82,17 @@ export class TenantShellComponent {
         this.apiAppointments.clear();
       }
     });
+    effect((onCleanup) => {
+      if (!(environment.useLiveAuth && this.session.accessToken() && this.session.isTenantUser())) {
+        return;
+      }
+      const tick = () => {
+        untracked(() => this.apiAppointments.refresh().subscribe({ error: () => {} }));
+      };
+      // Polling liviano para reflejar nuevas reservas públicas sin recargar panel.
+      const timer = setInterval(tick, 8000);
+      onCleanup(() => clearInterval(timer));
+    });
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', () => {
         if (
@@ -91,6 +102,7 @@ export class TenantShellComponent {
           this.session.isTenantUser()
         ) {
           this.session.refreshTenantModulesFromApi().subscribe({ error: () => {} });
+          this.apiAppointments.refresh().subscribe({ error: () => {} });
         }
       });
     }
