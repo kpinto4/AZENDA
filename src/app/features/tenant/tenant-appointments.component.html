@@ -119,7 +119,7 @@
         @for (a of tenantAppointments(); track a.id) {
           <tr>
             <td>{{ a.customer }}</td>
-            <td>{{ a.service }}</td>
+            <td>{{ displayServiceLabel(a.service) }}</td>
             <td>{{ a.when }}</td>
             <td>
               <span class="status-pill" [class.pending]="a.status === 'pendiente'" [class.ok]="a.status === 'confirmada'" [class.cancelled]="a.status === 'cancelada'">

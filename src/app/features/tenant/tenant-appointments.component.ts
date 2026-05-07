@@ -69,6 +69,15 @@ function parseWhenLocal(when: string): { ymd: string; time: string } | null {
   return null;
 }
 
+function readEmployeeIdFromService(service: string): string | null {
+  const m = /\bEmpleadoId:([A-Za-z0-9_-]+)\b/.exec(service);
+  return m?.[1] ?? null;
+}
+
+function cleanServiceLabel(service: string): string {
+  return service.replace(/\s*·\s*EmpleadoId:[A-Za-z0-9_-]+/g, '').trim();
+}
+
 function weekRangeLabel(monday: Date): string {
   const fri = new Date(monday);
   fri.setDate(monday.getDate() + 4);
@@ -146,9 +155,17 @@ export class TenantAppointmentsComponent {
   });
 
   readonly tenantAppointments = computed(() => {
+    const me = this.session.currentUserId();
     if (this.apiAppointments.useRemote()) {
       const slug = this.session.publicBookingSlug();
-      return this.apiAppointments.rows().map((row) => mapApiAppointmentToMock(row, slug));
+      const mapped = this.apiAppointments.rows().map((row) => mapApiAppointmentToMock(row, slug));
+      if (this.session.role() === 'EMPLOYEE' && me) {
+        return mapped.filter((a) => {
+          const emp = readEmployeeIdFromService(a.service);
+          return emp === me;
+        });
+      }
+      return mapped;
     }
     return this.data.appointmentsForBookingSlug(this.session.publicBookingSlug());
   });
@@ -173,7 +190,7 @@ export class TenantAppointmentsComponent {
         .sort((x, y) => x.a.when.localeCompare(y.a.when))
         .map(({ a, p }) => ({
           id: a.id,
-          title: `${a.customer} · ${a.service}`,
+          title: `${a.customer} · ${cleanServiceLabel(a.service)}`,
           time: p!.time,
           tone: eventTone(a),
         }));
@@ -355,5 +372,9 @@ export class TenantAppointmentsComponent {
     this.createMsg.set('Cita creada (modo demo).');
     this.alerts.success('Cita creada en modo demo.');
     this.createForm.patchValue({ customer: '', service: '', time: '09:00' });
+  }
+
+  displayServiceLabel(service: string): string {
+    return cleanServiceLabel(service);
   }
 }

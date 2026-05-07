@@ -67,6 +67,26 @@ function parseWhenLocal(when: string): { ymd: string; time: string } | null {
   return null;
 }
 
+function readEmployeeIdFromService(service: string): string | null {
+  const m = /\bEmpleadoId:([A-Za-z0-9_-]+)\b/.exec(service);
+  return m?.[1] ?? null;
+}
+
+function cleanServiceLabel(service: string): string {
+  return service.replace(/\s*·\s*EmpleadoId:[A-Za-z0-9_-]+/g, '').trim();
+}
+
+function parseWhenDate(when: string): Date | null {
+  const p = parseWhenLocal(when);
+  if (!p) {
+    return null;
+  }
+  const [y, m, d] = p.ymd.split('-').map(Number);
+  const [hh, mm] = p.time === '—' ? [0, 0] : p.time.split(':').map(Number);
+  const dt = new Date(y, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0, 0, 0);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
 function weekRangeLabel(monday: Date): string {
   const sun = new Date(monday);
   sun.setDate(monday.getDate() + 6);
@@ -198,11 +218,39 @@ export class TenantDashboardComponent {
   );
 
   readonly myAppointments = computed(() => {
+    const me = this.session.currentUserId();
     if (this.apiAppointments.useRemote()) {
       const slug = this.session.publicBookingSlug();
-      return this.apiAppointments.rows().map((row) => mapApiAppointmentToMock(row, slug));
+      const mapped = this.apiAppointments.rows().map((row) => mapApiAppointmentToMock(row, slug));
+      if (this.session.role() === 'EMPLOYEE' && me) {
+        return mapped.filter((a) => {
+          const emp = readEmployeeIdFromService(a.service);
+          return emp === me;
+        });
+      }
+      return mapped;
     }
     return this.data.appointmentsForBookingSlug(this.session.publicBookingSlug());
+  });
+
+  readonly upcomingAppointments = computed(() => {
+    const now = new Date();
+    return this.myAppointments()
+      .filter((a) => {
+        const dt = parseWhenDate(a.when);
+        if (!dt || dt < now) {
+          return false;
+        }
+        if (a.status !== 'pendiente') {
+          return false;
+        }
+        return (a.attendance ?? 'PENDIENTE') === 'PENDIENTE';
+      })
+      .sort((a, b) => {
+        const da = parseWhenDate(a.when)?.getTime() ?? 0;
+        const db = parseWhenDate(b.when)?.getTime() ?? 0;
+        return da - db;
+      });
   });
 
   /** Misma fecha local que usa la vista semanal (no total de citas del tenant). */
@@ -231,15 +279,21 @@ export class TenantDashboardComponent {
   });
 
   private employeeForAppointment(appt: MockAppointment): string {
-    if (this.apiAppointments.useRemote() && this.session.role() === 'TENANT_ADMIN') {
-      const employees = this.dashboardEmployeesLive();
-      if (!employees.length) {
+    if (this.apiAppointments.useRemote()) {
+      const employeeId = readEmployeeIdFromService(appt.service);
+      if (!employeeId) {
         return 'Sin asignar';
       }
-      const seed = `${appt.id}|${appt.customer}|${appt.service}`
-        .split('')
-        .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-      return employees[seed % employees.length].name;
+      const employees = this.dashboardEmployeesLive();
+      const match = employees.find((e) => e.id === employeeId);
+      if (match?.name) {
+        return match.name;
+      }
+      if (employeeId === this.session.currentUserId()) {
+        const own = this.session.userName().trim();
+        return own || 'Mi cita';
+      }
+      return employeeId;
     }
     const employees = this.data.employees();
     if (!employees.length) {
@@ -254,7 +308,7 @@ export class TenantDashboardComponent {
   readonly employeeLegend = computed(() => {
     const colors = this.employeeColorByName();
     const apiEm = this.dashboardEmployeesLive();
-    if (this.apiAppointments.useRemote() && this.session.role() === 'TENANT_ADMIN') {
+    if (this.apiAppointments.useRemote() && apiEm.length) {
       return apiEm.map((e) => ({
         name: e.name,
         color: colors.get(e.name) ?? '#64748b',
@@ -289,7 +343,7 @@ export class TenantDashboardComponent {
           return {
             id: a.id,
             time: p!.time,
-            title: `${a.customer} · ${a.service}`,
+            title: `${a.customer} · ${cleanServiceLabel(a.service)}`,
             employeeName,
             employeeColor: colorMap.get(employeeName) ?? '#64748b',
           };
@@ -340,5 +394,9 @@ export class TenantDashboardComponent {
 
   resetDashboardToToday(): void {
     this.dashboardBaseDate.set(new Date());
+  }
+
+  displayServiceLabel(service: string): string {
+    return cleanServiceLabel(service);
   }
 }

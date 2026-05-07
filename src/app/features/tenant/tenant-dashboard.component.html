@@ -133,11 +133,13 @@
     <div class="az-card">
       <h3>Próximas citas</h3>
       <ul class="list">
-        @for (a of myAppointments().slice(0, 4); track a.id) {
+        @for (a of upcomingAppointments().slice(0, 4); track a.id) {
           <li>
-            <strong>{{ a.customer }}</strong> · {{ a.service }}
+            <strong>{{ a.customer }}</strong> · {{ displayServiceLabel(a.service) }}
             <span class="muted">{{ a.when }}</span>
           </li>
+        } @empty {
+          <li class="muted">No hay citas pendientes próximas.</li>
         }
       </ul>
     </div>

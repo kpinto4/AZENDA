@@ -13,13 +13,42 @@ exports.TenantAppointmentsService = void 0;
 const common_1 = require("@nestjs/common");
 const auth_types_1 = require("../auth/auth.types");
 const sql_db_service_1 = require("../infrastructure/sql-db/sql-db.service");
+function parseWhenLocal(when) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})/.exec(when.trim());
+    if (!m) {
+        return null;
+    }
+    const y = Number(m[1]);
+    const mo = Number(m[2]);
+    const d = Number(m[3]);
+    const hh = Number(m[4]);
+    const mm = Number(m[5]);
+    const dt = new Date(y, mo - 1, d, hh, mm, 0, 0);
+    return Number.isNaN(dt.getTime()) ? null : dt;
+}
 let TenantAppointmentsService = class TenantAppointmentsService {
     constructor(sqlDb) {
         this.sqlDb = sqlDb;
     }
     async listForUser(user) {
         this.requireTenantUser(user);
-        return this.sqlDb.listAppointmentsByTenantId(user.tenantId);
+        const tenantId = user.tenantId;
+        const nowMs = Date.now();
+        const thresholdMs = 5 * 60 * 1000;
+        const currentRows = await this.sqlDb.listAppointmentsByTenantId(tenantId);
+        for (const row of currentRows) {
+            if (row.status !== 'pendiente' || row.attendance !== 'PENDIENTE') {
+                continue;
+            }
+            const at = parseWhenLocal(row.when);
+            if (!at) {
+                continue;
+            }
+            if (nowMs - at.getTime() > thresholdMs) {
+                await this.sqlDb.updateAppointmentAttendance(row.id, tenantId, 'NO_ASISTIO');
+            }
+        }
+        return this.sqlDb.listAppointmentsByTenantId(tenantId);
     }
     async createForUser(user, dto) {
         this.requireTenantUser(user);

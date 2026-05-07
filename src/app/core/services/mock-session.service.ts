@@ -40,6 +40,7 @@ export class MockSessionService {
   readonly apiTenantId = signal<string | null>(null);
 
   readonly role = signal<DemoRole>(null);
+  readonly currentUserId = signal<string | null>(null);
   readonly userName = signal('');
   readonly tenantName = signal('');
   readonly tenantId = signal<string | null>(null);
@@ -91,6 +92,7 @@ export class MockSessionService {
   }
 
   loginAsSuperAdmin(): void {
+    this.currentUserId.set('mock_super_admin');
     this.role.set('SUPER_ADMIN');
     this.userName.set('Super Admin');
     this.tenantName.set('');
@@ -192,6 +194,7 @@ export class MockSessionService {
 
   private logoutLocalState(): void {
     this.accessToken.set(null);
+    this.currentUserId.set(null);
     this.role.set(null);
     this.userName.set('');
     this.tenantName.set('');
@@ -260,6 +263,7 @@ export class MockSessionService {
     u: ApiAuthUser,
   ): Observable<void> {
     this.accessToken.set(token);
+    this.currentUserId.set(u.id);
     this.apiTenantId.set(u.tenantId);
 
     if (u.role === 'SUPER_ADMIN') {
@@ -312,6 +316,8 @@ export class MockSessionService {
           }
 
           this.loginFromTenant(tenant, { userName: u.email, role });
+          // Mantener el id real del usuario autenticado (no mock), para filtros por empleado.
+          this.currentUserId.set(u.id);
 
           this.tenantName.set(ctx.tenant.name);
           this.publicBookingSlug.set(ctx.tenant.slug);
