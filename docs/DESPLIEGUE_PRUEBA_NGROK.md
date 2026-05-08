@@ -1,64 +1,75 @@
-# Despliegue De Prueba Con Ngrok
+# Pruebas con ngrok (acceso externo al entorno local)
 
-Esta guía explica solo cómo exponer AZENDA temporalmente a Internet para pruebas (sin deploy productivo).
+Esta guía explica **por qué** usar ngrok, **qué** necesitas y **qué** puede fallar.
 
-## Qué es este modo
+---
 
-- Es una URL pública temporal para compartir la app local.
-- Sirve para pruebas desde móvil, demos internas o validación rápida.
-- No reemplaza un deploy real en servidor.
+## Para qué sirve ngrok aquí
 
-## Requisitos
+| Concepto | Explicación |
+| --- | --- |
+| **Problema** | Tu navegador en el móvil no puede abrir `http://localhost:4200` de tu PC porque `localhost` en el teléfono es el propio teléfono. |
+| **Solución** | ngrok crea un túnel HTTPS público que reenvía tráfico a tu `localhost:4200`. |
+| **Alcance** | Solo para **demos y pruebas temporas**. No sustituye un hosting productivo. |
 
-- Proyecto corriendo en local con:
-  - frontend en `http://localhost:4200`
-  - api en `http://localhost:3000`
-- Ngrok instalado y autenticado.
+La guía completa de despliegue local, cuentas de prueba y mantenimiento está en [PRUEBAS_SISTEMA.md](PRUEBAS_SISTEMA.md).
 
-## Paso 1: Levantar AZENDA local
+---
 
-Desde la raíz del repo:
+## Requisitos previos
+
+| Requisito | Para qué |
+| --- | --- |
+| Proyecto levantado con Neon | `DATABASE_URL` en `api/.env`, luego `npm run db:bootstrap` y `npm run dev`. |
+| ngrok instalado y **autenticado** en tu cuenta | ngrok necesita tu token para URLs estables según plan. |
+
+---
+
+## Pasos
+
+### 1) Levantar AZENDA en local
 
 ```powershell
+npm run db:bootstrap
 npm run dev
 ```
 
-Deja esta terminal abierta.
+| Comando | Qué hace |
+| --- | --- |
+| `db:bootstrap` | Prepara base en Neon (tablas + seed si aplica). |
+| `dev` | Arranca Angular en `:4200` y el API (puerto según configuración, típicamente `:3000`). |
 
-## Paso 2: Abrir túnel ngrok al frontend
+Comprueba en el PC: `http://localhost:4200` abre la app.
 
-En otra terminal:
+### 2) Abrir túnel solo al frontend
 
 ```powershell
 ngrok http 4200
 ```
 
-Usa la URL `https://...ngrok-free.dev` que aparezca en `Forwarding`.
+| Qué obtienes | Una URL `https://....ngrok-free.dev` en la columna **Forwarding**. |
+| --- | --- |
+| **Importante** | El front sigue llamando al API como en local (normalmente proxy a `/api`). El API debe seguir corriendo en la misma máquina. |
 
-## Paso 3: Probar desde otro dispositivo
+### 3) Probar desde otro dispositivo
 
-- Abre la URL pública de ngrok en el móvil.
-- Prueba rutas como:
-  - `/`
-  - `/reservar/<slug>`
+Abre la URL HTTPS de ngrok en el móvil y navega como en local (login, `/app`, `/reservar/...`).
 
-## Errores comunes
+---
 
-- `ERR_NGROK_334`:
-  - ya existe un endpoint activo con ese dominio.
-  - solución: usar `ngrok http 4200` sin `--url` o cerrar el endpoint anterior.
+## Errores frecuentes
 
-- `ERR_NGROK_8012`:
-  - ngrok no puede conectar al servicio local.
-  - solución: verificar que `npm run dev` siga corriendo.
+| Código o mensaje | Qué significa | Qué hacer |
+| --- | --- | --- |
+| `ERR_NGROK_8012` | ngrok no puede conectar al puerto local. | Comprueba que `npm run dev` siga activo y que el puerto sea **4200** (o el que hayas puesto en `ngrok http ...`). |
+| `401` / `500` al usar la app | El front no puede hablar bien con el API o la base falla. | Revisa `DATABASE_URL`, ejecuta `npm run db:bootstrap`, mira consola de red del navegador y logs del API. |
+| `ERR_NGROK_334` | Conflicto de dominio/endpoint en tu cuenta ngrok. | Cierra túneles viejos o usa otro comando según documentación ngrok. |
+| “Host not allowed” (Angular) | El dev server rechaza el host del túnel. | En este repo suele estar permitido `.ngrok-free.dev`; si cambia el dominio de ngrok, puede hacer falta actualizar `allowedHosts` en la config de Angular. |
 
-- `Blocked request. This host ... is not allowed`:
-  - faltaba permitir host externo en dev server.
-  - en este repo ya se habilitó `allowedHosts` para `.ngrok-free.dev`.
+---
 
 ## Buenas prácticas
 
-- No compartir el authtoken de ngrok.
-- Usar este método solo para pruebas temporales.
-- Para uso estable con clientes, preparar un deploy real.
-
+- No compartas el **authtoken** de ngrok.
+- Trata la URL pública como **pública de verdad**: no uses datos personales reales sin acuerdo.
+- Para producción usa despliegue real (hosting + dominio + HTTPS gestionado).

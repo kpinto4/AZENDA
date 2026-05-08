@@ -1,55 +1,77 @@
-# Backend — alcance pendiente (Azenda)
+# Backend (NestJS + Neon)
 
-Este repositorio incluye un **front-end Angular** con una **simulación amplia en memoria** (tenants editables, usuarios globales, ventas con descuento de stock, movimientos de inventario, estados de cita, etc.) para demos de equipo. Nada de eso persiste entre recargas. La persistencia, seguridad y reglas de negocio reales vivirán en el API. Este documento resume qué debe cubrir el backend.
+Este documento resume **qué es** el backend del monorepo AZENDA, **con qué habla** el front y **qué variables** necesitas, en lenguaje claro.
 
-## Autenticación y autorización
+---
 
-- Registro que cree **usuario + tenant** (y opcionalmente plan trial).
-- Login con JWT (o sesiones) con claims: `user_id`, `tenant_id`, `role` (`SUPER_ADMIN`, `ADMIN`, `EMPLEADO`, opcional `CLIENTE_FINAL`).
-- **Super Admin**: rutas bajo prefijo `/api/admin/*` sin `tenant_id` o con scope global.
-- **Tenant**: todas las queries filtradas por `tenant_id` salvo endpoints públicos de reserva.
+## Rol del backend
 
-## Multi-tenant
+| Pregunta | Respuesta |
+| --- | --- |
+| **Qué es** | Un API HTTP hecho con **NestJS** que expone rutas bajo `/api/...` (el prefijo exacto depende de cómo esté montado el proxy en desarrollo). |
+| **Para qué sirve** | Autenticación, datos multi-tenant (citas, ventas, configuración), endpoints públicos de reserva y rutas de administración. |
+| **Dónde vive el código** | Carpeta `api/src/`. |
+| **Dónde viven los datos** | En **PostgreSQL en Neon**, conectado solo mediante `DATABASE_URL` en `api/.env`. |
 
-- Tabla `tenants` (nombre, slug público, plan, límites, branding).
-- **Slug único** para URLs de reserva: `/reservar/:slug`.
-- Límites por plan (empleados, citas/mes, módulos activos) aplicados **en servidor**.
+---
 
-## Módulos por tenant
+## Configuración mínima
 
-- Flags: `citas` (base), `ventas`, `inventario`.
-- El front ya puede ocultar menús; el API debe **rechazar** operaciones de módulos no contratados.
+| Archivo / variable | Qué hace |
+| --- | --- |
+| `api/.env` → `DATABASE_URL` | URL de conexión a Neon. Sin ella el servicio de base de datos del API no puede funcionar correctamente. |
+| (Opcional) `PORT` | Puerto HTTP del API si el proyecto lo define en `main.ts` / env. |
 
-## Dominio principal (REST sugerido)
+Inicializar esquema y datos demo (primera vez o tras base vacía):
 
-| Área | Endpoints (orientativos) | Notas |
-|------|--------------------------|--------|
-| Tenants (super) | `GET/POST/PATCH/DELETE /admin/tenants` | CRUD, asignación de plan |
-| Planes | `GET/PATCH /admin/plans` | Límites y precios |
-| Usuarios | `GET /admin/users`, bloqueos, reset | Auditoría |
-| Servicios | `GET/POST/PATCH /tenants/:id/services` | Duración, precio |
-| Empleados | `CRUD /tenants/:id/employees` | Horarios, servicios asignados |
-| Disponibilidad | `GET /tenants/:id/availability?service=&date=` | Reglas: horario negocio, empleados, citas existentes |
-| Citas | `CRUD /tenants/:id/appointments` | Estados, conflictos |
-| Ventas | `POST /tenants/:id/sales`, listados | Vínculo opcional `appointment_id` |
-| Inventario | `products`, `stock_movements` | Transacción: venta → movimiento de salida |
-| Reserva pública | `GET /public/:slug/meta`, `POST /public/:slug/bookings` | Sin auth; anti-abuso (rate limit, captcha opcional) |
-| WhatsApp | Config por tenant (teléfono, plantilla); futuro webhook | |
+```powershell
+npm run db:bootstrap
+```
 
-## Reglas críticas de negocio
+**Qué hace `db:bootstrap`:** ejecuta el script del API que crea o ajusta tablas y, si no hay usuarios, inserta tenants y usuarios de prueba. Detalle en [PRUEBAS_SISTEMA.md → db:bootstrap](PRUEBAS_SISTEMA.md#npm-run-dbbootstrap).
 
-- **Disponibilidad**: zona horaria del tenant, buffers entre citas, feriados.
-- **Ventas + inventario**: descuento atómico de stock; política de stock negativo explícita.
-- **Idempotencia** en creación de reservas públicas (evitar dobles clics).
+---
 
-## Integraciones futuras
+## Arranque local
 
-- Pasarela de pago (suscripción y/o TPV).
-- Notificaciones (email/SMS/push).
-- WhatsApp Business API / chatbot (fase posterior).
+Desde la **raíz** del monorepo (recomendado: web + API juntos):
 
-## Contrato con el front
+```powershell
+npm run dev
+```
 
-- Sustituir `MockSessionService` / `MockDataService` por servicios que llamen al API.
-- Guards de ruta deberían validar token y refresco; roles reales desde el servidor.
-- Variables de entorno: `environment.apiUrl`, feature flags si aplica.
+| Servicio | URL típica | Qué es |
+| --- | --- | --- |
+| Frontend (Angular) | `http://localhost:4200` | La SPA que consume el API. |
+| API (Nest) | `http://localhost:3000` | El backend; el front suele llamar vía proxy en dev (`/api`). |
+
+Si solo quieres el API:
+
+```powershell
+npm run start:api
+```
+
+---
+
+## Prefijos de API (orientativo)
+
+La lista ayuda a orientarse en el código y en herramientas tipo Postman. Las rutas exactas pueden incluir prefijo global según versión del proyecto.
+
+| Área | Prefijo orientativo | Para quién |
+| --- | --- | --- |
+| Administración | `/api/admin/...` | Super admin; operaciones globales. |
+| Tenant | `/api/tenant/...` | Usuarios del negocio (admin/empleado) con JWT. |
+| Público | `/api/public/...` | Sin login; reserva por slug, etc. |
+| Acceso / salud | según código | Ping o helpers si existen en el proyecto. |
+
+---
+
+## Documentación relacionada
+
+| Documento | Contenido |
+| --- | --- |
+| [PRUEBAS_SISTEMA.md](PRUEBAS_SISTEMA.md) | Despliegue, comandos uno a uno, pruebas por rol, runbook. |
+| [PLANES_Y_FACTURACION.md](PLANES_Y_FACTURACION.md) | Endpoints y lógica de facturación por tenant. |
+| [DESPLIEGUE_PRUEBA_NGROK.md](DESPLIEGUE_PRUEBA_NGROK.md) | Exponer el front local con ngrok. |
+
+Para arquitectura técnica detallada del API, si existe en el repo, revisar `api/ARCHITECTURE.md`.

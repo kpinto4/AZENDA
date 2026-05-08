@@ -1,72 +1,76 @@
-# Planes y Facturacion de Tenants
+# Planes y facturación (tenant)
 
-Este documento describe la logica implementada para controlar ciclos de plan, contador de tiempo y prorrateo de upgrade.
+Documento operativo: **qué endpoints existen**, **qué devuelven** y **qué campos** en base los sustentan.
 
-## Objetivo
+---
 
-- Tener ciclo mensual o anual por tenant.
-- Mostrar cuanto tiempo lleva/queda del ciclo actual.
-- Simular upgrade justo (prorrateado) para cobrar solo la diferencia.
+## Objetivo del módulo
 
-## Campos nuevos en `tenants`
+| Qué resuelve | Descripción breve |
+| --- | --- |
+| Ciclo de facturación | Periodo actual del tenant (mensual o anual) con fechas de inicio/fin. |
+| Contador de tiempo | Días transcurridos y restantes del periodo (para UI y lógica). |
+| Simulación de upgrade | Cálculo de prorrateo **sin cobrar**; sirve para mostrar “cuánto pagaría ahora” antes de pasarela. |
 
-- `billing_cycle`: `MONTHLY | YEARLY`
-- `plan_price_monthly`: precio mensual vigente del plan actual
-- `plan_price_yearly`: precio anual vigente del plan actual
-- `subscription_started_at`: inicio historico de la suscripcion
-- `current_period_start`: inicio del ciclo actual
-- `current_period_end`: fin del ciclo actual
-- `next_renewal_at`: siguiente fecha de renovacion (normalmente igual a `current_period_end`)
+---
 
-Notas:
-- Se agregan automaticamente por migracion si no existen.
-- Si hay datos viejos/invalidos, se normaliza el periodo al siguiente ciclo valido.
+## Endpoints
 
-## Endpoints nuevos
+### `GET /api/tenant/billing/status`
 
-### 1) Estado de facturacion (contador)
+| Pregunta | Respuesta |
+| --- | --- |
+| **Qué hace** | Devuelve el estado de facturación del tenant del usuario autenticado. |
+| **Quién puede** | Usuario con rol de administración del tenant (según reglas del API). |
+| **Para qué sirve en la app** | Mostrar plan, fechas del ciclo, progreso y precios vigentes. |
 
-`GET /api/tenant/billing/status`
+Campos típicos en la respuesta (nombres pueden variar según DTO): plan, estado del tenant, ciclo (`MONTHLY` / `YEARLY`), fechas de periodo, días totales/transcurridos/restantes, porcentaje de progreso, precios mensual/anual.
 
-Requiere usuario `ADMIN` del tenant.
+---
 
-Respuesta principal:
-- `plan`
-- `status`
-- `billing.cycle`
-- `billing.currentPeriodStart`
-- `billing.currentPeriodEnd`
-- `billing.nextRenewalAt`
-- `billing.daysTotal`
-- `billing.daysElapsed`
-- `billing.daysRemaining`
-- `billing.progressPct`
-- `billing.monthlyPrice`
-- `billing.yearlyPrice`
+### `POST /api/tenant/billing/upgrade-quote`
 
-### 2) Simulacion de upgrade con prorrateo
+| Pregunta | Respuesta |
+| --- | --- |
+| **Qué hace** | Calcula una **cotización** de cambio de plan/ciclo usando prorrateo sobre el tiempo restante del periodo actual. |
+| **Qué no hace** | **No** cobra, **no** cambia el plan en base; es solo simulación. |
+| **Quién puede** | Usuario admin del tenant (según API). |
 
-`POST /api/tenant/billing/upgrade-quote`
-
-Body:
+Body mínimo de ejemplo:
 
 ```json
 {
   "targetPlan": "Pro",
-  "targetCycle": "MONTHLY",
-  "targetMonthlyPrice": 59,
-  "targetYearlyPrice": 590
+  "targetCycle": "MONTHLY"
 }
 ```
 
-Respuesta:
-- `creditAmount`: credito por tiempo no usado del plan actual
-- `targetCostForRemaining`: costo del nuevo plan para el tiempo restante
-- `amountDueNow`: monto a cobrar ahora (si es positivo)
-- `carryOverBalance`: saldo a favor (si la diferencia es negativa)
-- `period.remainingDays`, `period.totalDays`
+| Campo del body | Significado |
+| --- | --- |
+| `targetPlan` | Plan al que se quiere migrar (debe existir en catálogo / reglas del sistema). |
+| `targetCycle` | `MONTHLY` o `YEARLY` para el plan destino. |
 
-## Formula de prorrateo
+Respuesta útil (conceptos): crédito por tiempo no usado, costo del nuevo plan en el tiempo restante, monto a pagar ahora si aplica, saldo a favor si aplica, y detalle de días del periodo.
+
+---
+
+## Campos en tabla `tenants` (referencia)
+
+| Campo | Qué representa |
+| --- | --- |
+| `billing_cycle` | `MONTHLY` o `YEARLY`: ritmo de facturación del tenant. |
+| `plan_price_monthly` | Precio mensual vigente del plan actual (según catálogo/sincronización). |
+| `plan_price_yearly` | Precio anual vigente del plan actual. |
+| `subscription_started_at` | Marca de inicio histórico de la suscripción. |
+| `current_period_start` | Inicio del periodo de facturación actual. |
+| `current_period_end` | Fin del periodo actual. |
+| `next_renewal_at` | Próxima renovación (suele alinearse con fin de periodo). |
+
+---
+
+## Regla de prorrateo (resumen)
+
+Se usa el **tiempo restante** del periodo actual frente al **precio del ciclo** actual y del destino:
 
 1. `ratioRemaining = remainingDays / totalDays`
 2. `creditAmount = precioCicloActual * ratioRemaining`
@@ -74,23 +78,18 @@ Respuesta:
 4. `amountDueNow = max(0, targetCostForRemaining - creditAmount)`
 5. `carryOverBalance = max(0, creditAmount - targetCostForRemaining)`
 
-## Reglas actuales
+Si el periodo está desfasado, el backend puede **normalizar** fechas antes de calcular (comportamiento implementado en servicio de BD).
 
-- El calculo usa el ciclo actual guardado en el tenant (`MONTHLY` o `YEARLY`).
-- Si el ciclo esta vencido, el sistema mueve el periodo al ciclo vigente antes de calcular.
-- Este paso implementa **simulacion** (quote), no cobra automaticamente.
+---
 
-## Flujo recomendado para produccion
+## Flujo recomendado (producto)
 
-1. Mostrar `GET /billing/status` en panel tenant.
-2. Cuando el cliente quiera cambiar plan, llamar `POST /billing/upgrade-quote`.
-3. Confirmar pago en pasarela.
-4. Aplicar cambio real de plan/ciclo/precio y abrir nuevo periodo.
-5. Guardar transaccion en tabla de movimientos (siguiente fase).
+1. Pantalla llama `GET /api/tenant/billing/status` y muestra estado del ciclo.
+2. Usuario elige nuevo plan/ciclo; la UI llama `POST /api/tenant/billing/upgrade-quote` y muestra números.
+3. Tras pasarela de pago (futuro / integración externa), el backend aplicaría el cambio real de plan y periodo (fuera del alcance de solo “quote”).
 
-## Siguiente fase sugerida
+---
 
-- Tabla `billing_transactions` para auditoria.
-- Job diario de renovaciones (`PAST_DUE`, gracia, bloqueo).
-- Integracion pasarela (Stripe/MercadoPago/etc).
+## Más ayuda operativa
 
+Comandos, despliegue y pruebas: [PRUEBAS_SISTEMA.md](PRUEBAS_SISTEMA.md).

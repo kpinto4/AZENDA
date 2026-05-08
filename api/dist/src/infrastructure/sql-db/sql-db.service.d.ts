@@ -4,7 +4,6 @@ export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
     private readonly logger;
     private readonly dialect;
     private readonly pool;
-    private readonly sqliteDb;
     constructor();
     onModuleInit(): Promise<void>;
     runBootstrap(): Promise<void>;

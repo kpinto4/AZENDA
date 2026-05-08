@@ -75,12 +75,12 @@ export class LoginPageComponent {
             const s = err.status;
             if (s === 0 || s >= 500) {
               this.message =
-                'El API no respondio (revisa la terminal del backend). Con Postgres y Docker: npm run dev:docker. Postgres ya en marcha: npm run dev. Sin Postgres: npm run dev:sqlite.';
+                'El API no respondio. Verifica conectividad al backend y que DATABASE_URL de Neon este configurada.';
               return;
             }
           }
           this.message =
-            'No se pudo conectar al API. Arranca el backend (npm run dev, npm run start:api o npm run dev:sqlite) y recarga.';
+            'No se pudo conectar al API. Verifica que el backend este activo y accesible con DATABASE_URL de Neon.';
         },
       });
       return;

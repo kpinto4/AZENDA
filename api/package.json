@@ -18,10 +18,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "db:create-db": "node scripts/create-database-once.mjs",
-    "db:bootstrap": "ts-node -r tsconfig-paths/register scripts/run-db-bootstrap.ts",
-    "mysql:create-db": "npm run db:create-db",
-    "mysql:bootstrap": "npm run db:bootstrap"
+    "db:bootstrap": "ts-node -r tsconfig-paths/register scripts/run-db-bootstrap.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

@@ -12,11 +12,8 @@ var SqlDbService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SqlDbService = void 0;
 const common_1 = require("@nestjs/common");
-const node_fs_1 = require("node:fs");
-const node_path_1 = require("node:path");
 const pg_1 = require("pg");
 const auth_types_1 = require("../../auth/auth.types");
-const sqlite_schema_1 = require("./sqlite-schema");
 const sql_db_types_1 = require("./sql-db.types");
 const DEFAULT_PLAN_CATALOG_SEED = [
     { planKey: 'Trial', priceMonthly: 0, priceYearly: 0 },
@@ -24,98 +21,51 @@ const DEFAULT_PLAN_CATALOG_SEED = [
     { planKey: 'Pro', priceMonthly: 59, priceYearly: 590 },
     { planKey: 'Negocio', priceMonthly: 99, priceYearly: 990 },
 ];
-function envIsTruthy(v) {
-    if (v == null || !String(v).trim()) {
-        return false;
-    }
-    const s = String(v).trim().toLowerCase();
-    return s === '1' || s === 'true' || s === 'yes' || s === 'on';
-}
 let SqlDbService = SqlDbService_1 = class SqlDbService {
     constructor() {
         this.logger = new common_1.Logger(SqlDbService_1.name);
-        if (envIsTruthy(process.env.USE_SQLITE)) {
-            this.dialect = 'sqlite';
-            this.pool = null;
-            const dbPath = (0, node_path_1.resolve)(process.cwd(), 'data', 'azenda.db');
-            (0, node_fs_1.mkdirSync)((0, node_path_1.dirname)(dbPath), { recursive: true });
-            const sqlite = require('node:sqlite');
-            this.sqliteDb = new sqlite.DatabaseSync(dbPath);
-            this.logger.log(`SQLite local: ${dbPath} (USE_SQLITE=1)`);
-            return;
-        }
         this.dialect = 'postgres';
-        this.sqliteDb = null;
-        const database = (process.env.PGDATABASE ?? 'azenda').trim();
         const connectionString = process.env.DATABASE_URL?.trim();
+        if (!connectionString) {
+            throw new Error('DATABASE_URL es obligatorio. Este proyecto usa Neon como base principal.');
+        }
         const sslMode = (process.env.PGSSLMODE ?? '').trim().toLowerCase();
         const requireSsl = sslMode === 'require' ||
-            envIsTruthy(process.env.PGSSL) ||
+            ['1', 'true', 'yes', 'on'].includes(String(process.env.PGSSL ?? '').trim().toLowerCase()) ||
             (connectionString?.toLowerCase().includes('sslmode=require') ?? false);
         const ssl = requireSsl ? { rejectUnauthorized: false } : undefined;
-        this.pool = connectionString
-            ? new pg_1.Pool({
-                connectionString,
-                ssl,
-                max: 10,
-            })
-            : new pg_1.Pool({
-                host: process.env.PGHOST ?? '127.0.0.1',
-                port: Number(process.env.PGPORT ?? 5432),
-                user: process.env.PGUSER ?? 'postgres',
-                password: process.env.PGPASSWORD ?? 'postgres',
-                database,
-                ssl,
-                max: 10,
-            });
-        if (connectionString) {
-            let hostHint = 'remoto';
-            try {
-                const u = new URL(connectionString);
-                if (u.hostname)
-                    hostHint = u.hostname;
-            }
-            catch {
-            }
-            this.logger.log(`Postgres por DATABASE_URL (${hostHint}; p. ej. Neon)`);
+        this.pool = new pg_1.Pool({
+            connectionString,
+            ssl,
+            max: 10,
+        });
+        let hostHint = 'remoto';
+        try {
+            const u = new URL(connectionString);
+            if (u.hostname)
+                hostHint = u.hostname;
         }
+        catch {
+        }
+        this.logger.log(`Postgres por DATABASE_URL (${hostHint}; p. ej. Neon)`);
     }
     async onModuleInit() {
-        const runOnStart = envIsTruthy(process.env.DB_BOOTSTRAP_ON_START);
+        const runOnStart = ['1', 'true', 'yes', 'on'].includes(String(process.env.DB_BOOTSTRAP_ON_START ?? '').trim().toLowerCase());
         if (runOnStart) {
             await this.runBootstrapInternal('arranque (DB_BOOTSTRAP_ON_START)');
             return;
         }
         await this.pingOrThrow();
-        if (this.dialect === 'sqlite') {
-            await this.createSchema();
-            await this.ensureSchemaMigrations();
-            this.logger.log('SQLite: tablas y migraciones ligeras aplicadas en el arranque. Semilla (usuarios): npm run db:bootstrap si hace falta.');
-            return;
-        }
         await this.createSchema();
         await this.ensureSchemaMigrations();
         this.logger.log('PostgreSQL: tablas y migraciones ligeras verificadas en el arranque. ' +
             'Semilla (usuarios demo): npm run db:bootstrap en la raiz si la base esta vacia. ' +
-            'Con Docker: npm run dev:docker. DB_BOOTSTRAP_ON_START=1 fuerza bootstrap en cada arranque.');
+            'DB_BOOTSTRAP_ON_START=1 fuerza bootstrap en cada arranque.');
     }
     async runBootstrap() {
         await this.runBootstrapInternal('db:bootstrap / runBootstrap()');
     }
     async pingOrThrow() {
-        if (this.dialect === 'sqlite') {
-            try {
-                this.sqliteDb.prepare('SELECT 1').get();
-            }
-            catch (err) {
-                this.logger.error('SQLite: no se pudo leer api/data/azenda.db');
-                throw err;
-            }
-            return;
-        }
-        const dbName = (process.env.PGDATABASE ?? 'azenda').trim();
-        const host = process.env.PGHOST ?? '127.0.0.1';
-        const port = Number(process.env.PGPORT ?? 5432);
         try {
             await this.queryRows('SELECT 1');
         }
@@ -123,44 +73,30 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             const code = err.code;
             const isConn = code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT' || code === 'EAI_AGAIN';
             if (isConn) {
-                this.logger.error(`No hay conexion a PostgreSQL en ${host}:${port} (base "${dbName}"). ` +
-                    `Neon u otro remoto: crea api/.env con DATABASE_URL=... (sslmode=require en la URL). ` +
-                    `Local con Docker: npm run dev:docker o npm run pg:up. Semilla: npm run db:bootstrap. ` +
-                    `Sin Postgres: npm run dev:sqlite. Quita USE_SQLITE=1 si usas Postgres.`);
+                this.logger.error(`No hay conexion a PostgreSQL via DATABASE_URL. ` +
+                    `Verifica credenciales/red de Neon y vuelve a intentar. ` +
+                    `Semilla inicial: npm run db:bootstrap.`);
             }
             throw err;
         }
     }
     async runBootstrapInternal(context) {
-        const dbName = (process.env.PGDATABASE ?? 'azenda').trim();
-        const host = process.env.PGHOST ?? '127.0.0.1';
-        const port = Number(process.env.PGPORT ?? 5432);
         try {
             await this.createSchema();
             await this.ensureSchemaMigrations();
             await this.seedIfEmpty();
-            this.logger.log(`${this.dialect === 'sqlite' ? 'SQLite' : 'PostgreSQL'} listo (${context}): esquema y semilla verificados`);
+            this.logger.log(`PostgreSQL listo (${context}): esquema y semilla verificados`);
         }
         catch (err) {
-            if (this.dialect === 'postgres') {
-                const code = err.code;
-                const isConn = code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT' || code === 'EAI_AGAIN';
-                if (isConn) {
-                    this.logger.error(`No hay conexion a PostgreSQL en ${host}:${port} (base "${dbName}"). ` +
-                        `Arranca PostgreSQL, ejecuta CREATE DATABASE ${dbName}, ` +
-                        `ajusta PGUSER/PGPASSWORD si hace falta. ` +
-                        `Si la base existe pero faltan tablas: npm run db:bootstrap. ` +
-                        `Sin PostgreSQL: USE_SQLITE=1.`);
-                }
+            const code = err.code;
+            const isConn = code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT' || code === 'EAI_AGAIN';
+            if (isConn) {
+                this.logger.error('No hay conexion a PostgreSQL via DATABASE_URL. Verifica Neon y ejecuta npm run db:bootstrap.');
             }
             throw err;
         }
     }
     async onModuleDestroy() {
-        if (this.dialect === 'sqlite') {
-            this.sqliteDb.close();
-            return;
-        }
         await this.pool.end();
     }
     toPgSql(sql) {
@@ -168,42 +104,20 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         return sql.replace(/\?/g, () => `$${++n}`);
     }
     async queryRows(sql, params = []) {
-        if (this.dialect === 'sqlite') {
-            return this.sqliteDb.prepare(sql).all(...params);
-        }
         const res = await this.pool.query(this.toPgSql(sql), params);
         return res.rows;
     }
     async queryOne(sql, params = []) {
-        if (this.dialect === 'sqlite') {
-            return this.sqliteDb.prepare(sql).get(...params);
-        }
         const rows = await this.queryRows(sql, params);
         return rows[0];
     }
     async exec(sql, params = []) {
-        if (this.dialect === 'sqlite') {
-            this.sqliteDb.prepare(sql).run(...params);
-            return;
-        }
         await this.pool.query(this.toPgSql(sql), params);
     }
     async execScript(sql) {
-        if (this.dialect === 'sqlite') {
-            this.sqliteDb.exec(sql);
-            return;
-        }
         await this.pool.query(sql);
     }
     async ensureIndex(createSql) {
-        if (this.dialect === 'sqlite') {
-            try {
-                this.sqliteDb.exec(createSql.replace(/^CREATE INDEX /i, 'CREATE INDEX IF NOT EXISTS '));
-            }
-            catch {
-            }
-            return;
-        }
         try {
             await this.pool.query(createSql);
         }
@@ -538,18 +452,10 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     async replacePlanCatalog(entries) {
         await this.ensurePlanCatalog();
         for (const e of entries) {
-            if (this.dialect === 'sqlite') {
-                await this.exec(`INSERT INTO plan_catalog (plan_key, price_monthly, price_yearly) VALUES (?, ?, ?)
-           ON CONFLICT(plan_key) DO UPDATE SET
-             price_monthly = excluded.price_monthly,
-             price_yearly = excluded.price_yearly`, [e.planKey, e.priceMonthly, e.priceYearly]);
-            }
-            else {
-                await this.exec(`INSERT INTO plan_catalog (plan_key, price_monthly, price_yearly) VALUES (?, ?, ?)
-           ON CONFLICT (plan_key) DO UPDATE SET
-             price_monthly = EXCLUDED.price_monthly,
-             price_yearly = EXCLUDED.price_yearly`, [e.planKey, e.priceMonthly, e.priceYearly]);
-            }
+            await this.exec(`INSERT INTO plan_catalog (plan_key, price_monthly, price_yearly) VALUES (?, ?, ?)
+         ON CONFLICT (plan_key) DO UPDATE SET
+           price_monthly = EXCLUDED.price_monthly,
+           price_yearly = EXCLUDED.price_yearly`, [e.planKey, e.priceMonthly, e.priceYearly]);
         }
         await this.syncTenantPlanPricesFromCatalog();
         return this.listPlanCatalog();
@@ -949,22 +855,6 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         ]);
     }
     async columnExists(table, column) {
-        if (this.dialect === 'sqlite') {
-            const allowed = new Set([
-                'appointments',
-                'tenants',
-                'users',
-                'store_visit_logs',
-                'tenant_branding',
-                'tenant_products',
-                'tenant_services',
-            ]);
-            if (!allowed.has(table)) {
-                return false;
-            }
-            const rows = this.sqliteDb.prepare(`PRAGMA table_info(${table})`).all();
-            return rows.some((c) => c.name === column);
-        }
         const row = await this.queryOne(`
         SELECT 1 AS ok
         FROM information_schema.columns
@@ -975,52 +865,6 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         return Boolean(row);
     }
     async ensureSchemaMigrations() {
-        if (this.dialect === 'sqlite') {
-            if (!(await this.columnExists('appointments', 'attendance'))) {
-                this.sqliteDb.exec(`ALTER TABLE appointments ADD COLUMN attendance TEXT NOT NULL DEFAULT 'PENDIENTE'`);
-            }
-            const tenantHasCol = (col) => this.sqliteDb.prepare(`PRAGMA table_info(tenants)`).all().some((c) => c.name === col);
-            if (!tenantHasCol('plan')) {
-                this.sqliteDb.exec(`ALTER TABLE tenants ADD COLUMN plan TEXT NOT NULL DEFAULT 'Trial'`);
-            }
-            if (!tenantHasCol('storefront_enabled')) {
-                this.sqliteDb.exec(`ALTER TABLE tenants ADD COLUMN storefront_enabled INTEGER NOT NULL DEFAULT 0`);
-            }
-            if (!tenantHasCol('manual_booking_enabled')) {
-                this.sqliteDb.exec(`ALTER TABLE tenants ADD COLUMN manual_booking_enabled INTEGER NOT NULL DEFAULT 1`);
-            }
-            if (!tenantHasCol('billing_cycle')) {
-                this.sqliteDb.exec(`ALTER TABLE tenants ADD COLUMN billing_cycle TEXT NOT NULL DEFAULT 'MONTHLY'`);
-            }
-            if (!tenantHasCol('plan_price_monthly')) {
-                this.sqliteDb.exec(`ALTER TABLE tenants ADD COLUMN plan_price_monthly REAL NOT NULL DEFAULT 0`);
-            }
-            if (!tenantHasCol('plan_price_yearly')) {
-                this.sqliteDb.exec(`ALTER TABLE tenants ADD COLUMN plan_price_yearly REAL NOT NULL DEFAULT 0`);
-            }
-            if (!tenantHasCol('subscription_started_at')) {
-                this.sqliteDb.exec(`ALTER TABLE tenants ADD COLUMN subscription_started_at TEXT NOT NULL DEFAULT '2026-01-01T00:00:00.000Z'`);
-            }
-            if (!tenantHasCol('current_period_start')) {
-                this.sqliteDb.exec(`ALTER TABLE tenants ADD COLUMN current_period_start TEXT NOT NULL DEFAULT '2026-01-01T00:00:00.000Z'`);
-            }
-            if (!tenantHasCol('current_period_end')) {
-                this.sqliteDb.exec(`ALTER TABLE tenants ADD COLUMN current_period_end TEXT NOT NULL DEFAULT '2026-02-01T00:00:00.000Z'`);
-            }
-            if (!tenantHasCol('next_renewal_at')) {
-                this.sqliteDb.exec(`ALTER TABLE tenants ADD COLUMN next_renewal_at TEXT NOT NULL DEFAULT '2026-02-01T00:00:00.000Z'`);
-            }
-            const tenants = this.sqliteDb.prepare(`SELECT id, name FROM tenants`).all();
-            for (const t of tenants) {
-                await this.ensureTenantBranding(String(t.id), String(t.name));
-            }
-            await this.ensurePlanCatalog();
-            await this.ensurePlatformSiteConfig();
-            await this.ensureTenantSalesTable();
-            await this.syncTenantPlanPricesFromCatalog();
-            await this.normalizeTenantBillingPeriods();
-            return;
-        }
         if (!(await this.columnExists('appointments', 'attendance'))) {
             await this.execScript(`ALTER TABLE appointments ADD COLUMN attendance TEXT NOT NULL DEFAULT 'PENDIENTE'`);
         }
@@ -1065,11 +909,6 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         await this.normalizeTenantBillingPeriods();
     }
     async createSchema() {
-        if (this.dialect === 'sqlite') {
-            this.sqliteDb.exec(sqlite_schema_1.SQLITE_INITIAL_SCHEMA);
-            this.sqliteDb.exec('PRAGMA foreign_keys = ON');
-            return;
-        }
         await this.execScript(`
       CREATE TABLE IF NOT EXISTS tenants (
         id TEXT PRIMARY KEY,
@@ -1410,20 +1249,6 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     `);
     }
     async ensurePlanCatalog() {
-        if (this.dialect === 'sqlite') {
-            this.sqliteDb.exec(`
-        CREATE TABLE IF NOT EXISTS plan_catalog (
-          plan_key TEXT PRIMARY KEY,
-          price_monthly REAL NOT NULL DEFAULT 0,
-          price_yearly REAL NOT NULL DEFAULT 0
-        )
-      `);
-            const stmt = this.sqliteDb.prepare(`INSERT OR IGNORE INTO plan_catalog (plan_key, price_monthly, price_yearly) VALUES (?, ?, ?)`);
-            for (const e of DEFAULT_PLAN_CATALOG_SEED) {
-                stmt.run(e.planKey, e.priceMonthly, e.priceYearly);
-            }
-            return;
-        }
         await this.execScript(`
       CREATE TABLE IF NOT EXISTS plan_catalog (
         plan_key TEXT PRIMARY KEY,
@@ -1477,16 +1302,6 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     }
     async ensurePlatformSiteConfig() {
         const payload = JSON.stringify(sql_db_types_1.DEFAULT_PLATFORM_SITE_CONFIG);
-        if (this.dialect === 'sqlite') {
-            this.sqliteDb.exec(`
-        CREATE TABLE IF NOT EXISTS platform_site_config (
-          id TEXT PRIMARY KEY,
-          payload_json TEXT NOT NULL
-        )
-      `);
-            this.sqliteDb.prepare(`INSERT OR IGNORE INTO platform_site_config (id, payload_json) VALUES (?, ?)`).run('default', payload);
-            return;
-        }
         await this.execScript(`
       CREATE TABLE IF NOT EXISTS platform_site_config (
         id TEXT PRIMARY KEY,
@@ -1496,27 +1311,6 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         await this.exec(`INSERT INTO platform_site_config (id, payload_json) VALUES ('default', ?) ON CONFLICT (id) DO NOTHING`, [payload]);
     }
     async ensureTenantSalesTable() {
-        if (this.dialect === 'sqlite') {
-            this.sqliteDb.exec(`
-        CREATE TABLE IF NOT EXISTS tenant_sales (
-          id TEXT PRIMARY KEY,
-          tenant_id TEXT NOT NULL,
-          sale_date TEXT NOT NULL,
-          total REAL NOT NULL,
-          method TEXT NOT NULL,
-          linked_appointment_id TEXT,
-          stock_note TEXT,
-          created_at TEXT NOT NULL,
-          FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
-        )
-      `);
-            try {
-                this.sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_tenant_sales_tenant_created ON tenant_sales(tenant_id, created_at DESC)`);
-            }
-            catch {
-            }
-            return;
-        }
         await this.execScript(`
       CREATE TABLE IF NOT EXISTS tenant_sales (
         id TEXT PRIMARY KEY,

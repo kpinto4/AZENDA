@@ -111,7 +111,7 @@ export interface MockTenant {
   name: string;
   /** Slug de la URL pública de reservas: `/reservar/:slug` (único por negocio). */
   bookingSlug: string;
-  /** Id del tenant en el API (SQLite), si existe. */
+  /** Id del tenant en el API del backend, si existe. */
   apiTenantId?: string;
   plan: string;
   /** Catálogo público (planes Pro+); en API viene de `storefrontEnabled`. */

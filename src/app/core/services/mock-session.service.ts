@@ -36,7 +36,7 @@ export class MockSessionService {
   /** Slug de reserva pública del negocio actual: `/reservar/:slug` */
   readonly publicBookingSlug = signal<string>('');
 
-  /** Id del tenant en el API (SQLite), cuando la sesión viene del backend. */
+  /** Id del tenant en el API del backend, cuando la sesión viene de autenticación real. */
   readonly apiTenantId = signal<string | null>(null);
 
   readonly role = signal<DemoRole>(null);
