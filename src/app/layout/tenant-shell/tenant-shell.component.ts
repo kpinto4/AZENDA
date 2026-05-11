@@ -1,6 +1,8 @@
 import { NgStyle } from '@angular/common';
 import { Component, computed, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiAppointmentsService } from '../../core/services/api-appointments.service';
 import { MockDataService } from '../../core/services/mock-data.service';
@@ -21,6 +23,18 @@ export class TenantShellComponent {
 
   /** En móvil el menú se abre como panel lateral; en escritorio no aplica. */
   readonly menuOpen = signal(false);
+
+  /** Citas nuevas respecto al último visto fuera de /app/citas (modo API). */
+  readonly citasNewBadge = signal(0);
+  private apptCountBaseline = -1;
+
+  private readonly routerUrl = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map(() => this.router.url),
+    ),
+    { initialValue: this.router.url },
+  );
 
   readonly currentTenant = computed(() => {
     const id = this.session.tenantId();
@@ -119,6 +133,35 @@ export class TenantShellComponent {
       if (t) {
         this.session.syncFromTenant(t);
       }
+    });
+
+    effect(() => {
+      const rows = this.apiAppointments.rows();
+      const url = this.routerUrl() ?? '';
+      const n = rows.length;
+      const onCitas = url.includes('/app/citas');
+
+      if (!environment.useLiveAuth || !this.session.accessToken() || !this.session.isTenantUser()) {
+        this.citasNewBadge.set(0);
+        this.apptCountBaseline = -1;
+        return;
+      }
+
+      if (this.apptCountBaseline < 0) {
+        if (n > 0) {
+          this.apptCountBaseline = n;
+        }
+        this.citasNewBadge.set(0);
+        return;
+      }
+
+      if (onCitas) {
+        this.apptCountBaseline = n;
+        this.citasNewBadge.set(0);
+        return;
+      }
+
+      this.citasNewBadge.set(Math.max(0, n - this.apptCountBaseline));
     });
   }
 

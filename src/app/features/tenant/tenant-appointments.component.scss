@@ -21,11 +21,101 @@
   margin-bottom: 0.9rem;
 }
 
+.table-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.table-toolbar .table-hint {
+  margin-bottom: 0;
+}
+
 .manual-create-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.65rem;
   align-items: end;
+}
+
+.manual-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.az-label.compact {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.manual-submit {
+  white-space: nowrap;
+}
+
+.attendance-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.att-chip {
+  border: 1px solid var(--az-border);
+  border-radius: 999px;
+  padding: 0.25rem 0.55rem;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--az-surface);
+  color: var(--az-text);
+}
+
+.att-chip:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--az-primary) 45%, var(--az-border));
+}
+
+.att-chip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.att-chip--on {
+  border-color: var(--az-primary);
+  background: color-mix(in srgb, var(--az-primary) 12%, var(--az-surface));
+  color: var(--az-primary);
+}
+
+.att-chip:focus-visible {
+  outline: 2px solid var(--az-primary);
+  outline-offset: 2px;
+}
+
+.wa-cell {
+  white-space: nowrap;
+}
+
+.wa-pill {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+}
+
+.wa-pill--ok {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.wa-pill--pend {
+  background: #fef9c3;
+  color: #854d0e;
+  border: 1px solid #fde047;
 }
 
 .cal-sim-card h3 {
@@ -289,4 +379,41 @@
   .cal-event {
     font-size: 0.66rem;
   }
+}
+
+.reminder-card {
+  margin-bottom: 0.9rem;
+}
+
+.reminder-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.reminder-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--az-border);
+}
+
+.reminder-row:last-child {
+  border-bottom: none;
+}
+
+.reminder-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.reminder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }

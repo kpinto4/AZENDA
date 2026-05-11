@@ -127,6 +127,13 @@ export class TenantAppointmentsComponent {
   readonly createErr = signal<string | null>(null);
   readonly creatingAppointment = signal(false);
   readonly liveServiceOptions = signal<string[]>([]);
+  readonly refreshingList = signal(false);
+
+  readonly attendanceQuickOptions: { value: MockAppointmentAttendance; label: string }[] = [
+    { value: 'PENDIENTE', label: 'Pendiente' },
+    { value: 'ASISTIO', label: 'Asistió' },
+    { value: 'NO_ASISTIO', label: 'No asistió' },
+  ];
 
   readonly createForm = this.fb.nonNullable.group({
     customer: ['', [Validators.required, Validators.minLength(2)]],
@@ -169,6 +176,57 @@ export class TenantAppointmentsComponent {
     }
     return this.data.appointmentsForBookingSlug(this.session.publicBookingSlug());
   });
+
+  /** Citas hoy o mañana con móvil y sin marcar recordatorio manual enviado. */
+  readonly manualReminderCandidates = computed(() => {
+    const tid = this.session.tenantId();
+    const branding = tid ? this.data.brandingForTenant(tid) : null;
+    const biz = (branding?.displayName ?? '').trim() || 'Tu negocio';
+    const todayY = toYmdLocal(new Date());
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+    const tomY = toYmdLocal(tmr);
+    return this
+      .tenantAppointments()
+      .filter((a) => {
+        const p = parseWhenLocal(a.when);
+        if (!p || a.status === 'cancelada') {
+          return false;
+        }
+        const phone = (a.customerPhoneE164 ?? '').replace(/\D/g, '');
+        if (!a.waReminderConsent || !phone || a.waReminderSentAt) {
+          return false;
+        }
+        return p.ymd === todayY || p.ymd === tomY;
+      })
+      .map((a) => {
+        const phoneDigits = (a.customerPhoneE164 ?? '').replace(/\D/g, '');
+        return {
+          appointment: a,
+          link: this.buildClientWaReminderLink(a, biz, phoneDigits),
+        };
+      });
+  });
+
+  private buildClientWaReminderLink(
+    a: MockAppointment,
+    businessDisplay: string,
+    phoneDigits: string,
+  ): string {
+    const text = `Hola, te recordamos tu cita el ${a.when} en ${businessDisplay}. Ref: ${a.id}`;
+    return `https://wa.me/${phoneDigits}?text=${encodeURIComponent(text)}`;
+  }
+
+  markManualReminderDone(id: string): void {
+    if (!this.apiAppointments.useRemote()) {
+      this.alerts.info('Modo demo: no hay persistencia de recordatorio en servidor.');
+      return;
+    }
+    this.apiAppointments.patchManualReminderSent(id).subscribe({
+      next: () => this.alerts.success('Recordatorio marcado como enviado.'),
+      error: () => this.alerts.warning('No se pudo actualizar la cita.'),
+    });
+  }
 
   /** Desplazamiento en semanas respecto a la semana actual (lunes–viernes). */
   readonly calWeekOffset = signal(0);
@@ -257,6 +315,24 @@ export class TenantAppointmentsComponent {
 
   shiftCalWeek(delta: number): void {
     this.calWeekOffset.update((o) => o + delta);
+  }
+
+  refreshAppointmentList(): void {
+    if (!this.apiAppointments.useRemote()) {
+      this.alerts.info('Modo demo: los datos están en esta sesión; recarga la página para simular cambios externos.');
+      return;
+    }
+    this.refreshingList.set(true);
+    this.apiAppointments.refresh().subscribe({
+      next: () => {
+        this.refreshingList.set(false);
+        this.alerts.success('Lista actualizada.');
+      },
+      error: () => {
+        this.refreshingList.set(false);
+        this.alerts.warning('No se pudo actualizar la lista.');
+      },
+    });
   }
 
   private scrollCalendarToToday(): void {

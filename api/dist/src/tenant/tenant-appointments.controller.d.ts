@@ -14,5 +14,6 @@ export declare class TenantAppointmentsController {
     create(req: AuthenticatedRequest, dto: CreateAppointmentDto): Promise<import("../infrastructure/sql-db/sql-db.types").AppointmentEntity>;
     patchStatus(req: AuthenticatedRequest, appointmentId: string, dto: PatchAppointmentStatusDto): import("../infrastructure/sql-db/sql-db.types").AppointmentEntity;
     patchAttendance(req: AuthenticatedRequest, appointmentId: string, dto: PatchAppointmentAttendanceDto): Promise<import("../infrastructure/sql-db/sql-db.types").AppointmentEntity>;
+    markManualReminderSent(req: AuthenticatedRequest, appointmentId: string): Promise<import("../infrastructure/sql-db/sql-db.types").AppointmentEntity>;
 }
 export {};

@@ -11,5 +11,6 @@ export declare class TenantAppointmentsService {
     createForUser(user: AuthUser, dto: CreateAppointmentDto): Promise<AppointmentEntity>;
     patchStatus(user: AuthUser, appointmentId: string, dto: PatchAppointmentStatusDto): AppointmentEntity;
     patchAttendance(user: AuthUser, appointmentId: string, dto: PatchAppointmentAttendanceDto): Promise<AppointmentEntity>;
+    markManualReminderSent(user: AuthUser, appointmentId: string): Promise<AppointmentEntity>;
     private requireTenantUser;
 }

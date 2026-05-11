@@ -38,16 +38,34 @@
         <p class="muted field-error">{{ createErr() }}</p>
       }
       <form class="manual-create-grid" [formGroup]="createForm" (ngSubmit)="createAppointment()">
-        <input class="az-input" placeholder="Cliente" formControlName="customer" />
-        <select class="az-select" formControlName="service">
-          <option value="" disabled>Selecciona un servicio</option>
-          @for (s of manualServiceOptions(); track s) {
-            <option [value]="s">{{ s }}</option>
-          }
-        </select>
-        <input class="az-input" type="date" formControlName="date" />
-        <input class="az-input" type="time" formControlName="time" />
-        <button type="submit" class="az-btn az-btn-primary" [disabled]="creatingAppointment()">
+        <div class="manual-field">
+          <label class="az-label compact" for="manual-customer">Cliente</label>
+          <input
+            id="manual-customer"
+            class="az-input"
+            formControlName="customer"
+            autocomplete="name"
+            placeholder="Nombre"
+          />
+        </div>
+        <div class="manual-field">
+          <label class="az-label compact" for="manual-service">Servicio</label>
+          <select id="manual-service" class="az-select" formControlName="service">
+            <option value="" disabled>Selecciona un servicio</option>
+            @for (s of manualServiceOptions(); track s) {
+              <option [value]="s">{{ s }}</option>
+            }
+          </select>
+        </div>
+        <div class="manual-field">
+          <label class="az-label compact" for="manual-date">Fecha</label>
+          <input id="manual-date" class="az-input" type="date" formControlName="date" />
+        </div>
+        <div class="manual-field">
+          <label class="az-label compact" for="manual-time">Hora</label>
+          <input id="manual-time" class="az-input" type="time" formControlName="time" />
+        </div>
+        <button type="submit" class="az-btn az-btn-primary manual-submit" [disabled]="creatingAppointment()">
           {{ creatingAppointment() ? 'Guardando…' : 'Crear cita manual' }}
         </button>
       </form>
@@ -101,10 +119,52 @@
       </div>
   </div>
 
+  @if (apiAppointments.useRemote() && manualReminderCandidates().length) {
+    <div class="az-card mt reminder-card">
+      <h3>Recordatorios por WhatsApp (hoy y mañana)</h3>
+      <p class="muted small">
+        Abre el chat con el cliente con el texto ya preparado; cuando hayas enviado el mensaje, marca «Listo».
+      </p>
+      <ul class="reminder-list">
+        @for (row of manualReminderCandidates(); track row.appointment.id) {
+          <li class="reminder-row">
+            <div class="reminder-meta">
+              <strong>{{ row.appointment.customer }}</strong>
+              <span class="muted small">{{ row.appointment.when }}</span>
+            </div>
+            <div class="reminder-actions">
+              <a class="az-btn az-btn-secondary" [href]="row.link" target="_blank" rel="noopener">Abrir WhatsApp</a>
+              <button
+                type="button"
+                class="az-btn az-btn-primary"
+                [disabled]="session.isTenantRestricted()"
+                (click)="markManualReminderDone(row.appointment.id)"
+              >
+                Marcar enviado
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
   <div class="az-table-wrap mt">
-    @if (apiAppointments.useRemote()) {
-      <p class="muted small table-hint">La tabla muestra las citas reales de tu negocio (datos del API).</p>
-    }
+    <div class="table-toolbar">
+      @if (apiAppointments.useRemote()) {
+        <p class="muted small table-hint">La tabla muestra las citas reales de tu negocio (datos del API).</p>
+        <button
+          type="button"
+          class="az-btn az-btn-secondary btn-refresh-appts"
+          (click)="refreshAppointmentList()"
+          [disabled]="refreshingList()"
+        >
+          {{ refreshingList() ? 'Actualizando…' : 'Actualizar lista' }}
+        </button>
+      } @else {
+        <p class="muted small table-hint">Vista demo: citas en memoria del navegador.</p>
+      }
+    </div>
     <table class="az-table">
       <thead>
         <tr>
@@ -113,6 +173,9 @@
           <th>Cuándo</th>
           <th>Estado</th>
           <th>Asistencia</th>
+            @if (apiAppointments.useRemote()) {
+            <th>Contacto WA</th>
+          }
         </tr>
       </thead>
       <tbody>
@@ -127,17 +190,38 @@
               </span>
             </td>
             <td>
-              <select
-                class="az-select status-sel"
-                [value]="a.attendance ?? 'PENDIENTE'"
-                [disabled]="session.isTenantRestricted()"
-                (change)="setAttendance(a.id, $any($event.target).value)"
+              <div
+                class="attendance-chips"
+                role="group"
+                [attr.aria-label]="'Asistencia de ' + a.customer"
               >
-                <option value="PENDIENTE">pendiente confirmar</option>
-                <option value="ASISTIO">asistió</option>
-                <option value="NO_ASISTIO">no asistió</option>
-              </select>
+                @for (opt of attendanceQuickOptions; track opt.value) {
+                  <button
+                    type="button"
+                    class="att-chip"
+                    [class.att-chip--on]="(a.attendance ?? 'PENDIENTE') === opt.value"
+                    [attr.aria-pressed]="(a.attendance ?? 'PENDIENTE') === opt.value"
+                    [disabled]="session.isTenantRestricted()"
+                    (click)="setAttendance(a.id, opt.value)"
+                  >
+                    {{ opt.label }}
+                  </button>
+                }
+              </div>
             </td>
+            @if (apiAppointments.useRemote()) {
+              <td class="wa-cell">
+                @if (a.waReminderConsent) {
+                  @if (a.waReminderSentAt) {
+                    <span class="wa-pill wa-pill--ok" title="Recordatorio manual marcado como enviado">Listo</span>
+                  } @else {
+                    <span class="wa-pill wa-pill--pend" title="Pendiente: usa la lista de recordatorios o abre WhatsApp">Pend.</span>
+                  }
+                } @else {
+                  <span class="muted tiny">—</span>
+                }
+              </td>
+            }
           </tr>
         }
       </tbody>

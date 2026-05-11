@@ -4,126 +4,250 @@
 }
 
 .sidebar {
-  width: 240px;
+  width: 260px;
   flex-shrink: 0;
   background: var(--az-sidebar-bg, var(--az-surface));
-  border-right: 1px solid var(--az-border);
+  border-right: 1px solid color-mix(in srgb, var(--az-border) 88%, var(--az-text));
+  box-shadow: 4px 0 32px rgb(15 23 42 / 0.04);
   display: flex;
   flex-direction: column;
-  padding: 1.25rem 0;
+  padding: 0;
 }
 
 .brand {
-  padding: 0 1.25rem 1.25rem;
-  border-bottom: 1px solid var(--az-border);
+  padding: 1.35rem 1.15rem 1.1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--az-border) 75%, transparent);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.brand-tag {
+  display: inline-flex;
+  align-self: flex-start;
+  margin-top: 0.35rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--az-primary) 85%, var(--az-text));
+  background: color-mix(in srgb, var(--az-primary) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--az-primary) 22%, transparent);
 }
 
 .brand-logo {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
   object-fit: cover;
-  border-radius: 999px;
-  border: 1px solid var(--az-border);
-  margin-bottom: 0.4rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--az-border) 70%, var(--az-text));
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
 }
 
 .logo {
   display: block;
   font-weight: 800;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   letter-spacing: -0.03em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .tenant {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 600;
   color: var(--az-muted);
-  margin-top: 0.2rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 nav {
   display: flex;
   flex-direction: column;
-  padding: 1rem 0.75rem;
-  gap: 0.85rem;
+  padding: 0.85rem 0.65rem 1rem;
+  gap: 1rem;
   flex: 1;
+  overflow-y: auto;
 }
 
 .nav-group {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .nav-group-title {
   margin: 0;
-  padding: 0 0.3rem;
+  padding: 0 0.55rem;
   color: var(--az-muted);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
+  opacity: 0.92;
 }
 
 .nav-links-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 0.3rem;
+  gap: 0.2rem;
+}
+
+nav a.nav-with-badge {
+  position: relative;
+  padding-right: 2rem;
+}
+
+.shell-nav-badge {
+  position: absolute;
+  top: 50%;
+  right: 0.5rem;
+  transform: translateY(-50%);
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.32rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.1rem;
+  text-align: center;
+  box-shadow: 0 1px 4px rgb(220 38 38 / 0.45);
+}
+
+.nav-ico {
+  width: 1.4rem;
+  text-align: center;
+  font-size: 0.82rem;
+  opacity: 0.88;
+  flex-shrink: 0;
 }
 
 nav a {
-  padding: 0.55rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.52rem 0.65rem;
   border-radius: var(--az-radius-sm);
-  color: var(--az-muted);
+  color: color-mix(in srgb, var(--az-muted) 92%, var(--az-text));
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   text-decoration: none;
+  border: 1px solid transparent;
   transition:
-    background 0.15s ease,
-    color 0.15s ease;
+    background 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.12s ease;
 }
 
 nav a:hover {
   color: var(--az-text);
-  background: color-mix(in srgb, var(--az-border) 45%, transparent);
+  background: color-mix(in srgb, var(--az-border) 38%, transparent);
+  border-color: color-mix(in srgb, var(--az-border) 55%, transparent);
   text-decoration: none;
+  transform: translateX(1px);
 }
 
 nav a.active {
   color: var(--az-primary);
-  background: color-mix(in srgb, var(--az-primary) 12%, transparent);
+  background: color-mix(in srgb, var(--az-primary) 11%, var(--az-surface));
+  border-color: color-mix(in srgb, var(--az-primary) 22%, var(--az-border));
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset;
+}
+
+nav a.active .nav-ico {
+  opacity: 1;
 }
 
 nav a.sidebar-booking {
-  border: 1px dashed var(--az-border);
+  border: 1px dashed color-mix(in srgb, var(--az-accent) 45%, var(--az-border));
   font-size: 0.82rem;
-  color: var(--az-accent);
+  color: color-mix(in srgb, var(--az-accent) 82%, var(--az-text));
+  background: color-mix(in srgb, var(--az-accent) 6%, transparent);
+}
+
+nav a.sidebar-booking:hover {
+  border-style: solid;
+  background: color-mix(in srgb, var(--az-accent) 12%, transparent);
 }
 
 .foot {
-  padding: 1rem 1.25rem;
-  border-top: 1px solid var(--az-border);
+  padding: 1rem 1.1rem 1.2rem;
+  border-top: 1px solid color-mix(in srgb, var(--az-border) 80%, transparent);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.65rem;
+  background: color-mix(in srgb, var(--az-sidebar-bg, var(--az-surface)) 94%, var(--az-border));
+}
+
+.foot-user {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.user-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--az-muted);
 }
 
 .user {
-  font-size: 0.85rem;
-  color: var(--az-muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--az-text);
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.foot-logout {
+  width: 100%;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--az-border) 80%, var(--az-text));
 }
 
 .main {
   flex: 1;
   min-width: 0;
   background: var(--az-page-gradient, var(--az-bg));
+  display: flex;
+  flex-direction: column;
+}
+
+.tenant-main-inner {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 0.35rem 0 2rem;
+}
+
+@media (min-width: 861px) {
+  .tenant-main-inner {
+    padding: 0.85rem 0.5rem 2.5rem;
+  }
 }
 
 .tenant-warn {
   margin: 0;
-  padding: 0.65rem 1.25rem;
-  background: color-mix(in srgb, var(--az-warning) 18%, var(--az-surface));
-  border-bottom: 1px solid color-mix(in srgb, var(--az-warning) 35%, var(--az-border));
-  font-size: 0.85rem;
+  padding: 0.7rem 1.25rem;
+  background: color-mix(in srgb, var(--az-warning) 16%, var(--az-surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--az-warning) 32%, var(--az-border));
+  font-size: 0.86rem;
   color: var(--az-text);
 }
 
@@ -150,7 +274,7 @@ nav a.sidebar-booking {
     position: fixed;
     inset: 0;
     z-index: 90;
-    background: rgb(0 0 0 / 0.45);
+    background: rgb(15 23 42 / 0.42);
     opacity: 0;
     visibility: hidden;
     transition:
@@ -167,14 +291,14 @@ nav a.sidebar-booking {
     position: fixed;
     top: 0;
     left: 0;
-    width: min(88vw, 300px);
+    width: min(90vw, 300px);
     height: 100dvh;
     max-height: 100dvh;
     z-index: 100;
-    padding: 0.5rem 0 1rem;
+    padding: 0;
     transform: translateX(-102%);
-    transition: transform 0.22s ease;
-    box-shadow: 4px 0 24px rgb(0 0 0 / 0.12);
+    transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 8px 0 40px rgb(0 0 0 / 0.18);
     overflow-y: auto;
     border-right: 1px solid var(--az-border);
   }
@@ -186,15 +310,15 @@ nav a.sidebar-booking {
   .drawer-head-mobile {
     display: flex;
     justify-content: flex-end;
-    padding: 0 0.35rem 0.35rem;
+    padding: 0.5rem 0.45rem 0.25rem;
   }
 
   .drawer-close {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.35rem;
+    height: 2.35rem;
     padding: 0;
     border: 1px solid var(--az-border);
     border-radius: var(--az-radius-sm);
@@ -210,39 +334,41 @@ nav a.sidebar-booking {
   }
 
   .brand {
-    padding: 0 1rem 0.85rem;
+    padding: 0 1rem 1rem;
     white-space: normal;
   }
 
   nav {
-    padding: 0.65rem 0.65rem 1rem;
-    gap: 0.75rem;
+    padding: 0.5rem 0.55rem 1rem;
+    gap: 0.85rem;
   }
 
   .nav-links-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 0.35rem;
+    gap: 0.25rem;
   }
 
   nav a {
     white-space: normal;
-    padding-inline: 0.75rem;
+    padding-inline: 0.65rem;
   }
 
   .foot {
-    padding: 0.85rem 1rem;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    white-space: normal;
+    padding: 0.9rem 1rem 1.1rem;
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .user {
-    overflow-wrap: anywhere;
+  .foot-logout {
+    align-self: stretch;
   }
 
   .main {
     min-height: 100dvh;
+  }
+
+  .tenant-main-inner {
+    padding: 0 0 1.5rem;
   }
 
   .mobile-shell-bar {
@@ -252,24 +378,27 @@ nav a.sidebar-booking {
     position: sticky;
     top: 0;
     z-index: 40;
-    padding: 0.55rem 0.85rem;
-    background: var(--az-surface);
-    border-bottom: 1px solid var(--az-border);
+    padding: 0.6rem 0.9rem;
+    background: color-mix(in srgb, var(--az-surface) 92%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--az-border) 85%, transparent);
+    backdrop-filter: blur(10px);
   }
 
   .mobile-menu-toggle {
     flex-shrink: 0;
-    padding: 0.4rem 0.75rem;
-    font-size: 0.85rem;
+    padding: 0.42rem 0.8rem;
+    font-size: 0.84rem;
+    font-weight: 700;
   }
 
   .mobile-shell-title {
-    font-weight: 700;
-    font-size: 0.95rem;
+    font-weight: 800;
+    font-size: 0.92rem;
     color: var(--az-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     min-width: 0;
+    letter-spacing: -0.02em;
   }
 }

@@ -16,7 +16,7 @@ Guía única para que cualquier persona entienda cómo levantar AZENDA, probarla
 | [6 Runbook de errores](#6-corrección-de-errores-runbook) | Síntomas → causas probables → pasos de arreglo |
 | [7 Criterio de salida](#7-criterio-de-salida) | Cuándo considerar el sistema “listo” |
 
-Documentos relacionados: [BACKEND.md](BACKEND.md), [PLANES_Y_FACTURACION.md](PLANES_Y_FACTURACION.md), [DESPLIEGUE_PRUEBA_NGROK.md](DESPLIEGUE_PRUEBA_NGROK.md).
+Documentos relacionados: [BACKEND.md](BACKEND.md), [PLANES_Y_FACTURACION.md](PLANES_Y_FACTURACION.md), [DESPLIEGUE_PRUEBA_NGROK.md](DESPLIEGUE_PRUEBA_NGROK.md), [RECORDATORIOS_Y_WHATSAPP.md](RECORDATORIOS_Y_WHATSAPP.md).
 
 ---
 
@@ -77,7 +77,7 @@ Estos usuarios los crea el **seed** del backend la primera vez que la base está
 | Rol en sistema | Correo | Contraseña | Qué esperar al entrar |
 | --- | --- | --- | --- |
 | SUPER_ADMIN | `super@azenda.dev` | `azenda123` | Panel super admin (`/super`), vista global |
-| ADMIN (tenant Spa) | `admin-spa@azenda.dev` | `azenda1234` | Panel del negocio (`/app`) asociado a Spa |
+| ADMIN (tenant Spa) | `admin-spa@azenda.dev` | `azenda123` | Panel del negocio (`/app`) asociado a Spa |
 | ADMIN (tenant Clínica) | `admin-clinica@azenda.dev` | `azenda123` | Panel del negocio; el tenant puede estar con restricciones según estado en BD |
 | EMPLEADO | `empleado@azenda.dev` | `azenda123` | Panel operativo (`/app`) con permisos de empleado |
 

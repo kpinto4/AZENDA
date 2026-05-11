@@ -1,7 +1,7 @@
 <div class="az-container az-page">
-  <div class="az-page-head">
+  <div class="az-page-head dashboard-head">
     <div>
-      <h1 class="az-page-title">Panel</h1>
+      <h1 class="az-page-title">Resumen</h1>
       <p class="az-page-sub">{{ panelSubtitle() }}</p>
     </div>
     <div class="head-actions">
@@ -16,16 +16,16 @@
     </div>
   </div>
 
-  <div class="az-grid cols-3">
-    <div class="az-card">
+  <div class="az-grid cols-3 dashboard-kpis">
+    <div class="az-card kpi-tile">
       <div class="az-kpi-label">{{ citasHoyKpiLabel() }}</div>
       <div class="az-kpi">{{ appointmentsTodayCount() }}</div>
     </div>
-    <div class="az-card">
+    <div class="az-card kpi-tile">
       <div class="az-kpi-label">{{ ventasRecientesLabel() }}</div>
       <div class="az-kpi">{{ recentSalesTotalCount() }}</div>
     </div>
-    <div class="az-card">
+    <div class="az-card kpi-tile">
       <div class="az-kpi-label">{{ stockAlertsLabel() }}</div>
       <div class="az-kpi">{{ lowStockCount() }}</div>
     </div>

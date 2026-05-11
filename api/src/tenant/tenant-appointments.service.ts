@@ -109,6 +109,15 @@ export class TenantAppointmentsService {
     return updated;
   }
 
+  async markManualReminderSent(user: AuthUser, appointmentId: string): Promise<AppointmentEntity> {
+    this.requireTenantUser(user);
+    const updated = await this.sqlDb.markAppointmentReminderSentForTenant(appointmentId, user.tenantId!);
+    if (!updated) {
+      throw new NotFoundException('Cita no encontrada');
+    }
+    return updated;
+  }
+
   private requireTenantUser(user: AuthUser): void {
     if (user.role === UserRole.SUPER_ADMIN) {
       throw new ForbiddenException('Usa el panel tenant con un usuario de negocio');

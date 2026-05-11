@@ -88,6 +88,14 @@ let TenantAppointmentsService = class TenantAppointmentsService {
         }
         return updated;
     }
+    async markManualReminderSent(user, appointmentId) {
+        this.requireTenantUser(user);
+        const updated = await this.sqlDb.markAppointmentReminderSentForTenant(appointmentId, user.tenantId);
+        if (!updated) {
+            throw new common_1.NotFoundException('Cita no encontrada');
+        }
+        return updated;
+    }
     requireTenantUser(user) {
         if (user.role === auth_types_1.UserRole.SUPER_ADMIN) {
             throw new common_1.ForbiddenException('Usa el panel tenant con un usuario de negocio');

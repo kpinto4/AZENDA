@@ -14,6 +14,8 @@ exports.SqlDbService = void 0;
 const common_1 = require("@nestjs/common");
 const pg_1 = require("pg");
 const auth_types_1 = require("../../auth/auth.types");
+const customer_name_match_util_1 = require("../../common/customer-name-match.util");
+const phone_e164_util_1 = require("../../common/phone-e164.util");
 const sql_db_types_1 = require("./sql-db.types");
 const DEFAULT_PLAN_CATALOG_SEED = [
     { planKey: 'Trial', priceMonthly: 0, priceYearly: 0 },
@@ -462,7 +464,8 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     }
     async listAppointmentsByTenantId(tenantId) {
         const rows = await this.queryRows(`
-        SELECT id, tenant_id, customer, service, when_at, status, attendance
+        SELECT id, tenant_id, customer, service, when_at, status, attendance,
+               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
         FROM appointments
         WHERE tenant_id = ?
         ORDER BY when_at ASC
@@ -473,23 +476,36 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         const id = `appt_${Date.now()}`;
         const status = data.status ?? 'pendiente';
         const attendance = data.attendance ?? 'PENDIENTE';
+        const phone = data.customerPhoneE164?.trim() || null;
+        const waConsent = Boolean(data.waReminderConsent);
         await this.exec(`
-        INSERT INTO appointments (id, tenant_id, customer, service, when_at, status, attendance)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [id, data.tenantId, data.customer, data.service, data.when, status, attendance]);
-        return {
-            id,
-            tenantId: data.tenantId,
-            customer: data.customer,
-            service: data.service,
-            when: data.when,
-            status,
-            attendance,
-        };
+        INSERT INTO appointments (
+          id, tenant_id, customer, service, when_at, status, attendance,
+          customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+      `, [id, data.tenantId, data.customer, data.service, data.when, status, attendance, phone, waConsent]);
+        const created = await this.findAppointmentById(id);
+        if (!created) {
+            throw new Error('No se pudo leer la cita recien creada');
+        }
+        return created;
+    }
+    async markAppointmentReminderSentForTenant(appointmentId, tenantId) {
+        await this.exec(`UPDATE appointments SET wa_reminder_sent_at = ? WHERE id = ? AND tenant_id = ?`, [new Date().toISOString(), appointmentId, tenantId]);
+        const row = await this.queryOne(`
+        SELECT id, tenant_id, customer, service, when_at, status, attendance,
+               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+        FROM appointments
+        WHERE id = ? AND tenant_id = ?
+        LIMIT 1
+      `, [appointmentId, tenantId]);
+        return row ? this.mapAppointmentRow(row) : undefined;
     }
     async findAppointmentByTenantAndWhen(tenantId, when) {
         const row = await this.queryOne(`
-        SELECT id, tenant_id, customer, service, when_at, status, attendance
+        SELECT id, tenant_id, customer, service, when_at, status, attendance,
+               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
         FROM appointments
         WHERE tenant_id = ? AND when_at = ?
         LIMIT 1
@@ -498,11 +514,20 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     }
     async findAppointmentById(appointmentId) {
         const row = await this.queryOne(`
-        SELECT id, tenant_id, customer, service, when_at, status, attendance
+        SELECT id, tenant_id, customer, service, when_at, status, attendance,
+               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
         FROM appointments
         WHERE id = ?
       `, [appointmentId]);
         return row ? this.mapAppointmentRow(row) : undefined;
+    }
+    async updateAppointmentWhenAndService(tenantId, appointmentId, when, service) {
+        const current = await this.findAppointmentById(appointmentId);
+        if (!current || current.tenantId !== tenantId) {
+            return undefined;
+        }
+        await this.exec(`UPDATE appointments SET when_at = ?, service = ? WHERE id = ? AND tenant_id = ?`, [when, service, appointmentId, tenantId]);
+        return this.findAppointmentById(appointmentId);
     }
     async updateAppointmentStatus(appointmentId, tenantId, status) {
         const current = await this.findAppointmentById(appointmentId);
@@ -541,15 +566,55 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         if (appt.status === 'cancelada') {
             return undefined;
         }
-        const norm = (s) => s
-            .trim()
-            .toLowerCase()
-            .replace(/\s+/g, ' ');
-        if (norm(appt.customer) !== norm(customerName)) {
+        if (!(0, customer_name_match_util_1.publicCustomerNameMatches)(appt.customer, customerName)) {
             return undefined;
         }
         await this.exec(`UPDATE appointments SET attendance = ?, status = ? WHERE id = ? AND tenant_id = ?`, ['ASISTIO', 'confirmada', appointmentId, tenant.id]);
         return { ...appt, attendance: 'ASISTIO', status: 'confirmada' };
+    }
+    async lookupPublicAppointmentsForClient(slug, customerNameRaw, appointmentIdRaw, customerPhoneRaw) {
+        const tenant = await this.findTenantBySlug(slug);
+        if (!tenant || tenant.status !== 'ACTIVE' || !tenant.modules.citas) {
+            return [];
+        }
+        const customerName = (customerNameRaw ?? '').trim();
+        const ref = appointmentIdRaw?.trim() ?? '';
+        const defaultCc = (process.env.PUBLIC_BOOKING_DEFAULT_COUNTRY_CODE ?? '34').trim() || '34';
+        const phoneDigits = customerPhoneRaw?.trim()
+            ? (0, phone_e164_util_1.normalizePhoneToWaDigits)(customerPhoneRaw, defaultCc)
+            : null;
+        if (!ref && !phoneDigits) {
+            return [];
+        }
+        let candidates = [];
+        if (ref) {
+            const appt = await this.findAppointmentById(ref);
+            if (appt && appt.tenantId === tenant.id) {
+                candidates = [appt];
+            }
+        }
+        else if (phoneDigits) {
+            const rows = await this.queryRows(`
+          SELECT id, tenant_id, customer, service, when_at, status, attendance,
+                 customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+          FROM appointments
+          WHERE tenant_id = ? AND customer_phone_e164 = ?
+            AND status != 'cancelada'
+            AND attendance = 'PENDIENTE'
+          ORDER BY when_at DESC
+          LIMIT 25
+        `, [tenant.id, phoneDigits]);
+            candidates = rows.map((row) => this.mapAppointmentRow(row));
+        }
+        return candidates.filter((a) => {
+            if (a.attendance !== 'PENDIENTE' || a.status === 'cancelada') {
+                return false;
+            }
+            if (!customerName) {
+                return true;
+            }
+            return (0, customer_name_match_util_1.publicCustomerNameMatches)(a.customer, customerName);
+        });
     }
     async listStoreVisitsByTenantId(tenantId) {
         const rows = await this.queryRows(`
@@ -613,7 +678,9 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     }
     async getTenantBranding(tenantId) {
         const row = await this.queryOne(`
-        SELECT tenant_id, display_name, logo_url, catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
+        SELECT tenant_id, display_name, logo_url, public_address, public_maps_url, cancellation_policy, reminder_notice,
+               whatsapp_phone_e164, whatsapp_default_message, public_booking_hours_json,
+               catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
                border_radius_px, use_gradient, gradient_from, gradient_to, gradient_angle_deg
         FROM tenant_branding
         WHERE tenant_id = ?
@@ -626,6 +693,16 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     }
     async updateTenantBranding(tenantId, patch) {
         const current = await this.getTenantBranding(tenantId);
+        const strOrNull = (v, cur) => {
+            if (v === undefined) {
+                return cur;
+            }
+            if (v === null) {
+                return null;
+            }
+            const t = String(v).trim();
+            return t.length ? t : null;
+        };
         const next = {
             ...current,
             ...patch,
@@ -635,18 +712,47 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
                 : patch.logoUrl === ''
                     ? null
                     : patch.logoUrl,
+            publicAddress: strOrNull(patch.publicAddress, current.publicAddress),
+            publicMapsUrl: strOrNull(patch.publicMapsUrl, current.publicMapsUrl),
+            cancellationPolicy: strOrNull(patch.cancellationPolicy, current.cancellationPolicy),
+            reminderNotice: strOrNull(patch.reminderNotice, current.reminderNotice),
+            whatsappPhoneE164: patch.whatsappPhoneE164 === undefined
+                ? current.whatsappPhoneE164
+                : (() => {
+                    const raw = patch.whatsappPhoneE164;
+                    if (raw === null || raw === '') {
+                        return null;
+                    }
+                    const digits = String(raw).replace(/\D/g, '');
+                    return digits.length ? digits : null;
+                })(),
+            whatsappDefaultMessage: strOrNull(patch.whatsappDefaultMessage, current.whatsappDefaultMessage),
+            publicBookingHoursJson: patch.publicBookingHoursJson === undefined
+                ? current.publicBookingHoursJson
+                : patch.publicBookingHoursJson === null || String(patch.publicBookingHoursJson).trim() === ''
+                    ? null
+                    : String(patch.publicBookingHoursJson).trim(),
             catalogLayout: patch.catalogLayout === 'grid' || patch.catalogLayout === 'horizontal'
                 ? patch.catalogLayout
                 : current.catalogLayout,
         };
         await this.exec(`
         UPDATE tenant_branding
-        SET display_name = ?, logo_url = ?, catalog_layout = ?, primary_color = ?, accent_color = ?, bg_color = ?, surface_color = ?, text_color = ?,
+        SET display_name = ?, logo_url = ?, public_address = ?, public_maps_url = ?, cancellation_policy = ?, reminder_notice = ?,
+            whatsapp_phone_e164 = ?, whatsapp_default_message = ?, public_booking_hours_json = ?,
+            catalog_layout = ?, primary_color = ?, accent_color = ?, bg_color = ?, surface_color = ?, text_color = ?,
             border_radius_px = ?, use_gradient = ?, gradient_from = ?, gradient_to = ?, gradient_angle_deg = ?
         WHERE tenant_id = ?
       `, [
             next.displayName,
             next.logoUrl,
+            next.publicAddress,
+            next.publicMapsUrl,
+            next.cancellationPolicy,
+            next.reminderNotice,
+            next.whatsappPhoneE164,
+            next.whatsappDefaultMessage,
+            next.publicBookingHoursJson,
             next.catalogLayout,
             next.primaryColor,
             next.accentColor,
@@ -898,6 +1004,27 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         if (!(await this.columnExists('tenants', 'next_renewal_at'))) {
             await this.execScript(`ALTER TABLE tenants ADD COLUMN next_renewal_at TEXT NOT NULL DEFAULT '2026-02-01T00:00:00.000Z'`);
         }
+        if (!(await this.columnExists('tenant_branding', 'public_address'))) {
+            await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN public_address TEXT NULL`);
+        }
+        if (!(await this.columnExists('tenant_branding', 'public_maps_url'))) {
+            await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN public_maps_url TEXT NULL`);
+        }
+        if (!(await this.columnExists('tenant_branding', 'cancellation_policy'))) {
+            await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN cancellation_policy TEXT NULL`);
+        }
+        if (!(await this.columnExists('tenant_branding', 'reminder_notice'))) {
+            await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN reminder_notice TEXT NULL`);
+        }
+        if (!(await this.columnExists('appointments', 'customer_phone_e164'))) {
+            await this.execScript(`ALTER TABLE appointments ADD COLUMN customer_phone_e164 TEXT NULL`);
+        }
+        if (!(await this.columnExists('appointments', 'wa_reminder_consent'))) {
+            await this.execScript(`ALTER TABLE appointments ADD COLUMN wa_reminder_consent BOOLEAN NOT NULL DEFAULT false`);
+        }
+        if (!(await this.columnExists('appointments', 'wa_reminder_sent_at'))) {
+            await this.execScript(`ALTER TABLE appointments ADD COLUMN wa_reminder_sent_at TEXT NULL`);
+        }
         const tenantRows = await this.queryRows(`SELECT id, name FROM tenants`);
         for (const t of tenantRows) {
             await this.ensureTenantBranding(String(t.id), String(t.name));
@@ -951,6 +1078,9 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         when_at TEXT NOT NULL,
         status TEXT NOT NULL,
         attendance TEXT NOT NULL DEFAULT 'PENDIENTE',
+        customer_phone_e164 TEXT NULL,
+        wa_reminder_consent BOOLEAN NOT NULL DEFAULT false,
+        wa_reminder_sent_at TEXT NULL,
         CONSTRAINT fk_appt_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
       )
     `);
@@ -971,6 +1101,10 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         tenant_id TEXT PRIMARY KEY,
         display_name TEXT NOT NULL,
         logo_url TEXT NULL,
+        public_address TEXT NULL,
+        public_maps_url TEXT NULL,
+        cancellation_policy TEXT NULL,
+        reminder_notice TEXT NULL,
         catalog_layout TEXT NOT NULL DEFAULT 'horizontal',
         primary_color TEXT NOT NULL DEFAULT '#4f46e5',
         accent_color TEXT NOT NULL DEFAULT '#06b6d4',
@@ -982,9 +1116,21 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         gradient_from TEXT NOT NULL DEFAULT '#4f46e5',
         gradient_to TEXT NOT NULL DEFAULT '#06b6d4',
         gradient_angle_deg INT NOT NULL DEFAULT 135,
+        whatsapp_phone_e164 TEXT NULL,
+        whatsapp_default_message TEXT NULL,
+        public_booking_hours_json TEXT NULL,
         CONSTRAINT fk_branding_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
       )
     `);
+        if (!(await this.columnExists('tenant_branding', 'whatsapp_phone_e164'))) {
+            await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN whatsapp_phone_e164 TEXT NULL`);
+        }
+        if (!(await this.columnExists('tenant_branding', 'whatsapp_default_message'))) {
+            await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN whatsapp_default_message TEXT NULL`);
+        }
+        if (!(await this.columnExists('tenant_branding', 'public_booking_hours_json'))) {
+            await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN public_booking_hours_json TEXT NULL`);
+        }
         await this.execScript(`
       CREATE TABLE IF NOT EXISTS tenant_products (
         id TEXT PRIMARY KEY,
@@ -1156,7 +1302,9 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     }
     async ensureTenantBranding(tenantId, tenantName) {
         const existing = await this.queryOne(`
-        SELECT tenant_id, display_name, logo_url, catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
+        SELECT tenant_id, display_name, logo_url, public_address, public_maps_url, cancellation_policy, reminder_notice,
+               whatsapp_phone_e164, whatsapp_default_message, public_booking_hours_json,
+               catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
                border_radius_px, use_gradient, gradient_from, gradient_to, gradient_angle_deg
         FROM tenant_branding
         WHERE tenant_id = ?
@@ -1166,9 +1314,11 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         }
         await this.exec(`
         INSERT INTO tenant_branding (
-          tenant_id, display_name, logo_url, catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
+          tenant_id, display_name, logo_url, public_address, public_maps_url, cancellation_policy, reminder_notice,
+          whatsapp_phone_e164, whatsapp_default_message, public_booking_hours_json,
+          catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
           border_radius_px, use_gradient, gradient_from, gradient_to, gradient_angle_deg
-        ) VALUES (?, ?, ?, 'horizontal', '#4f46e5', '#06b6d4', '#f8fafc', '#ffffff', '#0f172a', 12, false, '#4f46e5', '#06b6d4', 135)
+        ) VALUES (?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'horizontal', '#4f46e5', '#06b6d4', '#f8fafc', '#ffffff', '#0f172a', 12, false, '#4f46e5', '#06b6d4', 135)
       `, [tenantId, tenantName, null]);
         return await this.getTenantBranding(tenantId);
     }
@@ -1395,6 +1545,9 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             attendanceRaw === 'PENDIENTE'
             ? attendanceRaw
             : 'PENDIENTE';
+        const phoneRaw = row.customer_phone_e164;
+        const consentRaw = row.wa_reminder_consent;
+        const sentRaw = row.wa_reminder_sent_at;
         return {
             id: String(row.id),
             tenantId: String(row.tenant_id),
@@ -1403,6 +1556,9 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             when: String(row.when_at),
             status: row.status,
             attendance,
+            customerPhoneE164: phoneRaw == null || String(phoneRaw).trim() === '' ? null : String(phoneRaw).trim(),
+            waReminderConsent: Boolean(consentRaw),
+            waReminderSentAt: sentRaw == null || String(sentRaw).trim() === '' ? null : String(sentRaw),
         };
     }
     mapStoreVisitRow(row) {
@@ -1431,6 +1587,17 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             tenantId: String(row.tenant_id),
             displayName: String(row.display_name ?? ''),
             logoUrl: row.logo_url == null ? null : String(row.logo_url),
+            publicAddress: row.public_address == null ? null : String(row.public_address),
+            publicMapsUrl: row.public_maps_url == null ? null : String(row.public_maps_url),
+            cancellationPolicy: row.cancellation_policy == null ? null : String(row.cancellation_policy),
+            reminderNotice: row.reminder_notice == null ? null : String(row.reminder_notice),
+            whatsappPhoneE164: row.whatsapp_phone_e164 == null || String(row.whatsapp_phone_e164).trim() === ''
+                ? null
+                : String(row.whatsapp_phone_e164).replace(/\D/g, '') || null,
+            whatsappDefaultMessage: row.whatsapp_default_message == null ? null : String(row.whatsapp_default_message),
+            publicBookingHoursJson: row.public_booking_hours_json == null || String(row.public_booking_hours_json).trim() === ''
+                ? null
+                : String(row.public_booking_hours_json),
             catalogLayout: row.catalog_layout === 'grid' ? 'grid' : 'horizontal',
             primaryColor: String(row.primary_color),
             accentColor: String(row.accent_color),

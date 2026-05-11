@@ -44,9 +44,9 @@ export const DEFAULT_API_SITE_CONFIG: ApiSiteConfig = {
       'Azenda combina agenda inteligente, POS ligero y stock para negocios que viven de las reservas. Activa solo los módulos que necesitas.',
     sectionTitle: 'Todo lo esencial, sin ruido',
     sectionSub: 'Diseñado para barberías, spas, clínicas ligeras y talleres con cita previa.',
-    demoTitle: 'Reservas públicas + WhatsApp',
+    demoTitle: 'Reservas públicas y contacto por WhatsApp',
     demoSub:
-      'Tus clientes eligen servicio, fecha y hora en una página limpia. Integración WhatsApp por niveles (enlace, plantilla, futuro chatbot).',
+      'Tus clientes eligen servicio, fecha y hora en una página limpia. Horario por franjas y recordatorios vía WhatsApp manual (wa.me).',
     plansSectionTitle: 'Planes claros',
     plansSectionSub: 'Los límites reales (empleados, citas/mes, módulos) los aplicará el backend.',
     ctaTitle: 'Listo para operar tu negocio real',

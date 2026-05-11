@@ -40,6 +40,9 @@ let TenantAppointmentsController = class TenantAppointmentsController {
     patchAttendance(req, appointmentId, dto) {
         return this.appointments.patchAttendance(req.user, appointmentId, dto);
     }
+    markManualReminderSent(req, appointmentId) {
+        return this.appointments.markManualReminderSent(req.user, appointmentId);
+    }
 };
 exports.TenantAppointmentsController = TenantAppointmentsController;
 __decorate([
@@ -75,6 +78,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, patch_appointment_attendance_dto_1.PatchAppointmentAttendanceDto]),
     __metadata("design:returntype", void 0)
 ], TenantAppointmentsController.prototype, "patchAttendance", null);
+__decorate([
+    (0, common_1.Patch)(':appointmentId/reminder-sent'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('appointmentId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], TenantAppointmentsController.prototype, "markManualReminderSent", null);
 exports.TenantAppointmentsController = TenantAppointmentsController = __decorate([
     (0, common_1.Controller)('tenant/appointments'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard, tenant_status_guard_1.TenantStatusGuard),

@@ -16,6 +16,21 @@ export interface ApiAppointmentDto {
   when: string;
   status: MockAppointment['status'];
   attendance: ApiAppointmentAttendance;
+  customerPhoneE164?: string | null;
+  waReminderConsent?: boolean;
+  waReminderSentAt?: string | null;
+}
+
+export interface PublicLookupAppointmentDto {
+  id: string;
+  when: string;
+  serviceLabel: string;
+  /** Nombre tal como en la reserva (para validar al cambiar horario). */
+  customer?: string;
+  /** Profesional asignado en la reserva (para huecos en reprogramación). */
+  employeeId?: string | null;
+  status: string;
+  attendance: string;
 }
 
 export function mapApiAppointmentToMock(
@@ -30,6 +45,9 @@ export function mapApiAppointmentToMock(
     status: row.status,
     attendance: row.attendance ?? 'PENDIENTE',
     tenantSlug: bookingSlug ?? undefined,
+    waReminderSentAt: row.waReminderSentAt ?? null,
+    waReminderConsent: row.waReminderConsent ?? false,
+    customerPhoneE164: row.customerPhoneE164 ?? null,
   };
 }
 
@@ -90,7 +108,14 @@ export class ApiAppointmentsService {
 
   createPublic(
     slug: string,
-    body: { customer: string; service: string; when: string; employeeId?: string },
+    body: {
+      customer: string;
+      service: string;
+      when: string;
+      employeeId?: string;
+      customerPhone?: string;
+      whatsappReminderConsent?: boolean;
+    },
   ): Observable<ApiAppointmentDto> {
     return this.http.post<ApiAppointmentDto>(
       `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/appointments`,
@@ -114,6 +139,32 @@ export class ApiAppointmentsService {
       );
   }
 
+  reschedulePublic(
+    slug: string,
+    body: { appointmentId: string; customer: string; when: string; employeeId?: string },
+  ): Observable<ApiAppointmentDto> {
+    return this.http
+      .post<ApiAppointmentDto>(
+        `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/reprogramar-cita`,
+        body,
+      )
+      .pipe(
+        tap((updated) =>
+          this.rows.update((cur) => cur.map((a) => (a.id === updated.id ? updated : a))),
+        ),
+      );
+  }
+
+  lookupPublicActiveAppointments(
+    slug: string,
+    body: { customer?: string; appointmentId?: string; customerPhone?: string },
+  ): Observable<{ appointments: PublicLookupAppointmentDto[] }> {
+    return this.http.post<{ appointments: PublicLookupAppointmentDto[] }>(
+      `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/buscar-citas`,
+      body,
+    );
+  }
+
   createPublicStoreVisit(
     slug: string,
     body: { customer: string; detail: string },
@@ -129,6 +180,19 @@ export class ApiAppointmentsService {
       .patch<ApiAppointmentDto>(
         `${environment.apiBaseUrl}/tenant/appointments/${encodeURIComponent(id)}/attendance`,
         { attendance },
+      )
+      .pipe(
+        tap((updated) =>
+          this.rows.update((cur) => cur.map((a) => (a.id === id ? updated : a))),
+        ),
+      );
+  }
+
+  patchManualReminderSent(id: string): Observable<ApiAppointmentDto> {
+    return this.http
+      .patch<ApiAppointmentDto>(
+        `${environment.apiBaseUrl}/tenant/appointments/${encodeURIComponent(id)}/reminder-sent`,
+        {},
       )
       .pipe(
         tap((updated) =>

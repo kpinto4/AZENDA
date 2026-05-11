@@ -3,4 +3,6 @@ export declare class CreatePublicAppointmentDto {
     service: string;
     when: string;
     employeeId?: string;
+    customerPhone?: string;
+    whatsappReminderConsent?: boolean;
 }

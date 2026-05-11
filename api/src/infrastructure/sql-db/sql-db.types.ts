@@ -71,6 +71,11 @@ export interface AppointmentEntity {
   when: string;
   status: AppointmentStatus;
   attendance: AppointmentAttendance;
+  /** Teléfono en dígitos internacionales sin "+" (wa.me / contacto). */
+  customerPhoneE164: string | null;
+  waReminderConsent: boolean;
+  /** ISO 8601 cuando el negocio marcó recordatorio por WhatsApp (manual) o histórico de envío automático. */
+  waReminderSentAt: string | null;
 }
 
 /** Registro enviado por clientes desde el enlace público (compra / recogida en tienda). */
@@ -86,6 +91,20 @@ export interface TenantBrandingEntity {
   tenantId: string;
   displayName: string;
   logoUrl: string | null;
+  /** Dirección o cómo llegar; se muestra en la reserva pública. */
+  publicAddress: string | null;
+  /** Enlace opcional (p. ej. Google Maps). */
+  publicMapsUrl: string | null;
+  /** Política de cancelación/reprogramación (texto libre). */
+  cancellationPolicy: string | null;
+  /** Aviso sobre recordatorios o contacto tras reservar. */
+  reminderNotice: string | null;
+  /** Dígitos E.164 sin + para wa.me del negocio (contacto / reservas). */
+  whatsappPhoneE164: string | null;
+  /** Texto por defecto para wa.me (primer mensaje al negocio). */
+  whatsappDefaultMessage: string | null;
+  /** JSON horario reserva pública: días mon–sun y franjas [{open,close},…]. */
+  publicBookingHoursJson: string | null;
   catalogLayout: 'horizontal' | 'grid';
   primaryColor: string;
   accentColor: string;
@@ -177,9 +196,9 @@ export const DEFAULT_PLATFORM_SITE_CONFIG: PlatformSiteConfig = {
       'Azenda combina agenda inteligente, POS ligero y stock para negocios que viven de las reservas. Activa solo los módulos que necesitas.',
     sectionTitle: 'Todo lo esencial, sin ruido',
     sectionSub: 'Diseñado para barberías, spas, clínicas ligeras y talleres con cita previa.',
-    demoTitle: 'Reservas públicas + WhatsApp',
+    demoTitle: 'Reservas públicas y contacto por WhatsApp',
     demoSub:
-      'Tus clientes eligen servicio, fecha y hora en una página limpia. Integración WhatsApp por niveles (enlace, plantilla, futuro chatbot).',
+      'Tus clientes eligen servicio, fecha y hora en una página limpia. Horario por franjas y recordatorios vía WhatsApp manual (wa.me).',
     plansSectionTitle: 'Planes claros',
     plansSectionSub: 'Los límites reales (empleados, citas/mes, módulos) los aplicará el backend.',
     ctaTitle: 'Listo para operar tu negocio real',

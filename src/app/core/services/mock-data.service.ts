@@ -1,4 +1,5 @@
 import { DestroyRef, Injectable, NgZone, inject, signal } from '@angular/core';
+import { publicCustomerNameMatches } from '../customer-name-match';
 import type { ApiTenantDto } from './api-tenants-admin.service';
 
 const PRODUCTS_LS_KEY = 'azenda.mock.products.v1';
@@ -7,6 +8,13 @@ const TENANT_CUSTOMIZATION_LS_KEY = 'azenda.mock.tenant.customization.v1';
 export interface TenantBranding {
   displayName: string;
   logoUrl: string | null;
+  publicAddress: string | null;
+  publicMapsUrl: string | null;
+  cancellationPolicy: string | null;
+  reminderNotice: string | null;
+  whatsappPhoneE164: string | null;
+  whatsappDefaultMessage: string | null;
+  publicBookingHoursJson: string | null;
   catalogLayout: 'horizontal' | 'grid';
   primaryColor: string;
   accentColor: string;
@@ -133,6 +141,11 @@ export interface MockAppointment {
   attendance?: MockAppointmentAttendance;
   /** Negocio al que pertenece la cita (reservas públicas / panel tenant). */
   tenantSlug?: string;
+  /** Solo API: recordatorio manual por WhatsApp marcado como enviado. */
+  waReminderSentAt?: string | null;
+  waReminderConsent?: boolean;
+  /** Solo API: móvil del cliente (wa.me). */
+  customerPhoneE164?: string | null;
 }
 
 export interface MockPublicStoreVisit {
@@ -253,6 +266,13 @@ function defaultTenantBranding(name: string): TenantBranding {
   return {
     displayName: name,
     logoUrl: null,
+    publicAddress: null,
+    publicMapsUrl: null,
+    cancellationPolicy: null,
+    reminderNotice: null,
+    whatsappPhoneE164: null,
+    whatsappDefaultMessage: null,
+    publicBookingHoursJson: null,
     catalogLayout: 'horizontal',
     primaryColor: '#4f46e5',
     accentColor: '#06b6d4',
@@ -658,6 +678,24 @@ export class MockDataService {
       displayName: (patch?.displayName ?? base.displayName).trim() || base.displayName,
       logoUrl:
         patch?.logoUrl === undefined || patch.logoUrl === '' ? base.logoUrl : patch.logoUrl,
+      publicAddress:
+        patch?.publicAddress !== undefined ? patch.publicAddress : base.publicAddress,
+      publicMapsUrl:
+        patch?.publicMapsUrl !== undefined ? patch.publicMapsUrl : base.publicMapsUrl,
+      cancellationPolicy:
+        patch?.cancellationPolicy !== undefined ? patch.cancellationPolicy : base.cancellationPolicy,
+      reminderNotice:
+        patch?.reminderNotice !== undefined ? patch.reminderNotice : base.reminderNotice,
+      whatsappPhoneE164:
+        patch?.whatsappPhoneE164 !== undefined ? patch.whatsappPhoneE164 : base.whatsappPhoneE164,
+      whatsappDefaultMessage:
+        patch?.whatsappDefaultMessage !== undefined
+          ? patch.whatsappDefaultMessage
+          : base.whatsappDefaultMessage,
+      publicBookingHoursJson:
+        patch?.publicBookingHoursJson !== undefined
+          ? patch.publicBookingHoursJson
+          : base.publicBookingHoursJson,
       borderRadiusPx: clampBorderRadius(patch?.borderRadiusPx ?? base.borderRadiusPx),
       useGradient: !!(patch?.useGradient ?? base.useGradient),
       gradientFrom: patch?.gradientFrom ?? base.gradientFrom,
@@ -861,7 +899,7 @@ export class MockDataService {
     if (cat?.length) {
       return cat.map((s) => this.serviceDisplayLabel(s));
     }
-    return ['Configura tus servicios en Panel → Catálogo'];
+    return ['Configura tus servicios en el menú Catálogo del panel.'];
   }
 
   listBusinessServicesForSlug(slug: string): MockBusinessService[] {
@@ -1043,19 +1081,13 @@ export class MockDataService {
 
   /** Cliente confirma asistencia (mock): slug del negocio, id de cita y nombre igual al de la reserva. */
   confirmPublicAttendanceMock(slug: string, appointmentId: string, customer: string): boolean {
-    const norm = (s: string) =>
-      s
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, ' ');
-    const target = norm(customer);
     let ok = false;
     this.appointments.update((list) =>
       list.map((a) => {
         if (
           a.id === appointmentId &&
           a.tenantSlug === slug &&
-          norm(a.customer) === target &&
+          publicCustomerNameMatches(a.customer, customer) &&
           a.status !== 'cancelada'
         ) {
           ok = true;
@@ -1069,6 +1101,97 @@ export class MockDataService {
       }),
     );
     return ok;
+  }
+
+  /** Busca citas activas (mock): solo referencia o móvil; nombre opcional para filtrar. */
+  lookupPublicAppointmentsMock(
+    slug: string,
+    customer: string | undefined,
+    appointmentId?: string,
+    customerPhoneRaw?: string,
+  ): {
+    id: string;
+    when: string;
+    serviceLabel: string;
+    customer: string;
+    employeeId: string | null;
+    status: MockAppointment['status'];
+    attendance: MockAppointmentAttendance;
+  }[] {
+    const ref = appointmentId?.trim();
+    const phoneDigits = customerPhoneRaw?.trim()
+      ? this.normalizePhoneDigitsForBookingMock(customerPhoneRaw)
+      : null;
+    if (!ref && !phoneDigits) {
+      return [];
+    }
+    const nameFilter = (customer ?? '').trim();
+    const list = this.appointments().filter((a) => {
+      if (a.tenantSlug !== slug || a.status === 'cancelada' || a.attendance !== 'PENDIENTE') {
+        return false;
+      }
+      if (!nameFilter) {
+        return true;
+      }
+      return publicCustomerNameMatches(a.customer, nameFilter);
+    });
+    let matched = list;
+    if (ref) {
+      matched = list.filter((a) => a.id === ref);
+    } else if (phoneDigits) {
+      matched = list.filter((a) => (a.customerPhoneE164 ?? '') === phoneDigits);
+    }
+    return matched.map((a) => ({
+      id: a.id,
+      when: a.when,
+      serviceLabel: this.publicServiceLabelFromBookingService(a.service),
+      customer: a.customer,
+      employeeId: this.readEmployeeIdFromMockService(a.service),
+      status: a.status,
+      attendance: a.attendance ?? 'PENDIENTE',
+    }));
+  }
+
+  private publicServiceLabelFromBookingService(service: string): string {
+    const marker = '· Empleado';
+    const idx = service.indexOf(marker);
+    return idx >= 0 ? service.slice(0, idx).trim() : service.trim();
+  }
+
+  private readEmployeeIdFromMockService(service: string): string | null {
+    const m = /\bEmpleadoId:([A-Za-z0-9_-]+)\b/.exec(service);
+    return m?.[1] ?? null;
+  }
+
+  private mockAppointmentStartMs(when: string): number | null {
+    const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{1,2}):(\d{2})/.exec(when.trim());
+    if (!m) {
+      return null;
+    }
+    const hh = m[2].padStart(2, '0');
+    const d = new Date(`${m[1]}T${hh}:${m[3]}:00`);
+    return Number.isNaN(d.getTime()) ? null : d.getTime();
+  }
+
+  /** Aproximación demo al E.164 en dígitos (alineada con la API para España por defecto). */
+  private normalizePhoneDigitsForBookingMock(raw: string): string | null {
+    let d = raw.replace(/\D/g, '');
+    if (!d) {
+      return null;
+    }
+    if (d.startsWith('00')) {
+      d = d.slice(2);
+    }
+    if (d.startsWith('0') && d.length >= 9) {
+      d = `34${d.replace(/^0+/, '')}`;
+    }
+    if (d.length === 9 && /^\d{9}$/.test(d)) {
+      d = `34${d}`;
+    }
+    if (d.length < 10 || d.length > 15) {
+      return null;
+    }
+    return d;
   }
 
   publicStoreVisitsForSlug(slug: string | null): MockPublicStoreVisit[] {
@@ -1113,6 +1236,7 @@ export class MockDataService {
     service: string,
     when: string,
     bookingSlug: string,
+    customerPhoneRaw?: string | null,
   ): boolean {
     const occupied = this
       .appointments()
@@ -1120,6 +1244,9 @@ export class MockDataService {
     if (occupied) {
       return false;
     }
+    const phoneDigits = customerPhoneRaw?.trim()
+      ? this.normalizePhoneDigitsForBookingMock(customerPhoneRaw)
+      : null;
     this.addAppointment({
       customer,
       service,
@@ -1127,8 +1254,52 @@ export class MockDataService {
       status: 'pendiente',
       attendance: 'PENDIENTE',
       tenantSlug: bookingSlug,
+      customerPhoneE164: phoneDigits,
     });
     return true;
+  }
+
+  /** Cambia fecha/hora de una cita mock; valida nombre, antelación 90 min y hueco libre. `serviceDisplay` opcional. */
+  reschedulePublicBookingMock(
+    bookingSlug: string,
+    appointmentId: string,
+    customerName: string,
+    newWhen: string,
+    serviceDisplay?: string,
+  ): boolean {
+    let updated = false;
+    this.appointments.update((cur) => {
+      const idx = cur.findIndex((a) => a.id === appointmentId && a.tenantSlug === bookingSlug);
+      if (idx < 0) {
+        return cur;
+      }
+      const a = cur[idx];
+      const oldMs = this.mockAppointmentStartMs(a.when);
+      if (oldMs != null && oldMs - Date.now() < 90 * 60 * 1000) {
+        return cur;
+      }
+      if (!publicCustomerNameMatches(a.customer, customerName)) {
+        return cur;
+      }
+      if (a.status === 'cancelada' || a.attendance !== 'PENDIENTE') {
+        return cur;
+      }
+      const conflict = cur.some(
+        (x) =>
+          x.tenantSlug === bookingSlug &&
+          x.when.trim() === newWhen.trim() &&
+          x.status !== 'cancelada' &&
+          x.id !== appointmentId,
+      );
+      if (conflict) {
+        return cur;
+      }
+      updated = true;
+      const next = [...cur];
+      next[idx] = { ...a, when: newWhen.trim(), service: serviceDisplay ?? a.service };
+      return next;
+    });
+    return updated;
   }
 
   addEmployee(name: string, email: string, panelRole: 'ADMIN' | 'EMPLEADO'): void {

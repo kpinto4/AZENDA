@@ -1,8 +1,29 @@
 <div class="az-container az-page">
+  @if (canManageOperations()) {
+    <div class="az-card mt onboarding-card">
+      <h3>Primeros pasos</h3>
+      <p class="muted small">
+        Completa lo básico en pocos minutos: servicios, prueba tu enlace público y ajusta los textos que ven tus clientes al
+        reservar.
+      </p>
+      <ol class="onboarding-steps">
+        <li>
+          Define o revisa <a routerLink="/app/inventario">productos y servicios</a> (precios y duración lógica ayudan en
+          agenda).
+        </li>
+        <li>
+          Copia tu <a routerLink="/app/configuracion">enlace de reservas</a> y haz una prueba como cliente.
+        </li>
+        <li>
+          En esta misma página, rellena «Información para quien reserva» antes de publicar el enlace.
+        </li>
+      </ol>
+    </div>
+  }
   <div class="az-page-head">
     <div>
       <h1 class="az-page-title">Configuración</h1>
-      <p class="az-page-sub">Horarios, servicios, WhatsApp y branding: persistencia en API más adelante.</p>
+      <p class="az-page-sub">Horario de reservas, WhatsApp del negocio, catálogo y branding (persistencia en API con cuenta real).</p>
     </div>
     <button type="button" class="az-btn az-btn-secondary" (click)="toggleDark()">
       {{ dark() ? 'Modo claro' : 'Modo oscuro (preview)' }}
@@ -86,7 +107,7 @@
         <label class="az-label">URL principal (reservar)</label>
         <input class="az-input wide" type="text" readonly [value]="publicBookingUrl()" />
         @if (publicClientUrls(); as urls) {
-          <label class="az-label lbl-top">Confirmar asistencia (misma página, pestaña)</label>
+          <label class="az-label lbl-top">Mis citas / buscador (misma página, pestaña)</label>
           <div class="url-row">
             <input class="az-input wide" type="text" readonly [value]="urls.asistencia" />
             <button type="button" class="az-btn az-btn-secondary" (click)="copyUrl(urls.asistencia)">Copiar</button>
@@ -102,24 +123,57 @@
   </div>
 
   <div class="az-grid cols-2">
-    <div class="az-card">
-      <h3>Horario del negocio (mock)</h3>
-      <form [formGroup]="form">
-        <label class="az-label">Apertura</label>
-        <input class="az-input wide" type="time" formControlName="openTime" />
-        <label class="az-label">Cierre</label>
-        <input class="az-input wide" type="time" formControlName="closeTime" />
-      </form>
+    <div class="az-card" [formGroup]="hoursForm">
+      <h3>Horario de reservas públicas</h3>
+      <p class="muted small">
+        Días abiertos y franjas (media hora entre inicio y fin). El cliente solo verá huecos dentro de lo que marques aquí.
+      </p>
+      @for (d of dayScheduleMeta; track d.code) {
+        <div class="day-hours-block" [formGroupName]="d.code">
+          <label class="day-hours-head">
+            <input type="checkbox" formControlName="enabled" />
+            {{ d.label }}
+          </label>
+          @if (hoursForm.get(d.code)?.get('enabled')?.value) {
+            <div class="day-hours-row">
+              <input type="time" class="az-input" formControlName="aOpen" />
+              <span class="day-hours-sep">–</span>
+              <input type="time" class="az-input" formControlName="aClose" />
+            </div>
+            <label class="split-check">
+              <input type="checkbox" formControlName="split" />
+              Partir el día (segunda franja)
+            </label>
+            @if (hoursForm.get(d.code)?.get('split')?.value) {
+              <div class="day-hours-row">
+                <input type="time" class="az-input" formControlName="bOpen" />
+                <span class="day-hours-sep">–</span>
+                <input type="time" class="az-input" formControlName="bClose" />
+              </div>
+            }
+          }
+        </div>
+      }
+      <button type="button" class="az-btn az-btn-primary mt" (click)="saveScheduleAndWhatsapp()">
+        Guardar horario y WhatsApp
+      </button>
     </div>
     <div class="az-card">
-      <h3>WhatsApp</h3>
+      <h3>WhatsApp del negocio</h3>
+      <p class="muted small">
+        Teléfono y texto inicial para <code>wa.me</code> (cliente abre chat contigo). Los recordatorios al cliente se envían
+        desde tu WhatsApp con el enlace del panel de citas.
+      </p>
       <form [formGroup]="form">
-        <label class="az-label">Teléfono (E.164)</label>
-        <input class="az-input wide" formControlName="waPhone" />
+        <label class="az-label">Teléfono (con prefijo)</label>
+        <input class="az-input wide" formControlName="waPhone" placeholder="+34 600 000 000" />
         <label class="az-label">Mensaje base</label>
         <input class="az-input wide" formControlName="waMessage" />
       </form>
-      <a class="az-btn az-btn-primary mt" [href]="whatsappHref()" target="_blank" rel="noopener">Probar enlace</a>
+      <div class="wa-actions mt">
+        <a class="az-btn az-btn-secondary" [href]="whatsappHref()" target="_blank" rel="noopener">Probar enlace</a>
+        <button type="button" class="az-btn az-btn-primary" (click)="saveScheduleAndWhatsapp()">Guardar</button>
+      </div>
     </div>
   </div>
 
@@ -137,6 +191,53 @@
         <div>
           <label class="az-label">Nombre de marca visible</label>
           <input class="az-input wide" formControlName="displayName" />
+        </div>
+        <div class="full-row">
+          <h4 class="subsection-title">Información para quien reserva (enlace público)</h4>
+          <p class="muted small">
+            Se muestra en el último paso antes de confirmar la cita. Si dejas un campo vacío, el cliente verá un texto
+            genérico útil (excepto dirección y mapa, que solo aparecen si los rellenas).
+          </p>
+        </div>
+        <div class="full-row">
+          <label class="az-label" for="pub-addr">Dirección o cómo llegar</label>
+          <textarea
+            id="pub-addr"
+            class="az-input wide branding-ta"
+            rows="2"
+            formControlName="publicAddress"
+            placeholder="Ej.: Calle Mayor 12, 2º puerta B"
+          ></textarea>
+        </div>
+        <div class="full-row">
+          <label class="az-label" for="pub-maps">Enlace a mapa o ficha (opcional)</label>
+          <input
+            id="pub-maps"
+            class="az-input wide"
+            type="url"
+            formControlName="publicMapsUrl"
+            placeholder="https://maps.app.goo.gl/…"
+          />
+        </div>
+        <div class="full-row">
+          <label class="az-label" for="pub-cancel">Política de cancelación o cambios</label>
+          <textarea
+            id="pub-cancel"
+            class="az-input wide branding-ta"
+            rows="3"
+            formControlName="cancellationPolicy"
+            placeholder="Ej.: Cancelación gratuita hasta 24 h antes…"
+          ></textarea>
+        </div>
+        <div class="full-row">
+          <label class="az-label" for="pub-reminder">Aviso sobre contacto o recordatorios</label>
+          <textarea
+            id="pub-reminder"
+            class="az-input wide branding-ta"
+            rows="2"
+            formControlName="reminderNotice"
+            placeholder="Ej.: Te llamaremos para confirmar. No enviamos SMS automáticos."
+          ></textarea>
         </div>
         <div class="full-row">
           <label class="az-label">Logo (opcional)</label>

@@ -73,12 +73,17 @@ export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
         when: string;
         status?: AppointmentStatus;
         attendance?: AppointmentAttendance;
+        customerPhoneE164?: string | null;
+        waReminderConsent?: boolean;
     }): Promise<AppointmentEntity>;
+    markAppointmentReminderSentForTenant(appointmentId: string, tenantId: string): Promise<AppointmentEntity | undefined>;
     findAppointmentByTenantAndWhen(tenantId: string, when: string): Promise<AppointmentEntity | undefined>;
     findAppointmentById(appointmentId: string): Promise<AppointmentEntity | undefined>;
+    updateAppointmentWhenAndService(tenantId: string, appointmentId: string, when: string, service: string): Promise<AppointmentEntity | undefined>;
     updateAppointmentStatus(appointmentId: string, tenantId: string, status: AppointmentStatus): Promise<AppointmentEntity | undefined>;
     updateAppointmentAttendance(appointmentId: string, tenantId: string, attendance: AppointmentAttendance): Promise<AppointmentEntity | undefined>;
     confirmPublicAppointmentAttendance(slug: string, appointmentId: string, customerName: string): Promise<AppointmentEntity | undefined>;
+    lookupPublicAppointmentsForClient(slug: string, customerNameRaw: string | undefined | null, appointmentIdRaw?: string | null, customerPhoneRaw?: string | null): Promise<AppointmentEntity[]>;
     listStoreVisitsByTenantId(tenantId: string): Promise<StoreVisitLogEntity[]>;
     createStoreVisitLog(data: {
         tenantId: string;

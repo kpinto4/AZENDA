@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -58,5 +60,14 @@ export class TenantAppointmentsController {
     @Body() dto: PatchAppointmentAttendanceDto,
   ) {
     return this.appointments.patchAttendance(req.user, appointmentId, dto);
+  }
+
+  @Patch(':appointmentId/reminder-sent')
+  @HttpCode(HttpStatus.OK)
+  markManualReminderSent(
+    @Req() req: AuthenticatedRequest,
+    @Param('appointmentId') appointmentId: string,
+  ) {
+    return this.appointments.markManualReminderSent(req.user, appointmentId);
   }
 }

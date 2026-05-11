@@ -8,15 +8,25 @@
       @if (tenantBranding().logoUrl; as logo) {
         <img class="brand-logo" [src]="logo" [alt]="tenantBranding().displayName" />
       }
-      <span class="logo">{{ tenantBranding().displayName || 'Azenda' }}</span>
-      <span class="tenant">{{ session.tenantName() || 'Tu negocio' }}</span>
+      <div class="brand-text">
+        <span class="logo">{{ tenantBranding().displayName || 'Azenda' }}</span>
+        <span class="tenant">{{ session.tenantName() || 'Tu negocio' }}</span>
+        <span class="brand-tag">Panel</span>
+      </div>
     </div>
     <nav (pointerdown)="onSidebarPointerDown($event)">
       <div class="nav-group">
         <p class="nav-group-title">Principal</p>
         <div class="nav-links-grid">
-          <a routerLink="/app/panel" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Panel</a>
-          <a routerLink="/app/citas" routerLinkActive="active">Citas</a>
+          <a routerLink="/app/panel" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"
+            ><span class="nav-ico" aria-hidden="true">▤</span> Resumen</a
+          >
+          <a routerLink="/app/citas" routerLinkActive="active" class="nav-with-badge">
+            <span class="nav-ico" aria-hidden="true">◷</span> Citas
+            @if (citasNewBadge() > 0) {
+              <span class="shell-nav-badge">{{ citasNewBadge() }}</span>
+            }
+          </a>
         </div>
       </div>
 
@@ -25,10 +35,14 @@
           <p class="nav-group-title">Comercial</p>
           <div class="nav-links-grid">
             @if (session.modules().sales) {
-              <a routerLink="/app/ventas" routerLinkActive="active">Ventas</a>
+              <a routerLink="/app/ventas" routerLinkActive="active"
+                ><span class="nav-ico" aria-hidden="true">◆</span> Ventas</a
+              >
             }
             @if (session.modules().inventory) {
-              <a routerLink="/app/inventario" routerLinkActive="active">Productos y servicios</a>
+              <a routerLink="/app/inventario" routerLinkActive="active"
+                ><span class="nav-ico" aria-hidden="true">☰</span> Catálogo</a
+              >
             }
           </div>
         </div>
@@ -38,30 +52,37 @@
         <p class="nav-group-title">Equipo y ajustes</p>
         <div class="nav-links-grid">
           @if (session.role() === 'TENANT_ADMIN') {
-            <a routerLink="/app/empleados" routerLinkActive="active">Empleados</a>
-            <a routerLink="/app/configuracion" routerLinkActive="active">Configuración</a>
+            <a routerLink="/app/empleados" routerLinkActive="active"
+              ><span class="nav-ico" aria-hidden="true">◎</span> Empleados</a
+            >
+            <a routerLink="/app/configuracion" routerLinkActive="active"
+              ><span class="nav-ico" aria-hidden="true">⚙</span> Configuración</a
+            >
           }
         </div>
       </div>
 
       @if (session.publicBookingSlug()) {
         <div class="nav-group">
-          <p class="nav-group-title">Cliente</p>
+          <p class="nav-group-title">Canal cliente</p>
           <div class="nav-links-grid">
             <a
               class="sidebar-booking"
               [routerLink]="['/reservar', session.publicBookingSlug()]"
               target="_blank"
               rel="noopener"
-              >Enlace reservas</a
+              ><span class="nav-ico" aria-hidden="true">↗</span> Página de reservas</a
             >
           </div>
         </div>
       }
     </nav>
     <div class="foot">
-      <span class="user">{{ session.userName() }}</span>
-      <button type="button" class="az-btn az-btn-ghost small" (click)="logout()">Salir</button>
+      <div class="foot-user">
+        <span class="user-label">Sesión</span>
+        <span class="user">{{ session.userName() }}</span>
+      </div>
+      <button type="button" class="az-btn az-btn-ghost small foot-logout" (click)="logout()">Cerrar sesión</button>
     </div>
   </aside>
   <main class="main">
@@ -82,6 +103,8 @@
         <strong>Estado del plan:</strong> {{ msg }}
       </div>
     }
-    <router-outlet />
+    <div class="tenant-main-inner">
+      <router-outlet />
+    </div>
   </main>
 </div>

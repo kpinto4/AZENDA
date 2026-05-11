@@ -1,6 +1,8 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Pool } from 'pg';
 import { AppSystem, UserRole } from '../../auth/auth.types';
+import { publicCustomerNameMatches } from '../../common/customer-name-match.util';
+import { normalizePhoneToWaDigits } from '../../common/phone-e164.util';
 import {
   AppointmentAttendance,
   AppointmentEntity,
@@ -613,7 +615,8 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
   async listAppointmentsByTenantId(tenantId: string): Promise<AppointmentEntity[]> {
     const rows = await this.queryRows(
       `
-        SELECT id, tenant_id, customer, service, when_at, status, attendance
+        SELECT id, tenant_id, customer, service, when_at, status, attendance,
+               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
         FROM appointments
         WHERE tenant_id = ?
         ORDER BY when_at ASC
@@ -630,27 +633,51 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
     when: string;
     status?: AppointmentStatus;
     attendance?: AppointmentAttendance;
+    customerPhoneE164?: string | null;
+    waReminderConsent?: boolean;
   }): Promise<AppointmentEntity> {
     const id = `appt_${Date.now()}`;
     const status = data.status ?? 'pendiente';
     const attendance = data.attendance ?? 'PENDIENTE';
+    const phone = data.customerPhoneE164?.trim() || null;
+    const waConsent = Boolean(data.waReminderConsent);
     await this.exec(
       `
-        INSERT INTO appointments (id, tenant_id, customer, service, when_at, status, attendance)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO appointments (
+          id, tenant_id, customer, service, when_at, status, attendance,
+          customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
       `,
-      [id, data.tenantId, data.customer, data.service, data.when, status, attendance],
+      [id, data.tenantId, data.customer, data.service, data.when, status, attendance, phone, waConsent],
     );
 
-    return {
-      id,
-      tenantId: data.tenantId,
-      customer: data.customer,
-      service: data.service,
-      when: data.when,
-      status,
-      attendance,
-    };
+    const created = await this.findAppointmentById(id);
+    if (!created) {
+      throw new Error('No se pudo leer la cita recien creada');
+    }
+    return created;
+  }
+
+  async markAppointmentReminderSentForTenant(
+    appointmentId: string,
+    tenantId: string,
+  ): Promise<AppointmentEntity | undefined> {
+    await this.exec(
+      `UPDATE appointments SET wa_reminder_sent_at = ? WHERE id = ? AND tenant_id = ?`,
+      [new Date().toISOString(), appointmentId, tenantId],
+    );
+    const row = await this.queryOne(
+      `
+        SELECT id, tenant_id, customer, service, when_at, status, attendance,
+               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+        FROM appointments
+        WHERE id = ? AND tenant_id = ?
+        LIMIT 1
+      `,
+      [appointmentId, tenantId],
+    );
+    return row ? this.mapAppointmentRow(row) : undefined;
   }
 
   async findAppointmentByTenantAndWhen(
@@ -659,7 +686,8 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
   ): Promise<AppointmentEntity | undefined> {
     const row = await this.queryOne(
       `
-        SELECT id, tenant_id, customer, service, when_at, status, attendance
+        SELECT id, tenant_id, customer, service, when_at, status, attendance,
+               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
         FROM appointments
         WHERE tenant_id = ? AND when_at = ?
         LIMIT 1
@@ -672,13 +700,31 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
   async findAppointmentById(appointmentId: string): Promise<AppointmentEntity | undefined> {
     const row = await this.queryOne(
       `
-        SELECT id, tenant_id, customer, service, when_at, status, attendance
+        SELECT id, tenant_id, customer, service, when_at, status, attendance,
+               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
         FROM appointments
         WHERE id = ?
       `,
       [appointmentId],
     );
     return row ? this.mapAppointmentRow(row) : undefined;
+  }
+
+  async updateAppointmentWhenAndService(
+    tenantId: string,
+    appointmentId: string,
+    when: string,
+    service: string,
+  ): Promise<AppointmentEntity | undefined> {
+    const current = await this.findAppointmentById(appointmentId);
+    if (!current || current.tenantId !== tenantId) {
+      return undefined;
+    }
+    await this.exec(
+      `UPDATE appointments SET when_at = ?, service = ? WHERE id = ? AND tenant_id = ?`,
+      [when, service, appointmentId, tenantId],
+    );
+    return this.findAppointmentById(appointmentId);
   }
 
   async updateAppointmentStatus(
@@ -739,12 +785,7 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
     if (appt.status === 'cancelada') {
       return undefined;
     }
-    const norm = (s: string) =>
-      s
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, ' ');
-    if (norm(appt.customer) !== norm(customerName)) {
+    if (!publicCustomerNameMatches(appt.customer, customerName)) {
       return undefined;
     }
     await this.exec(
@@ -752,6 +793,64 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
       ['ASISTIO', 'confirmada', appointmentId, tenant.id],
     );
     return { ...appt, attendance: 'ASISTIO', status: 'confirmada' };
+  }
+
+  /**
+   * Citas del tenant aún pendientes de confirmar asistencia: por referencia exacta o por móvil guardado en la reserva.
+   */
+  async lookupPublicAppointmentsForClient(
+    slug: string,
+    customerNameRaw: string | undefined | null,
+    appointmentIdRaw?: string | null,
+    customerPhoneRaw?: string | null,
+  ): Promise<AppointmentEntity[]> {
+    const tenant = await this.findTenantBySlug(slug);
+    if (!tenant || tenant.status !== 'ACTIVE' || !tenant.modules.citas) {
+      return [];
+    }
+    const customerName = (customerNameRaw ?? '').trim();
+    const ref = appointmentIdRaw?.trim() ?? '';
+    const defaultCc = (process.env.PUBLIC_BOOKING_DEFAULT_COUNTRY_CODE ?? '34').trim() || '34';
+    const phoneDigits = customerPhoneRaw?.trim()
+      ? normalizePhoneToWaDigits(customerPhoneRaw, defaultCc)
+      : null;
+
+    if (!ref && !phoneDigits) {
+      return [];
+    }
+
+    let candidates: AppointmentEntity[] = [];
+    if (ref) {
+      const appt = await this.findAppointmentById(ref);
+      if (appt && appt.tenantId === tenant.id) {
+        candidates = [appt];
+      }
+    } else if (phoneDigits) {
+      const rows = await this.queryRows(
+        `
+          SELECT id, tenant_id, customer, service, when_at, status, attendance,
+                 customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+          FROM appointments
+          WHERE tenant_id = ? AND customer_phone_e164 = ?
+            AND status != 'cancelada'
+            AND attendance = 'PENDIENTE'
+          ORDER BY when_at DESC
+          LIMIT 25
+        `,
+        [tenant.id, phoneDigits],
+      );
+      candidates = rows.map((row) => this.mapAppointmentRow(row));
+    }
+
+    return candidates.filter((a) => {
+      if (a.attendance !== 'PENDIENTE' || a.status === 'cancelada') {
+        return false;
+      }
+      if (!customerName) {
+        return true;
+      }
+      return publicCustomerNameMatches(a.customer, customerName);
+    });
   }
 
   async listStoreVisitsByTenantId(tenantId: string): Promise<StoreVisitLogEntity[]> {
@@ -845,7 +944,9 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
   async getTenantBranding(tenantId: string): Promise<TenantBrandingEntity> {
     const row = await this.queryOne(
       `
-        SELECT tenant_id, display_name, logo_url, catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
+        SELECT tenant_id, display_name, logo_url, public_address, public_maps_url, cancellation_policy, reminder_notice,
+               whatsapp_phone_e164, whatsapp_default_message, public_booking_hours_json,
+               catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
                border_radius_px, use_gradient, gradient_from, gradient_to, gradient_angle_deg
         FROM tenant_branding
         WHERE tenant_id = ?
@@ -864,6 +965,16 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
     patch: Partial<Omit<TenantBrandingEntity, 'tenantId'>>,
   ): Promise<TenantBrandingEntity> {
     const current = await this.getTenantBranding(tenantId);
+    const strOrNull = (v: string | null | undefined, cur: string | null): string | null => {
+      if (v === undefined) {
+        return cur;
+      }
+      if (v === null) {
+        return null;
+      }
+      const t = String(v).trim();
+      return t.length ? t : null;
+    };
     const next: TenantBrandingEntity = {
       ...current,
       ...patch,
@@ -874,6 +985,28 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
           : patch.logoUrl === ''
             ? null
             : patch.logoUrl,
+      publicAddress: strOrNull(patch.publicAddress, current.publicAddress),
+      publicMapsUrl: strOrNull(patch.publicMapsUrl, current.publicMapsUrl),
+      cancellationPolicy: strOrNull(patch.cancellationPolicy, current.cancellationPolicy),
+      reminderNotice: strOrNull(patch.reminderNotice, current.reminderNotice),
+      whatsappPhoneE164:
+        patch.whatsappPhoneE164 === undefined
+          ? current.whatsappPhoneE164
+          : (() => {
+              const raw = patch.whatsappPhoneE164;
+              if (raw === null || raw === '') {
+                return null;
+              }
+              const digits = String(raw).replace(/\D/g, '');
+              return digits.length ? digits : null;
+            })(),
+      whatsappDefaultMessage: strOrNull(patch.whatsappDefaultMessage, current.whatsappDefaultMessage),
+      publicBookingHoursJson:
+        patch.publicBookingHoursJson === undefined
+          ? current.publicBookingHoursJson
+          : patch.publicBookingHoursJson === null || String(patch.publicBookingHoursJson).trim() === ''
+            ? null
+            : String(patch.publicBookingHoursJson).trim(),
       catalogLayout:
         patch.catalogLayout === 'grid' || patch.catalogLayout === 'horizontal'
           ? patch.catalogLayout
@@ -882,13 +1015,22 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
     await this.exec(
       `
         UPDATE tenant_branding
-        SET display_name = ?, logo_url = ?, catalog_layout = ?, primary_color = ?, accent_color = ?, bg_color = ?, surface_color = ?, text_color = ?,
+        SET display_name = ?, logo_url = ?, public_address = ?, public_maps_url = ?, cancellation_policy = ?, reminder_notice = ?,
+            whatsapp_phone_e164 = ?, whatsapp_default_message = ?, public_booking_hours_json = ?,
+            catalog_layout = ?, primary_color = ?, accent_color = ?, bg_color = ?, surface_color = ?, text_color = ?,
             border_radius_px = ?, use_gradient = ?, gradient_from = ?, gradient_to = ?, gradient_angle_deg = ?
         WHERE tenant_id = ?
       `,
       [
         next.displayName,
         next.logoUrl,
+        next.publicAddress,
+        next.publicMapsUrl,
+        next.cancellationPolicy,
+        next.reminderNotice,
+        next.whatsappPhoneE164,
+        next.whatsappDefaultMessage,
+        next.publicBookingHoursJson,
         next.catalogLayout,
         next.primaryColor,
         next.accentColor,
@@ -1223,6 +1365,31 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
+    if (!(await this.columnExists('tenant_branding', 'public_address'))) {
+      await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN public_address TEXT NULL`);
+    }
+    if (!(await this.columnExists('tenant_branding', 'public_maps_url'))) {
+      await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN public_maps_url TEXT NULL`);
+    }
+    if (!(await this.columnExists('tenant_branding', 'cancellation_policy'))) {
+      await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN cancellation_policy TEXT NULL`);
+    }
+    if (!(await this.columnExists('tenant_branding', 'reminder_notice'))) {
+      await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN reminder_notice TEXT NULL`);
+    }
+
+    if (!(await this.columnExists('appointments', 'customer_phone_e164'))) {
+      await this.execScript(`ALTER TABLE appointments ADD COLUMN customer_phone_e164 TEXT NULL`);
+    }
+    if (!(await this.columnExists('appointments', 'wa_reminder_consent'))) {
+      await this.execScript(
+        `ALTER TABLE appointments ADD COLUMN wa_reminder_consent BOOLEAN NOT NULL DEFAULT false`,
+      );
+    }
+    if (!(await this.columnExists('appointments', 'wa_reminder_sent_at'))) {
+      await this.execScript(`ALTER TABLE appointments ADD COLUMN wa_reminder_sent_at TEXT NULL`);
+    }
+
     const tenantRows = await this.queryRows(`SELECT id, name FROM tenants`);
     for (const t of tenantRows) {
       await this.ensureTenantBranding(String(t.id), String(t.name));
@@ -1279,6 +1446,9 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
         when_at TEXT NOT NULL,
         status TEXT NOT NULL,
         attendance TEXT NOT NULL DEFAULT 'PENDIENTE',
+        customer_phone_e164 TEXT NULL,
+        wa_reminder_consent BOOLEAN NOT NULL DEFAULT false,
+        wa_reminder_sent_at TEXT NULL,
         CONSTRAINT fk_appt_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
       )
     `);
@@ -1305,6 +1475,10 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
         tenant_id TEXT PRIMARY KEY,
         display_name TEXT NOT NULL,
         logo_url TEXT NULL,
+        public_address TEXT NULL,
+        public_maps_url TEXT NULL,
+        cancellation_policy TEXT NULL,
+        reminder_notice TEXT NULL,
         catalog_layout TEXT NOT NULL DEFAULT 'horizontal',
         primary_color TEXT NOT NULL DEFAULT '#4f46e5',
         accent_color TEXT NOT NULL DEFAULT '#06b6d4',
@@ -1316,9 +1490,22 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
         gradient_from TEXT NOT NULL DEFAULT '#4f46e5',
         gradient_to TEXT NOT NULL DEFAULT '#06b6d4',
         gradient_angle_deg INT NOT NULL DEFAULT 135,
+        whatsapp_phone_e164 TEXT NULL,
+        whatsapp_default_message TEXT NULL,
+        public_booking_hours_json TEXT NULL,
         CONSTRAINT fk_branding_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
       )
     `);
+
+    if (!(await this.columnExists('tenant_branding', 'whatsapp_phone_e164'))) {
+      await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN whatsapp_phone_e164 TEXT NULL`);
+    }
+    if (!(await this.columnExists('tenant_branding', 'whatsapp_default_message'))) {
+      await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN whatsapp_default_message TEXT NULL`);
+    }
+    if (!(await this.columnExists('tenant_branding', 'public_booking_hours_json'))) {
+      await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN public_booking_hours_json TEXT NULL`);
+    }
 
     await this.execScript(`
       CREATE TABLE IF NOT EXISTS tenant_products (
@@ -1535,7 +1722,9 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
   private async ensureTenantBranding(tenantId: string, tenantName: string): Promise<TenantBrandingEntity> {
     const existing = await this.queryOne(
       `
-        SELECT tenant_id, display_name, logo_url, catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
+        SELECT tenant_id, display_name, logo_url, public_address, public_maps_url, cancellation_policy, reminder_notice,
+               whatsapp_phone_e164, whatsapp_default_message, public_booking_hours_json,
+               catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
                border_radius_px, use_gradient, gradient_from, gradient_to, gradient_angle_deg
         FROM tenant_branding
         WHERE tenant_id = ?
@@ -1548,9 +1737,11 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
     await this.exec(
       `
         INSERT INTO tenant_branding (
-          tenant_id, display_name, logo_url, catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
+          tenant_id, display_name, logo_url, public_address, public_maps_url, cancellation_policy, reminder_notice,
+          whatsapp_phone_e164, whatsapp_default_message, public_booking_hours_json,
+          catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
           border_radius_px, use_gradient, gradient_from, gradient_to, gradient_angle_deg
-        ) VALUES (?, ?, ?, 'horizontal', '#4f46e5', '#06b6d4', '#f8fafc', '#ffffff', '#0f172a', 12, false, '#4f46e5', '#06b6d4', 135)
+        ) VALUES (?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'horizontal', '#4f46e5', '#06b6d4', '#f8fafc', '#ffffff', '#0f172a', 12, false, '#4f46e5', '#06b6d4', 135)
       `,
       [tenantId, tenantName, null],
     );
@@ -1811,6 +2002,9 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
       attendanceRaw === 'PENDIENTE'
         ? (attendanceRaw as AppointmentAttendance)
         : 'PENDIENTE';
+    const phoneRaw = row.customer_phone_e164;
+    const consentRaw = row.wa_reminder_consent;
+    const sentRaw = row.wa_reminder_sent_at;
     return {
       id: String(row.id),
       tenantId: String(row.tenant_id),
@@ -1819,6 +2013,9 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
       when: String(row.when_at),
       status: row.status as AppointmentStatus,
       attendance,
+      customerPhoneE164: phoneRaw == null || String(phoneRaw).trim() === '' ? null : String(phoneRaw).trim(),
+      waReminderConsent: Boolean(consentRaw),
+      waReminderSentAt: sentRaw == null || String(sentRaw).trim() === '' ? null : String(sentRaw),
     };
   }
 
@@ -1850,6 +2047,20 @@ export class SqlDbService implements OnModuleInit, OnModuleDestroy {
       tenantId: String(row.tenant_id),
       displayName: String(row.display_name ?? ''),
       logoUrl: row.logo_url == null ? null : String(row.logo_url),
+      publicAddress: row.public_address == null ? null : String(row.public_address),
+      publicMapsUrl: row.public_maps_url == null ? null : String(row.public_maps_url),
+      cancellationPolicy: row.cancellation_policy == null ? null : String(row.cancellation_policy),
+      reminderNotice: row.reminder_notice == null ? null : String(row.reminder_notice),
+      whatsappPhoneE164:
+        row.whatsapp_phone_e164 == null || String(row.whatsapp_phone_e164).trim() === ''
+          ? null
+          : String(row.whatsapp_phone_e164).replace(/\D/g, '') || null,
+      whatsappDefaultMessage:
+        row.whatsapp_default_message == null ? null : String(row.whatsapp_default_message),
+      publicBookingHoursJson:
+        row.public_booking_hours_json == null || String(row.public_booking_hours_json).trim() === ''
+          ? null
+          : String(row.public_booking_hours_json),
       catalogLayout: row.catalog_layout === 'grid' ? 'grid' : 'horizontal',
       primaryColor: String(row.primary_color),
       accentColor: String(row.accent_color),

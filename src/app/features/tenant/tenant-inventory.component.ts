@@ -612,6 +612,10 @@ export class TenantInventoryComponent {
           this.data.updateTenantBranding(tenantId, {
             displayName: res.branding.displayName,
             logoUrl: res.branding.logoUrl,
+            publicAddress: res.branding.publicAddress,
+            publicMapsUrl: res.branding.publicMapsUrl,
+            cancellationPolicy: res.branding.cancellationPolicy,
+            reminderNotice: res.branding.reminderNotice,
             catalogLayout: res.branding.catalogLayout,
             primaryColor: res.branding.primaryColor,
             accentColor: res.branding.accentColor,

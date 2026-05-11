@@ -14,6 +14,13 @@ export interface PublicTenantMetaDto {
   branding?: {
     displayName: string;
     logoUrl: string | null;
+    publicAddress: string | null;
+    publicMapsUrl: string | null;
+    cancellationPolicy: string | null;
+    reminderNotice: string | null;
+    whatsappPhoneE164?: string | null;
+    whatsappDefaultMessage?: string | null;
+    publicBookingHoursJson?: string | null;
     catalogLayout: 'horizontal' | 'grid';
     primaryColor: string;
     accentColor: string;

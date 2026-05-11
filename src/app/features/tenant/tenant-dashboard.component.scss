@@ -5,6 +5,54 @@
   align-items: center;
 }
 
+.dashboard-head {
+  border-radius: var(--az-radius);
+  padding: 1rem 1.15rem;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--az-surface) 88%, var(--az-primary)) 0%,
+    var(--az-surface) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--az-border) 80%, var(--az-primary));
+  box-shadow: 0 4px 20px rgb(15 23 42 / 0.06);
+}
+
+.dashboard-kpis {
+  margin-top: 0.25rem;
+}
+
+.kpi-tile {
+  position: relative;
+  overflow: hidden;
+  padding: 1.1rem 1.15rem 1.15rem;
+  border: 1px solid color-mix(in srgb, var(--az-border) 92%, var(--az-text));
+}
+
+.kpi-tile::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: var(--az-radius) var(--az-radius) 0 0;
+  background: linear-gradient(90deg, var(--az-primary), var(--az-accent));
+  opacity: 0.85;
+}
+
+.kpi-tile .az-kpi-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--az-muted);
+}
+
+.kpi-tile .az-kpi {
+  margin-top: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .below {
   margin-top: 1.25rem;
 }
@@ -180,19 +228,37 @@
 }
 
 .quick-card {
+  position: relative;
   display: grid;
   gap: 0.12rem;
   border: 1px solid var(--az-border);
   border-radius: var(--az-radius-sm);
-  padding: 0.65rem 0.75rem;
+  padding: 0.75rem 2rem 0.75rem 0.85rem;
   background: color-mix(in srgb, var(--az-primary) 4%, var(--az-surface));
   color: var(--az-text);
   text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.quick-card::after {
+  content: '›';
+  position: absolute;
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.15rem;
+  font-weight: 300;
+  color: color-mix(in srgb, var(--az-muted) 70%, var(--az-primary));
+  line-height: 1;
 }
 
 .quick-card:hover {
   border-color: color-mix(in srgb, var(--az-primary) 45%, var(--az-border));
   background: color-mix(in srgb, var(--az-primary) 10%, var(--az-surface));
+  box-shadow: 0 4px 14px rgb(15 23 42 / 0.06);
   text-decoration: none;
 }
 

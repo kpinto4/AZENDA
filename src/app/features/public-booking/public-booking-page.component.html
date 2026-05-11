@@ -32,7 +32,7 @@
           <p class="hero-kicker">Reserva en línea</p>
           <h1 class="hero-title">{{ branding().displayName || slug() }}</h1>
           <p class="hero-sub">
-            Elige horario, confirma asistencia y, si lo permite el negocio, solicita productos sin fricción.
+            Elige horario, consulta tus citas o confirma asistencia y, si lo permite el negocio, solicita productos sin fricción.
           </p>
         </div>
       </div>
@@ -51,6 +51,9 @@
           <span class="metric-chip subtle">Confirmación instantánea</span>
           <span class="metric-chip subtle">Catálogo bajo solicitud</span>
         </div>
+        <p class="hero-demo-note">
+          Las estrellas y reseñas de ejemplo son solo ilustrativas (no valoraciones reales del negocio).
+        </p>
       </div>
     </div>
   </section>
@@ -65,7 +68,7 @@
       Reservar cita
     </button>
     <button type="button" class="tab az-adaptive-tab" [class.active]="clientTab() === 'asistencia'" (click)="goTab('asistencia')">
-      Confirmar asistencia
+      Mis citas
     </button>
     @if (catalogoVisible()) {
       <button
@@ -155,52 +158,274 @@
       </ul>
     </div>
   } @else if (clientTab() === 'asistencia') {
-    <div class="az-card panel tab-panel">
-      <h1>Confirmar asistencia</h1>
-      <p class="muted">
-        Cuando ya hayas acudido a tu cita, indica la <strong>referencia</strong> que te mostramos al reservar (o te dio el
-        negocio) y el <strong>mismo nombre</strong> que pusiste en la reserva.
-      </p>
+    <div class="az-card panel tab-panel attendance-panel att-unified">
+      <header class="att-unified-head">
+        <div class="att-unified-head-text">
+          <h1 class="att-unified-title">Mis citas</h1>
+          <p class="muted att-unified-lead">
+            Busca tus citas pendientes con <strong>referencia</strong> o <strong>teléfono</strong>. El negocio marca en
+            su panel si acudiste o no; desde aquí solo puedes <strong>cambiar fecha y hora</strong> si quedan al menos
+            <strong>90 minutos</strong> antes del inicio de la cita.
+          </p>
+        </div>
+        @if (businessPublicWhatsHref(); as waPub) {
+          <a class="az-btn att-wa-pill" [href]="waPub" target="_blank" rel="noopener noreferrer">WhatsApp al negocio</a>
+        }
+      </header>
       @if (attendanceMsg()) {
-        <p class="muted success-line">{{ attendanceMsg() }}</p>
+        <p class="muted success-line att-unified-banner">{{ attendanceMsg() }}</p>
       }
       @if (attendanceErr()) {
-        <p class="muted field-error">{{ attendanceErr() }}</p>
+        <p class="muted field-error att-unified-banner">{{ attendanceErr() }}</p>
       }
-      <form [formGroup]="attendanceForm" (ngSubmit)="submitAttendance()">
-        <label class="az-label" for="ref">Referencia de la cita</label>
-        <input id="ref" class="az-input wide" formControlName="appointmentId" autocomplete="off" />
-        <label class="az-label" for="aname">Nombre (como en la reserva)</label>
-        <input id="aname" class="az-input wide" formControlName="customer" autocomplete="name" />
-        <div class="row-btns">
-          <button type="submit" class="az-btn az-btn-primary" [disabled]="attendanceSubmitting()">
-            {{ attendanceSubmitting() ? 'Enviando…' : 'Confirmar que asistí' }}
-          </button>
-        </div>
-      </form>
+      <div class="att-unified-surface">
+        <form [formGroup]="attendanceForm" (submit)="$event.preventDefault()">
+          <section class="att-pane" aria-labelledby="att-step-buscar">
+            <span class="att-step" id="att-step-buscar">1</span>
+            <div class="att-pane-body">
+              <h2 class="att-pane-title">Buscar</h2>
+              <p class="muted small att-pane-desc">Solo uno de los dos campos y pulsa Buscar.</p>
+              <div class="att-two-col">
+                <div>
+                  <label class="az-label" for="ref">Referencia</label>
+                  <input
+                    id="ref"
+                    class="az-input wide"
+                    formControlName="appointmentId"
+                    autocomplete="off"
+                    placeholder="Ej.: appt_…"
+                  />
+                </div>
+                <div>
+                  <label class="az-label" for="aphone">Teléfono</label>
+                  <input
+                    id="aphone"
+                    class="az-input wide"
+                    type="tel"
+                    formControlName="lookupPhone"
+                    autocomplete="tel"
+                    placeholder="Mismo número que al reservar"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                class="az-btn az-btn-primary att-search-btn"
+                (click)="searchActiveAppointments()"
+                [disabled]="lookupSearching()"
+              >
+                {{ lookupSearching() ? 'Buscando…' : 'Buscar' }}
+              </button>
+            </div>
+          </section>
+          @if (lookupResults(); as rows) {
+            @if (rows.length > 0) {
+              <section class="att-pane att-pane--results" aria-labelledby="att-step-resultados">
+                <span class="att-step" id="att-step-resultados">2</span>
+                <div class="att-pane-body">
+                  <h2 class="att-pane-title">Resultados</h2>
+                  <ul class="att-lookup-list" role="list">
+                    @for (row of rows; track row.id) {
+                      <li
+                        class="att-lookup-row"
+                        [class.att-lookup-row--selected]="attendanceSelectedAppointment()?.id === row.id"
+                      >
+                        <div class="att-lookup-main">
+                          <strong>{{ row.when }}</strong>
+                          <span class="muted">{{ row.serviceLabel }}</span>
+                          <code class="att-ref-code">{{ row.id }}</code>
+                        </div>
+                        <button
+                          type="button"
+                          class="az-btn az-btn-secondary att-confirm-row"
+                          [disabled]="attendanceSubmitting()"
+                          (click)="selectAppointmentForConfirm(row)"
+                        >
+                          Elegir esta cita
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                  @if (rows.length > 1) {
+                    <p class="muted small att-results-hint">Pulsa «Elegir esta cita» para ver el cambio de horario.</p>
+                  }
+                </div>
+              </section>
+            }
+          }
+          @if (attendanceSelectedAppointment(); as sel) {
+            <section
+              id="att-confirm-anchor"
+              class="att-pane att-pane--last"
+              aria-labelledby="att-step-corregir"
+            >
+              <span class="att-step" id="att-step-corregir">3</span>
+              <div class="att-pane-body">
+                <h2 class="att-pane-title">Corregir horario de la cita</h2>
+                <div class="att-selected-summary" role="status">
+                  <strong>{{ sel.when }}</strong>
+                  <span class="muted">{{ sel.serviceLabel }}</span>
+                  @if (sel.customer) {
+                    <span class="att-selected-name">{{ sel.customer }}</span>
+                  }
+                  <code class="att-ref-code">{{ sel.id }}</code>
+                </div>
+                <p class="muted small attendance-confirm-hint">
+                  La <strong>asistencia</strong> la registra el negocio en su panel; tú no puedes marcarla aquí. Si necesitas
+                  otro día u hora, elige abajo y guarda (solo si faltan <strong>al menos 90 minutos</strong> para el inicio
+                  de la cita mostrada arriba).
+                </p>
+                @if (!canLookupRescheduleSelected()) {
+                  <p class="muted small field-error att-reschedule-deadline">
+                    Ya no puedes cambiar el horario en esta web (faltan menos de 90 minutos). Contacta al negocio por
+                    teléfono o WhatsApp si lo tienen.
+                  </p>
+                }
+                <label class="az-label" for="aname">Nombre (como en la reserva)</label>
+                <input id="aname" class="az-input wide" formControlName="customer" autocomplete="name" />
+                @if (canLookupRescheduleSelected()) {
+                  <div class="att-reschedule-pick">
+                    <label class="az-label" for="att-rd">Nueva fecha</label>
+                    <input
+                      id="att-rd"
+                      class="az-input wide"
+                      type="date"
+                      [value]="lookupRescheduleDate()"
+                      (input)="lookupRescheduleDateInput(($any($event.target).value))"
+                    />
+                    <span class="az-label att-reschedule-slot-label">Nueva hora</span>
+                    @if (!lookupRescheduleDate()) {
+                      <p class="muted small">Indica primero una fecha para cargar horarios.</p>
+                    } @else if (environment.useLiveAuth && lookupRescheduleAvailLoading()) {
+                      <p class="muted small">Cargando horarios…</p>
+                    } @else if (environment.useLiveAuth && !lookupRescheduleAvailability()) {
+                      <p class="muted small field-error">No se pudieron cargar los huecos. Prueba otra fecha.</p>
+                    } @else if (lookupRescheduleSlotOptions().length === 0) {
+                      <p class="muted small field-error">No hay huecos para esa fecha con tu profesional. Prueba otro día.</p>
+                    } @else {
+                      <div class="slots att-reschedule-slots">
+                        @for (t of lookupRescheduleSlotOptions(); track t) {
+                          <button
+                            type="button"
+                            class="slot"
+                            [class.pick]="lookupRescheduleSlot() === t"
+                            (click)="pickLookupRescheduleSlot(t)"
+                          >
+                            {{ t }}
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                  <button
+                    type="button"
+                    class="az-btn az-btn-primary att-confirm-submit"
+                    (click)="submitLookupReschedule()"
+                    [disabled]="attendanceSubmitting()"
+                  >
+                    {{ attendanceSubmitting() ? 'Guardando…' : 'Guardar nuevo horario' }}
+                  </button>
+                }
+                <button type="button" class="az-btn az-btn-secondary att-change-selection" (click)="clearAttendanceSelection()">
+                  Elegir otra cita
+                </button>
+              </div>
+            </section>
+          }
+        </form>
+      </div>
     </div>
   } @else if (done()) {
-    <div class="az-card panel success">
+    <div class="az-card panel success" role="status" aria-live="polite">
       <h1>¡Listo!</h1>
-      @if (bookedWithLiveApi()) {
-        <p>Reserva guardada. El negocio la verá en su panel interno; tú no necesitas iniciar sesión.</p>
-      } @else {
-        <p>Reserva de demostración guardada solo en el navegador (modo sin API).</p>
+      @if (lastBookingRescheduleNote(); as rn) {
+        <p class="muted success-line success-reschedule-note">{{ rn }}</p>
       }
-      @if (lastBookingId()) {
-        <p class="muted ref-line">
-          Tu referencia:
-          <code>{{ lastBookingId() }}</code>
-          · guárdala para confirmar asistencia o cualquier consulta con el negocio.
+      @if (bookedWithLiveApi()) {
+        <p class="success-lead">Reserva guardada. El negocio la verá en su panel interno; tú no necesitas iniciar sesión.</p>
+      } @else {
+        <p class="success-lead">Reserva de demostración guardada solo en el navegador (modo sin API).</p>
+      }
+
+      @if (businessWhatsAfterBookingHref(); as waBus) {
+        <section class="wa-contact-card" aria-label="Escribir al negocio por WhatsApp">
+          <div class="wa-contact-card-head">
+            <span class="wa-mark" aria-hidden="true">WA</span>
+            <div>
+              <h2 class="wa-contact-title">¿Quieres escribir al negocio sobre tu cita?</h2>
+              <p class="wa-contact-desc">
+                Abre WhatsApp con un mensaje ya preparado (fecha de la cita y referencia). Solo tienes que enviarlo o completarlo
+                si quieres añadir algo más.
+              </p>
+            </div>
+          </div>
+          <a class="wa-contact-btn" [href]="waBus" target="_blank" rel="noopener noreferrer">
+            Escribir al negocio por WhatsApp
+          </a>
+        </section>
+      } @else if (done()) {
+        <section class="wa-contact-card wa-contact-card--muted" aria-label="WhatsApp no disponible en la web">
+          <p class="wa-contact-muted">
+            Para abrir un chat de <strong>WhatsApp</strong> con el negocio desde aquí, el establecimiento debe configurar
+            su número en el panel (Configuración). Mientras tanto, contacta por los medios que te indiquen. Si tienes
+            referencia o móvil de la reserva, puedes buscar tus citas en la pestaña <strong>Mis citas</strong>.
+          </p>
+        </section>
+      }
+
+      @if (lastBookingWaReminder()) {
+        <p class="muted wa-success-note">
+          Has dejado tu móvil: el negocio puede contactarte por <strong>WhatsApp</strong> (desde su teléfono). También verá la cita
+          en su panel.
         </p>
       }
-      <a routerLink="/" class="az-btn az-btn-primary">Volver al inicio</a>
-      <button type="button" class="az-btn az-btn-secondary" (click)="anotherReservation()">
-        Hacer otra reserva
-      </button>
+      @if (lastBookingId(); as ref) {
+        <p class="muted ref-line">
+          Tu referencia:
+          <code id="booking-ref-code">{{ ref }}</code>
+          · guárdala para buscar tu cita en «Mis citas» o para cualquier consulta con el negocio.
+        </p>
+        <div class="success-actions">
+          <button type="button" class="az-btn az-btn-secondary" (click)="copyBookingReference(ref)">
+            Copiar referencia
+          </button>
+          @if (refCopied()) {
+            <p class="copy-ref-feedback">Copiado al portapapeles</p>
+          }
+        </div>
+      }
+      <div class="success-footer-btns">
+        <a routerLink="/" class="az-btn az-btn-primary">Volver al inicio</a>
+        <button type="button" class="az-btn az-btn-secondary" (click)="startRescheduleAfterBooking()">
+          Corregir día y hora
+        </button>
+        <button type="button" class="az-btn az-btn-secondary" (click)="anotherReservation()">Hacer otra reserva</button>
+      </div>
     </div>
   } @else {
     <div class="az-card panel panel-booking">
+      <nav class="booking-progress" aria-label="Pasos de la reserva">
+        <div class="booking-step-rail" aria-hidden="true">
+          <span
+            class="step-dot"
+            [class.step-dot--on]="step() >= 1"
+            [class.step-dot--done]="step() > 1"
+          ></span>
+          <span class="step-seg" [class.step-seg--done]="step() > 1"></span>
+          <span
+            class="step-dot"
+            [class.step-dot--on]="step() >= 2"
+            [class.step-dot--done]="step() > 2"
+          ></span>
+          <span class="step-seg" [class.step-seg--done]="step() > 2"></span>
+          <span class="step-dot" [class.step-dot--on]="step() >= 3"></span>
+        </div>
+        <ol class="steps booking-steps">
+          <li [class.on]="step() === 1">Servicio</li>
+          <li [class.on]="step() === 2">Horario</li>
+          <li [class.on]="step() === 3">Confirmar</li>
+        </ol>
+      </nav>
       @if (step() === 1) {
         <h1 class="panel-lead">1. Servicio</h1>
         <p class="muted lead-caption">Elige el servicio. Al seleccionarlo pasas a configurar profesional, fecha y hora.</p>
@@ -234,8 +459,15 @@
       }
 
       @if (step() === 2) {
-        <h1 class="panel-lead">2. Profesional, fecha y hora</h1>
-        <p class="muted lead-caption">Define quién te atiende y en qué momento.</p>
+        <h1 class="panel-lead">{{ rescheduleMode() ? 'Corregir día y hora' : '2. Profesional, fecha y hora' }}</h1>
+        <p class="muted lead-caption">
+          @if (rescheduleMode()) {
+            Cambia fecha, hora o profesional. Tu referencia sigue siendo la misma; usamos el nombre que indicaste al reservar
+            para validar el cambio.
+          } @else {
+            Define quién te atiende y en qué momento.
+          }
+        </p>
 
         <section class="booking-section">
           <header class="booking-section-head">
@@ -322,8 +554,21 @@
           <p class="muted field-error">{{ bookingError() }}</p>
         }
         <div class="row-btns">
-          <button type="button" class="az-btn az-btn-ghost" (click)="back()">Atrás</button>
-          <button type="button" class="az-btn az-btn-primary" (click)="goToSummaryStep()">Continuar</button>
+          <button type="button" class="az-btn az-btn-ghost" (click)="back()">
+            {{ rescheduleMode() ? 'Cancelar' : 'Atrás' }}
+          </button>
+          @if (rescheduleMode()) {
+            <button
+              type="button"
+              class="az-btn az-btn-primary"
+              (click)="submitRescheduleFromStep2()"
+              [disabled]="bookingSubmitting()"
+            >
+              {{ bookingSubmitting() ? 'Guardando…' : 'Guardar cambios' }}
+            </button>
+          } @else {
+            <button type="button" class="az-btn az-btn-primary" (click)="goToSummaryStep()">Continuar</button>
+          }
         </div>
       }
 
@@ -345,11 +590,62 @@
               <strong>{{ selectedEmployeeLabel() || '—' }}</strong>
             </div>
           </div>
+          @let bic = bookingClientTexts();
+          <div class="booking-info-card">
+            <h2 class="booking-info-title">Antes de confirmar</h2>
+            @if (bic.address || bic.mapsUrl) {
+              <div class="booking-info-block">
+                <span class="booking-info-label">Ubicación / cómo llegar</span>
+                @if (bic.address) {
+                  <p class="booking-info-p">{{ bic.address }}</p>
+                }
+                @if (bic.mapsUrl) {
+                  <a class="booking-info-link" [href]="bic.mapsUrl!" target="_blank" rel="noopener noreferrer"
+                    >Ver en mapa o enlace del negocio</a
+                  >
+                }
+              </div>
+            }
+            <div class="booking-info-block">
+              <span class="booking-info-label">Cancelaciones y cambios</span>
+              <p class="booking-info-p">{{ bic.cancellation }}</p>
+            </div>
+            <div class="booking-info-block">
+              <span class="booking-info-label">Contacto y recordatorios</span>
+              <p class="booking-info-p">{{ bic.reminder }}</p>
+            </div>
+          </div>
           <label class="az-label" for="name">Nombre</label>
-          <input id="name" class="az-input wide" formControlName="name" />
-          <label class="az-label" for="phone">Teléfono</label>
-          <input id="phone" class="az-input wide" formControlName="phone" />
-          <div class="booking-bottom-bar">
+          <input
+            id="name"
+            class="az-input wide"
+            formControlName="name"
+            autocomplete="name"
+            enterkeyhint="next"
+          />
+          <label class="az-label" for="phone">Teléfono (móvil recomendado)</label>
+          <input
+            id="phone"
+            class="az-input wide"
+            formControlName="phone"
+            type="tel"
+            inputmode="tel"
+            autocomplete="tel"
+            enterkeyhint="done"
+            placeholder="Ej.: 600123456 o +34600123456"
+          />
+          <div class="wa-opt-in">
+            <label class="wa-opt-in-label" for="wa-rem">
+              <input id="wa-rem" type="checkbox" formControlName="waReminderConsent" />
+              <span class="wa-opt-in-text">
+                <strong>Comparto móvil para WhatsApp con el negocio</strong>
+                <span class="muted wa-opt-in-note">
+                  El negocio podrá escribirte desde su WhatsApp (recordatorios manuales). Requiere un número válido.
+                </span>
+              </span>
+            </label>
+          </div>
+          <div class="booking-bottom-bar" id="booking-confirm-anchor">
             <div class="booking-total">
               <span>Total</span>
               <strong>{{ selectedServicePriceLabel() || '—' }}</strong>
@@ -371,40 +667,23 @@
   }
     </div>
     <aside class="stage-side">
-      <div class="az-card side-card side-card--reviews">
-        <h3>Opiniones recientes</h3>
-        <p class="side-reviews-intro muted">Ejemplo de confianza (el negocio puede sustituirlo por reseñas reales más adelante).</p>
-        <div class="side-rating-block">
-          <span class="side-rating-big">4,9</span>
-          <div class="side-rating-meta">
-            <span class="hero-stars small" aria-hidden="true">
-              @for (_ of [1, 2, 3, 4, 5]; track _) {
-                <span class="star on"></span>
-              }
-            </span>
-            <span class="muted tiny">128 valoraciones</span>
-          </div>
-        </div>
-        <ul class="review-bars" aria-hidden="true">
-          <li><span class="rb-label">Servicio</span><span class="rb-track"><span class="rb-fill" style="width: 96%"></span></span></li>
-          <li><span class="rb-label">Puntualidad</span><span class="rb-track"><span class="rb-fill" style="width: 94%"></span></span></li>
-          <li><span class="rb-label">Limpieza</span><span class="rb-track"><span class="rb-fill" style="width: 98%"></span></span></li>
+      <div class="az-card side-card side-card--tips">
+        <h3>Tu reserva</h3>
+        <p class="muted side-tips-intro">
+          Aquí no mostramos valoraciones falsas: la confianza la da el propio negocio (nombre, datos que configure y tu
+          experiencia). Si tienes dudas, contacta directamente antes de reservar.
+        </p>
+        <ul class="side-tip-list">
+          <li>Lee la sección «Antes de confirmar» en el último paso: cancelación y avisos.</li>
+          <li>Guarda la referencia que verás tras reservar; sirve ante el negocio y para buscar tus citas en «Mis citas».</li>
         </ul>
-        <blockquote class="review-quote">
-          «Muy clara la reserva desde el móvil. En 1 minuto tenía día y hora.»
-          <footer>Cliente verificado · hace 2 semanas</footer>
-        </blockquote>
-        <blockquote class="review-quote">
-          «Me gustó poder pedir info del catálogo sin exponer datos de pago aquí.»
-          <footer>Cliente verificado · hace 5 días</footer>
-        </blockquote>
       </div>
       <div class="az-card side-card">
         <h3>Cómo funciona</h3>
         <ol class="side-steps">
           <li><strong>Reservar:</strong> servicio, fecha y franja disponible.</li>
           <li><strong>Referencia:</strong> guarda el código que verás al confirmar.</li>
-          <li><strong>Asistencia:</strong> confirma tu visita con referencia y nombre.</li>
+          <li><strong>Mis citas:</strong> cambia fecha u hora con antelación (90 min); la asistencia la marca el negocio.</li>
           @if (catalogoVisible()) {
             <li><strong>Tienda:</strong> solicita productos; el negocio te responde fuera de Azenda.</li>
           }

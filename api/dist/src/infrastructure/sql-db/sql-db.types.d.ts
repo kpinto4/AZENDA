@@ -57,6 +57,9 @@ export interface AppointmentEntity {
     when: string;
     status: AppointmentStatus;
     attendance: AppointmentAttendance;
+    customerPhoneE164: string | null;
+    waReminderConsent: boolean;
+    waReminderSentAt: string | null;
 }
 export interface StoreVisitLogEntity {
     id: string;
@@ -69,6 +72,13 @@ export interface TenantBrandingEntity {
     tenantId: string;
     displayName: string;
     logoUrl: string | null;
+    publicAddress: string | null;
+    publicMapsUrl: string | null;
+    cancellationPolicy: string | null;
+    reminderNotice: string | null;
+    whatsappPhoneE164: string | null;
+    whatsappDefaultMessage: string | null;
+    publicBookingHoursJson: string | null;
     catalogLayout: 'horizontal' | 'grid';
     primaryColor: string;
     accentColor: string;

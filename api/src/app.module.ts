@@ -9,7 +9,13 @@ import { AdminModule } from './admin/admin.module';
 import { PublicModule } from './public/public.module';
 
 @Module({
-  imports: [SqlDbModule, AuthModule, TenantModule, AdminModule, PublicModule],
+  imports: [
+    SqlDbModule,
+    AuthModule,
+    TenantModule,
+    AdminModule,
+    PublicModule,
+  ],
   controllers: [AppController, AccessController],
   providers: [AppService],
 })

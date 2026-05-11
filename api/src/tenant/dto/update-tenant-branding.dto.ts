@@ -20,6 +20,45 @@ export class UpdateTenantBrandingDto {
   @IsString()
   logoUrl?: string | null;
 
+  /** Dirección u orientación para el cliente (reserva pública). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  publicAddress?: string;
+
+  /** URL de mapa o ficha externa (opcional). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  publicMapsUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  cancellationPolicy?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  reminderNotice?: string;
+
+  /** Dígitos E.164 sin + (wa.me del negocio). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  whatsappPhoneE164?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  whatsappDefaultMessage?: string | null;
+
+  /** JSON horario reserva pública (días mon–sun, franjas {open,close}). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(8000)
+  publicBookingHoursJson?: string | null;
+
   @IsOptional()
   @IsIn(['horizontal', 'grid'])
   catalogLayout?: 'horizontal' | 'grid';

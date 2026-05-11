@@ -21,7 +21,13 @@ let AppModule = class AppModule {
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [sql_db_module_1.SqlDbModule, auth_module_1.AuthModule, tenant_module_1.TenantModule, admin_module_1.AdminModule, public_module_1.PublicModule],
+        imports: [
+            sql_db_module_1.SqlDbModule,
+            auth_module_1.AuthModule,
+            tenant_module_1.TenantModule,
+            admin_module_1.AdminModule,
+            public_module_1.PublicModule,
+        ],
         controllers: [app_controller_1.AppController, access_controller_1.AccessController],
         providers: [app_service_1.AppService],
     })
