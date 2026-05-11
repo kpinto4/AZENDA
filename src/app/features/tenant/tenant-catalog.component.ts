@@ -6,13 +6,14 @@ import {
   MockDataService,
 } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
+import { FormatCopPipe } from '../../core/format-cop.pipe';
 import { UiAlertService } from '../../core/services/ui-alert.service';
 
 const MAX_IMAGE_BYTES = 600 * 1024;
 
 @Component({
   selector: 'app-tenant-catalog',
-  imports: [RouterLink, ReactiveFormsModule],
+  imports: [RouterLink, ReactiveFormsModule, FormatCopPipe],
   templateUrl: './tenant-catalog.component.html',
   styleUrl: './tenant-catalog.component.scss',
 })

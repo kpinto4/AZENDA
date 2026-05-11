@@ -65,8 +65,8 @@
             <tr>
               <td>{{ p.name }}</td>
               <td>{{ p.description || '—' }}</td>
-              <td>${{ p.price.toFixed(2) }}</td>
-              <td>{{ p.promoPrice != null ? ('$' + p.promoPrice.toFixed(2)) : '—' }}</td>
+              <td>{{ p.price | formatCop }}</td>
+              <td>{{ p.promoPrice != null ? (p.promoPrice | formatCop) : '—' }}</td>
               <td>{{ p.sku }}</td>
               <td>{{ p.stock }}</td>
               <td>
@@ -111,8 +111,8 @@
             <tr>
               <td>{{ s.name }}</td>
               <td>{{ s.description || '—' }}</td>
-              <td>${{ s.price.toFixed(2) }}</td>
-              <td>{{ s.promoPrice != null ? ('$' + s.promoPrice.toFixed(2)) : '—' }}</td>
+              <td>{{ s.price | formatCop }}</td>
+              <td>{{ s.promoPrice != null ? (s.promoPrice | formatCop) : '—' }}</td>
               <td>{{ s.promoLabel || '—' }}</td>
               @if (canManageCatalog()) {
                 <td class="row-actions">
@@ -198,7 +198,7 @@
         <input id="e-name" class="az-input wide" type="text" formControlName="name" autocomplete="off" />
       </div>
       <div>
-        <label class="az-label" for="e-price">Precio</label>
+        <label class="az-label" for="e-price">Precio (COP)</label>
         <input id="e-price" class="az-input" type="number" min="0" step="0.01" formControlName="price" />
       </div>
       <div class="full">
@@ -216,7 +216,7 @@
           <input id="e-stock" class="az-input" type="number" min="0" formControlName="stock" />
         </div>
         <div>
-          <label class="az-label" for="e-prod-promo-price">Precio promo (opcional)</label>
+          <label class="az-label" for="e-prod-promo-price">Precio promo en COP (opcional)</label>
           <input id="e-prod-promo-price" class="az-input" type="number" min="0" step="0.01" formControlName="promoPrice" />
         </div>
         <div class="full">
@@ -234,7 +234,7 @@
         </div>
       } @else {
         <div>
-          <label class="az-label" for="e-promo-price">Precio promo (opcional)</label>
+          <label class="az-label" for="e-promo-price">Precio promo en COP (opcional)</label>
           <input id="e-promo-price" class="az-input" type="number" min="0" step="0.01" formControlName="promoPrice" />
         </div>
         <div class="full">

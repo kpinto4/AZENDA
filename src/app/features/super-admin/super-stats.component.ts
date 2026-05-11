@@ -1,4 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
+import { formatCop } from '../../core/format-currency';
 import { MockDataService } from '../../core/services/mock-data.service';
 
 @Component({
@@ -22,6 +23,8 @@ export class SuperStatsComponent {
       movements: this.data.stockMovements().length,
     };
   });
+
+  readonly salesSumFormatted = computed(() => formatCop(this.summary().salesSum));
 
   /** Barras relativas para el gráfico decorativo (0–100). */
   readonly barHeights = computed(() => {

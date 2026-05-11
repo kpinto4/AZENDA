@@ -16,7 +16,7 @@
       <h3>{{ isSalesLiveApi() ? 'Registrar venta' : 'Registrar venta (demo)' }}</h3>
       <form [formGroup]="form" (ngSubmit)="add()" class="row">
       <div>
-        <label class="az-label" for="total">Importe</label>
+        <label class="az-label" for="total">Importe (COP)</label>
         <input id="total" class="az-input" type="number" formControlName="total" />
       </div>
       <div>
@@ -144,7 +144,7 @@
           @for (s of tenantSalesLive(); track s.id) {
             <tr>
               <td>{{ s.saleDate }}</td>
-              <td>{{ s.total }}</td>
+              <td>{{ s.total | formatCop }}</td>
               <td>{{ s.method }}</td>
               <td>{{ s.linkedAppointmentId || '—' }}</td>
               <td>{{ s.stockNote || '—' }}</td>
@@ -158,7 +158,7 @@
           @for (s of data.sales(); track s.id) {
             <tr>
               <td>{{ s.date }}</td>
-              <td>{{ s.total }} €</td>
+              <td>{{ s.total | formatCop }}</td>
               <td>{{ s.method }}</td>
               <td>{{ s.linkedAppointment || '—' }}</td>
               <td>{{ s.stockNote || '—' }}</td>

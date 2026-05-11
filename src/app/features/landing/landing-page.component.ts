@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { formatCop } from '../../core/format-currency';
 import {
   ApiSiteConfigService,
   DEFAULT_API_SITE_CONFIG,
@@ -22,14 +23,8 @@ export class LandingPageComponent {
 
   readonly siteConfig = signal(mergeApiSiteConfig(DEFAULT_API_SITE_CONFIG));
 
-  /** Formato de importes para la landing (p. ej. pesos colombianos). */
-  formatMoney(n: number): string {
-    const v = Number(n);
-    if (Number.isNaN(v)) {
-      return '—';
-    }
-    return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 }).format(v);
-  }
+  /** Importes en COP (formato local) para la landing. */
+  readonly formatCop = formatCop;
 
   constructor() {
     this.siteApi.getPublic().subscribe({

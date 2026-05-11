@@ -1,4 +1,5 @@
 import { DestroyRef, Injectable, NgZone, inject, signal } from '@angular/core';
+import { formatCop } from '../format-currency';
 import { publicCustomerNameMatches } from '../customer-name-match';
 import type { ApiTenantDto } from './api-tenants-admin.service';
 
@@ -990,9 +991,9 @@ export class MockDataService {
 
   private serviceDisplayLabel(s: MockBusinessService): string {
     const desc = s.description?.trim() ? ` — ${s.description.trim()}` : '';
-    const base = `${s.name}${desc} · $${s.price.toFixed(2)}`;
+    const base = `${s.name}${desc} · ${formatCop(s.price)}`;
     if (s.promoPrice != null) {
-      const promo = `$${Number(s.promoPrice).toFixed(2)}`;
+      const promo = formatCop(Number(s.promoPrice));
       const tag = s.promoLabel ? ` (${s.promoLabel})` : '';
       return `${base} · Promo ${promo}${tag}`;
     }

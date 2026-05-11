@@ -9,6 +9,8 @@ import {
   ApiTenantServiceDto,
 } from '../../core/services/api-tenant-catalog.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
+import { formatCop } from '../../core/format-currency';
+import { FormatCopPipe } from '../../core/format-cop.pipe';
 import { UiAlertService } from '../../core/services/ui-alert.service';
 
 const MAX_IMAGE_BYTES = 600 * 1024;
@@ -30,7 +32,7 @@ type PendingDelete =
 
 @Component({
   selector: 'app-tenant-inventory',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, FormatCopPipe],
   templateUrl: './tenant-inventory.component.html',
   styleUrl: './tenant-inventory.component.scss',
 })
@@ -273,7 +275,7 @@ export class TenantInventoryComponent {
       type: 'product',
       id: row.id,
       name: row.name,
-      detail: `SKU: ${row.sku} · Stock actual: ${row.stock}${row.promoPrice != null ? ` · Promo: $${row.promoPrice.toFixed(2)}` : ''}`,
+      detail: `SKU: ${row.sku} · Stock actual: ${row.stock}${row.promoPrice != null ? ` · Promo: ${formatCop(row.promoPrice)}` : ''}`,
     });
   }
 
@@ -286,7 +288,7 @@ export class TenantInventoryComponent {
       type: 'service',
       id: row.id,
       name: row.name,
-      detail: `Precio base: $${row.price.toFixed(2)}${row.promoPrice != null ? ` · Promo: $${row.promoPrice.toFixed(2)}` : ''}`,
+      detail: `Precio base: ${formatCop(row.price)}${row.promoPrice != null ? ` · Promo: ${formatCop(row.promoPrice)}` : ''}`,
     });
   }
 

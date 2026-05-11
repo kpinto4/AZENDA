@@ -18,6 +18,8 @@ import {
 } from '../../core/services/api-public-meta.service';
 import { MockDataService } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
+import { formatCop } from '../../core/format-currency';
+import { FormatCopPipe } from '../../core/format-cop.pipe';
 import { UiAlertService } from '../../core/services/ui-alert.service';
 
 function tabFromQuery(tab: string | null): 'reserva' | 'asistencia' | 'catalogo' {
@@ -85,7 +87,7 @@ type PublicBookingPeriod = 'manana' | 'tarde' | 'noche';
 
 @Component({
   selector: 'app-public-booking-page',
-  imports: [RouterLink, ReactiveFormsModule, NgStyle],
+  imports: [RouterLink, ReactiveFormsModule, NgStyle, FormatCopPipe],
   templateUrl: './public-booking-page.component.html',
   styleUrl: './public-booking-page.component.scss',
 })
@@ -126,9 +128,9 @@ export class PublicBookingPageComponent {
       const services = this.publicCatalog()?.services ?? [];
       if (services.length) {
         return services.map((s) => {
-          const base = `${s.name} · $${Number(s.price).toFixed(2)}`;
+          const base = `${s.name} · ${formatCop(Number(s.price))}`;
           if (s.promoPrice != null) {
-            const promo = `$${Number(s.promoPrice).toFixed(2)}`;
+            const promo = formatCop(Number(s.promoPrice));
             return `${base} · Promo ${promo}${s.promoLabel ? ` (${s.promoLabel})` : ''}`;
           }
           return base;
@@ -150,11 +152,11 @@ export class PublicBookingPageComponent {
       const services = this.publicCatalog()?.services ?? [];
       if (services.length) {
         return services.map((s) => {
-          const priceLabel = `$${Number(s.price).toFixed(2)}`;
+          const priceLabel = formatCop(Number(s.price));
           let promoLabel: string | null = null;
           let full = `${s.name} · ${priceLabel}`;
           if (s.promoPrice != null) {
-            const promo = `$${Number(s.promoPrice).toFixed(2)}`;
+            const promo = formatCop(Number(s.promoPrice));
             promoLabel = s.promoLabel ? `${s.promoLabel} · ${promo}` : `Promo ${promo}`;
             full += ` · Promo ${promo}${s.promoLabel ? ` (${s.promoLabel})` : ''}`;
           }
@@ -485,6 +487,8 @@ export class PublicBookingPageComponent {
   readonly lookupRescheduleSlot = signal('');
   readonly lookupRescheduleAvailability = signal<PublicAvailabilityDto | null>(null);
   readonly lookupRescheduleAvailLoading = signal(false);
+  /** Panel fecha/hora solo tras pulsar «Cambiar día / fecha». */
+  readonly lookupRescheduleEditorOpen = signal(false);
 
   readonly catalogRequestTarget = signal<string | null>(null);
   readonly catalogRequestMsg = signal<string | null>(null);
@@ -573,11 +577,18 @@ export class PublicBookingPageComponent {
       this.attendanceForm.patchValue({ appointmentId: ref });
     });
     effect(() => {
+      const editorOpen = this.lookupRescheduleEditorOpen();
       const slug = this.slug();
       const date = this.lookupRescheduleDate().trim();
       const asist = this.clientTab() === 'asistencia';
       const sel = this.attendanceSelectedAppointment();
-      if (!environment.useLiveAuth || !date || !asist || !sel) {
+      if (
+        !editorOpen ||
+        !environment.useLiveAuth ||
+        !date ||
+        !asist ||
+        !sel
+      ) {
         untracked(() => {
           this.lookupRescheduleAvailability.set(null);
           this.lookupRescheduleAvailLoading.set(false);
@@ -618,6 +629,7 @@ export class PublicBookingPageComponent {
       this.lookupRescheduleSlot.set('');
       this.lookupRescheduleAvailability.set(null);
       this.lookupRescheduleAvailLoading.set(false);
+      this.lookupRescheduleEditorOpen.set(false);
     }
     if (tab !== 'catalogo') {
       this.catalogRequestTarget.set(null);
@@ -820,6 +832,42 @@ export class PublicBookingPageComponent {
     this.lookupRescheduleSlot.set(t);
   }
 
+  openLookupRescheduleEditor(): void {
+    if (!this.canLookupRescheduleSelected()) {
+      return;
+    }
+    this.attendanceMsg.set(null);
+    this.attendanceErr.set(null);
+    const sel = this.attendanceSelectedAppointment();
+    const parts = sel ? splitLookupYmdHhmm(sel.when) : null;
+    if (parts) {
+      this.lookupRescheduleDate.set(parts.date);
+      this.lookupRescheduleSlot.set(parts.slot);
+    }
+    this.lookupRescheduleEditorOpen.set(true);
+    if (typeof document !== 'undefined') {
+      setTimeout(() => {
+        document.getElementById('att-reschedule-editor')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 0);
+    }
+  }
+
+  closeLookupRescheduleEditor(): void {
+    this.lookupRescheduleEditorOpen.set(false);
+    this.attendanceErr.set(null);
+    const sel = this.attendanceSelectedAppointment();
+    const parts = sel ? splitLookupYmdHhmm(sel.when) : null;
+    if (parts) {
+      this.lookupRescheduleDate.set(parts.date);
+      this.lookupRescheduleSlot.set(parts.slot);
+    } else {
+      this.lookupRescheduleDate.set('');
+      this.lookupRescheduleSlot.set('');
+    }
+    this.lookupRescheduleAvailability.set(null);
+    this.lookupRescheduleAvailLoading.set(false);
+  }
+
   /** Si la cita actual permite cambiar horario en web (≥ 90 min antes del inicio). */
   canLookupRescheduleSelected(): boolean {
     const sel = this.attendanceSelectedAppointment();
@@ -881,9 +929,20 @@ export class PublicBookingPageComponent {
         .subscribe({
           next: (row) => {
             this.attendanceSubmitting.set(false);
-            this.attendanceMsg.set('Listo: el negocio verá el nuevo horario en su agenda.');
             this.patchLookupRowAfterReschedule(row.id, row.when);
             this.attendanceForm.patchValue({ appointmentId: row.id, customer: name });
+            this.lookupRescheduleEditorOpen.set(false);
+            this.lookupRescheduleAvailability.set(null);
+            this.lookupRescheduleAvailLoading.set(false);
+            this.attendanceMsg.set('Horario actualizado. El negocio verá el cambio en su agenda.');
+            if (typeof document !== 'undefined') {
+              setTimeout(() => {
+                document.getElementById('attendance-feedback-anchor')?.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'nearest',
+                });
+              }, 0);
+            }
           },
           error: (err: unknown) => {
             this.attendanceSubmitting.set(false);
@@ -894,8 +953,19 @@ export class PublicBookingPageComponent {
     }
     const ok = this.data.reschedulePublicBookingMock(this.slug(), ref, name, when);
     if (ok) {
-      this.attendanceMsg.set('Listo (demo): horario actualizado en esta sesión.');
       this.patchLookupRowAfterReschedule(ref, when);
+      this.lookupRescheduleEditorOpen.set(false);
+      this.lookupRescheduleAvailability.set(null);
+      this.lookupRescheduleAvailLoading.set(false);
+      this.attendanceMsg.set('Horario actualizado (demo). El cambio queda en esta sesión del navegador.');
+      if (typeof document !== 'undefined') {
+        setTimeout(() => {
+          document.getElementById('attendance-feedback-anchor')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+          });
+        }, 0);
+      }
     } else {
       this.attendanceErr.set(
         'No se pudo aplicar el cambio: hueco ocupado, nombre incorrecto o faltan 90 minutos para el inicio de la cita.',
@@ -926,6 +996,7 @@ export class PublicBookingPageComponent {
     this.lookupRescheduleSlot.set('');
     this.lookupRescheduleAvailability.set(null);
     this.lookupRescheduleAvailLoading.set(false);
+    this.lookupRescheduleEditorOpen.set(false);
     const v = this.attendanceForm.getRawValue();
     const ref = v.appointmentId.trim();
     const phone = v.lookupPhone.trim();
@@ -996,6 +1067,7 @@ export class PublicBookingPageComponent {
     }
     this.lookupRescheduleAvailability.set(null);
     this.lookupRescheduleAvailLoading.set(false);
+    this.lookupRescheduleEditorOpen.set(false);
     if (typeof document !== 'undefined') {
       queueMicrotask(() => {
         document.getElementById('att-confirm-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1010,6 +1082,7 @@ export class PublicBookingPageComponent {
     this.lookupRescheduleSlot.set('');
     this.lookupRescheduleAvailability.set(null);
     this.lookupRescheduleAvailLoading.set(false);
+    this.lookupRescheduleEditorOpen.set(false);
   }
 
   /** Envío al mismo endpoint público que el negocio consulta en Ventas (mensaje tipo solicitud cliente). */
@@ -1252,6 +1325,7 @@ export class PublicBookingPageComponent {
     this.lookupRescheduleSlot.set('');
     this.lookupRescheduleAvailability.set(null);
     this.lookupRescheduleAvailLoading.set(false);
+    this.lookupRescheduleEditorOpen.set(false);
   }
 
   private formatHttpError(err: unknown): string {

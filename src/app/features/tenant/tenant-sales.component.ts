@@ -10,11 +10,12 @@ import {
 import { ApiTenantSaleDto, ApiTenantSalesService } from '../../core/services/api-tenant-sales.service';
 import { MockDataService, MockProduct } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
+import { FormatCopPipe } from '../../core/format-cop.pipe';
 import { UiAlertService } from '../../core/services/ui-alert.service';
 
 @Component({
   selector: 'app-tenant-sales',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, FormatCopPipe],
   templateUrl: './tenant-sales.component.html',
   styleUrl: './tenant-sales.component.scss',
 })

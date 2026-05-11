@@ -581,6 +581,26 @@
   margin-top: 0.15rem;
 }
 
+.att-open-reschedule {
+  margin-top: 0.65rem;
+}
+
+.att-reschedule-editor {
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--az-primary) 22%, var(--az-border));
+  background: color-mix(in srgb, var(--az-primary) 5%, var(--az-surface));
+}
+
+.att-reschedule-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
 .att-lookup-main {
   display: flex;
   flex-direction: column;

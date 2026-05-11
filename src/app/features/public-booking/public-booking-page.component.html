@@ -145,9 +145,9 @@
               <strong>{{ p.name }}</strong>
               <span class="muted small-block">{{ p.description || 'Sin descripción' }}</span>
               @if (p.promoPrice != null) {
-                <span class="muted small-block">Precio ${{ p.price.toFixed(2) }} · Promo ${{ p.promoPrice.toFixed(2) }}</span>
+                <span class="muted small-block">Precio {{ p.price | formatCop }} · Promo {{ p.promoPrice | formatCop }}</span>
               } @else {
-                <span class="muted small-block">Precio ${{ p.price.toFixed(2) }}</span>
+                <span class="muted small-block">Precio {{ p.price | formatCop }}</span>
               }
             </div>
             <button type="button" class="az-btn az-btn-secondary" (click)="openCatalogRequest(p.name)">
@@ -173,7 +173,9 @@
         }
       </header>
       @if (attendanceMsg()) {
-        <p class="muted success-line att-unified-banner">{{ attendanceMsg() }}</p>
+        <p id="attendance-feedback-anchor" class="muted success-line att-unified-banner" tabindex="-1">
+          {{ attendanceMsg() }}
+        </p>
       }
       @if (attendanceErr()) {
         <p class="muted field-error att-unified-banner">{{ attendanceErr() }}</p>
@@ -271,9 +273,9 @@
                   <code class="att-ref-code">{{ sel.id }}</code>
                 </div>
                 <p class="muted small attendance-confirm-hint">
-                  La <strong>asistencia</strong> la registra el negocio en su panel; tú no puedes marcarla aquí. Si necesitas
-                  otro día u hora, elige abajo y guarda (solo si faltan <strong>al menos 90 minutos</strong> para el inicio
-                  de la cita mostrada arriba).
+                  La <strong>asistencia</strong> la registra el negocio en su panel; tú no puedes marcarla aquí. Para
+                  cambiar día u hora pulsa <strong>Cambiar día / fecha</strong> (solo si faltan <strong>al menos 90
+                  minutos</strong> para el inicio de la cita).
                 </p>
                 @if (!canLookupRescheduleSelected()) {
                   <p class="muted small field-error att-reschedule-deadline">
@@ -283,8 +285,13 @@
                 }
                 <label class="az-label" for="aname">Nombre (como en la reserva)</label>
                 <input id="aname" class="az-input wide" formControlName="customer" autocomplete="name" />
-                @if (canLookupRescheduleSelected()) {
-                  <div class="att-reschedule-pick">
+                @if (canLookupRescheduleSelected() && !lookupRescheduleEditorOpen()) {
+                  <button type="button" class="az-btn az-btn-secondary att-open-reschedule" (click)="openLookupRescheduleEditor()">
+                    Cambiar día / fecha
+                  </button>
+                }
+                @if (canLookupRescheduleSelected() && lookupRescheduleEditorOpen()) {
+                  <div id="att-reschedule-editor" class="att-reschedule-pick att-reschedule-editor">
                     <label class="az-label" for="att-rd">Nueva fecha</label>
                     <input
                       id="att-rd"
@@ -316,15 +323,20 @@
                         }
                       </div>
                     }
+                    <div class="att-reschedule-editor-actions">
+                      <button
+                        type="button"
+                        class="az-btn az-btn-primary att-confirm-submit"
+                        (click)="submitLookupReschedule()"
+                        [disabled]="attendanceSubmitting()"
+                      >
+                        {{ attendanceSubmitting() ? 'Guardando…' : 'Guardar nuevo horario' }}
+                      </button>
+                      <button type="button" class="az-btn az-btn-ghost" (click)="closeLookupRescheduleEditor()">
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    class="az-btn az-btn-primary att-confirm-submit"
-                    (click)="submitLookupReschedule()"
-                    [disabled]="attendanceSubmitting()"
-                  >
-                    {{ attendanceSubmitting() ? 'Guardando…' : 'Guardar nuevo horario' }}
-                  </button>
                 }
                 <button type="button" class="az-btn az-btn-secondary att-change-selection" (click)="clearAttendanceSelection()">
                   Elegir otra cita
