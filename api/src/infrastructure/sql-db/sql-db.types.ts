@@ -169,7 +169,7 @@ export interface PlatformSiteLandingCopy {
   ctaTitle: string;
   ctaLead: string;
   footerNote: string;
-  /** Texto plano del aviso superior (demo / legal); si vacío se usa el texto por defecto del front. */
+  /** Texto plano del aviso superior opcional (legal, campañas); reservado para usos futuros en la landing. */
   demoBannerText: string;
 }
 
@@ -190,20 +190,20 @@ export const DEFAULT_PLATFORM_SITE_CONFIG: PlatformSiteConfig = {
   planPriceBusiness: 399_000,
   landing: {
     navBrand: 'Azenda',
-    eyebrow: 'SaaS multi-tenant modular',
-    heroTitle: 'Citas, ventas e inventario en un solo panel',
+    eyebrow: 'Gestión para negocios con citas',
+    heroTitle: 'Agenda, ventas anotadas e inventario en un solo lugar',
     heroLead:
-      'Azenda combina agenda inteligente, POS ligero y stock para negocios que viven de las reservas. Activa solo los módulos que necesitas.',
-    sectionTitle: 'Todo lo esencial, sin ruido',
-    sectionSub: 'Diseñado para barberías, spas, clínicas ligeras y talleres con cita previa.',
-    demoTitle: 'Reservas públicas y contacto por WhatsApp',
+      'Reservas por web, panel de operación y todo en pesos colombianos. No cobramos con tarjeta en la app: tú cobras como siempre (efectivo, transferencia, etc.).',
+    sectionTitle: 'Lo esencial para el día a día',
+    sectionSub: 'Peluquerías, spas, talleres y negocios con cita: reservas claras para el cliente y control para ti.',
+    demoTitle: 'Tu página de reservas',
     demoSub:
-      'Tus clientes eligen servicio, fecha y hora en una página limpia. Horario por franjas y recordatorios vía WhatsApp manual (wa.me).',
-    plansSectionTitle: 'Planes claros',
-    plansSectionSub: 'Los límites reales (empleados, citas/mes, módulos) los aplicará el backend.',
-    ctaTitle: 'Listo para operar tu negocio real',
-    ctaLead: 'Registro, tenant y módulos serán persistidos cuando conectemos el backend.',
-    footerNote: '© 2026 Azenda · Demo front-end',
+      'El cliente elige servicio, día y hora en tu enlace. Tú confirmas y cobras por el canal que ya uses.',
+    plansSectionTitle: 'Planes simples',
+    plansSectionSub: 'Sube de plan cuando necesites más módulos o más equipo.',
+    ctaTitle: 'Empieza con Azenda',
+    ctaLead: 'Cuenta, servicios y enlace de reservas en pocos pasos.',
+    footerNote: '© 2026 Azenda. Todos los derechos reservados.',
     demoBannerText: '',
   },
 };

@@ -6,8 +6,6 @@ import {
   DEFAULT_API_SITE_CONFIG,
   mergeApiSiteConfig,
 } from '../../core/services/api-site-config.service';
-import { MockDataService } from '../../core/services/mock-data.service';
-import { MockSessionService } from '../../core/services/mock-session.service';
 
 @Component({
   selector: 'app-landing-page',
@@ -17,8 +15,6 @@ import { MockSessionService } from '../../core/services/mock-session.service';
 })
 export class LandingPageComponent {
   private readonly router = inject(Router);
-  private readonly session = inject(MockSessionService);
-  private readonly data = inject(MockDataService);
   private readonly siteApi = inject(ApiSiteConfigService);
 
   readonly siteConfig = signal(mergeApiSiteConfig(DEFAULT_API_SITE_CONFIG));
@@ -35,27 +31,8 @@ export class LandingPageComponent {
     });
   }
 
-  enterSuperDemo(): void {
-    this.session.loginAsSuperAdmin();
-    void this.router.navigateByUrl('/super/panel');
-  }
-
-  enterTenantDemo(): void {
-    const t = this.data.tenantById('t1');
-    if (t) {
-      this.session.loginFromTenant(t, { userName: 'María López', role: 'TENANT_ADMIN' });
-    } else {
-      this.session.loginAsTenantAdmin();
-    }
-    void this.router.navigateByUrl('/app');
-  }
-
-  openBookingDemo(): void {
+  /** Abre la reserva pública de ejemplo para mostrar el flujo al visitante. */
+  openPublicBooking(): void {
     void this.router.navigateByUrl('/reservar/barberia-centro');
-  }
-
-  resetDemo(): void {
-    this.session.logout();
-    this.data.resetDemo();
   }
 }

@@ -392,50 +392,6 @@ a:hover {
   color: var(--az-muted);
 }
 
-.az-demo-banner {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  padding: 0.5rem 1rem;
-  background: linear-gradient(90deg, #4f46e5, #06b6d4);
-  color: #fff;
-  font-size: 0.8rem;
-  text-align: center;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem 1rem;
-}
-
-.az-demo-banner a {
-  color: #fff;
-  font-weight: 700;
-  text-decoration: underline;
-}
-
-.az-demo-banner code {
-  background: rgb(0 0 0 / 0.15);
-  padding: 0.1rem 0.35rem;
-  border-radius: 4px;
-}
-
-.az-demo-banner .banner-reset {
-  border: 1px solid rgb(255 255 255 / 0.65);
-  background: rgb(255 255 255 / 0.2);
-  color: #fff;
-  font: inherit;
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.25rem 0.65rem;
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.az-demo-banner .banner-reset:hover {
-  background: rgb(255 255 255 / 0.35);
-}
-
 /* Tenant panel: grid adaptativo para evitar bloques largos en columna. */
 .tenant-shell .main .tenant-cards-grid {
   display: grid;

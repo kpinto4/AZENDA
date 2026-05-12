@@ -3,8 +3,8 @@
     <a routerLink="/" class="back">← Volver</a>
     <h1>Crear cuenta</h1>
     <p class="hint">
-      Simulación: se crea un <strong>tenant</strong> en memoria y entras directo al panel. Al recargar la página los datos
-      mock se pierden salvo que uses “Restablecer demo” en la landing.
+      Si tu entorno aún no persiste en servidor, el tenant puede crearse solo en esta sesión del navegador y perderse al
+      recargar. Con la API y base de datos activas, el registro queda guardado de forma permanente.
     </p>
     <form [formGroup]="form" (ngSubmit)="submit()">
       <label class="az-label" for="business">Nombre del negocio</label>

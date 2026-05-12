@@ -98,7 +98,7 @@
               >
                 <span class="rail-icon" aria-hidden="true">▣</span>
                 <span class="rail-label">Bloques de contenido</span>
-                <span class="rail-hint">Funciones, demo, planes</span>
+                <span class="rail-hint">Funciones, reservas, planes</span>
               </button>
               <button
                 type="button"
@@ -182,7 +182,7 @@
                 <section class="panel" role="tabpanel" formGroupName="landing" aria-labelledby="panel-hero-title">
                   <div class="panel-head">
                     <h2 id="panel-hero-title" class="panel-title">Cabecera y héroe</h2>
-                    <p class="panel-desc">Primera impresión: barra superior y bloque principal de la landing.</p>
+                    <p class="panel-desc">Primera impresión: marca y bloque principal de la landing.</p>
                   </div>
                   <div class="panel-card">
                     <div class="field-grid">
@@ -227,7 +227,7 @@
                     </div>
                   </div>
                   <div class="panel-card">
-                    <h3 class="card-title">Demo</h3>
+                    <h3 class="card-title">Reserva pública</h3>
                     <div class="field-grid">
                       <label class="field">
                         <span class="field-label">Título</span>
@@ -262,8 +262,8 @@
               @if (activeSection() === 'closing') {
                 <section class="panel" role="tabpanel" formGroupName="landing" aria-labelledby="panel-closing-title">
                   <div class="panel-head">
-                    <h2 id="panel-closing-title" class="panel-title">Cierre, pie y banner</h2>
-                    <p class="panel-desc">Call to action final, pie de página y aviso superior opcional.</p>
+                    <h2 id="panel-closing-title" class="panel-title">Cierre y pie de página</h2>
+                    <p class="panel-desc">Call to action final, pie de página y aviso superior opcional (reservado).</p>
                   </div>
                   <div class="panel-card">
                     <div class="field-grid">
@@ -280,14 +280,16 @@
                         <input class="field-input" type="text" formControlName="footerNote" />
                       </label>
                       <label class="field">
-                        <span class="field-label">Banner superior</span>
+                        <span class="field-label">Aviso superior (opcional)</span>
                         <textarea
                           class="field-input field-textarea"
                           rows="2"
                           formControlName="demoBannerText"
-                          placeholder="Vacío = texto por defecto de entorno demo"
+                          placeholder="Ej. mensaje legal o promoción temporal"
                         ></textarea>
-                        <span class="field-help">Sustituye el aviso gris superior si escribes algo aquí.</span>
+                        <span class="field-help"
+                          >Campo reservado para futuros avisos globales; la landing actual no muestra barra superior.</span
+                        >
                       </label>
                     </div>
                   </div>

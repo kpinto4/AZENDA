@@ -1,118 +1,233 @@
 @let cfg = siteConfig();
 
-<div class="az-demo-banner">
-  @if (cfg.landing.demoBannerText.trim()) {
-    <span>{{ cfg.landing.demoBannerText }}</span>
-  } @else {
-    <span
-      >Todo el sistema es <strong>simulación en memoria</strong> para presentar al equipo. Backend en
-      <code>docs/BACKEND.md</code>.</span
-    >
-  }
-  <button type="button" class="banner-reset" (click)="resetDemo()">Restablecer demo</button>
-</div>
-
+<div class="landing-root">
 <header class="nav">
   <div class="az-container nav-inner">
-    <span class="logo">{{ cfg.landing.navBrand }}</span>
+    <a class="logo" routerLink="/" fragment="top">{{ cfg.landing.navBrand }}</a>
     <nav class="nav-links">
       <a href="#funciones">Funciones</a>
-      <a href="#demo">Demo</a>
+      <a href="#reservas">Reservas</a>
+      <a href="#como-funciona">Cómo funciona</a>
       <a href="#planes">Planes</a>
-      <a routerLink="/auth/iniciar-sesion">Iniciar sesión</a>
-      <a routerLink="/auth/registro" class="az-btn az-btn-primary">Crear cuenta</a>
+      <a href="#preguntas">FAQ</a>
+      <a routerLink="/auth/iniciar-sesion" class="nav-link-auth">Iniciar sesión</a>
+      <a routerLink="/auth/registro" class="az-btn az-btn-primary landing-btn-nav">Crear cuenta</a>
     </nav>
   </div>
 </header>
 
-<section class="hero">
+<section class="hero" id="top">
   <div class="az-container hero-inner">
     <div class="hero-copy">
       <p class="eyebrow">{{ cfg.landing.eyebrow }}</p>
       <h1>{{ cfg.landing.heroTitle }}</h1>
       <p class="lead">{{ cfg.landing.heroLead }}</p>
       <div class="hero-cta">
-        <a routerLink="/auth/registro" class="az-btn az-btn-primary">Empezar gratis</a>
-        <button type="button" class="az-btn az-btn-secondary" (click)="openBookingDemo()">Ver reserva pública</button>
+        <a routerLink="/auth/registro" class="az-btn az-btn-primary landing-btn-primary">Empezar gratis</a>
+        <button type="button" class="az-btn az-btn-secondary landing-btn-secondary" (click)="openPublicBooking()">
+          Ver página de reserva
+        </button>
       </div>
-      <div class="demo-row">
-        <span>Acceso rápido demo:</span>
-        <button type="button" class="linkish" (click)="enterTenantDemo()">Panel cliente</button>
-        <button type="button" class="linkish" (click)="enterSuperDemo()">Super Admin</button>
+      <div class="landing-proof-row" aria-label="Destacados">
+        <span class="landing-proof-chip">En COP</span>
+        <span class="landing-proof-chip">Sin cobro con tarjeta en la app</span>
+        <span class="landing-proof-chip">Tu enlace de reservas</span>
       </div>
     </div>
-    <div class="hero-card az-card">
-      <h3>Vista del panel</h3>
-      <p class="muted">Calendario, ventas del día y alertas de stock en un solo vistazo.</p>
-      <div class="mock-ui">
-        <div class="mock-bar"></div>
-        <div class="mock-grid">
-          <div class="mock-box"></div>
-          <div class="mock-box wide"></div>
-          <div class="mock-box"></div>
+    <div class="hero-card az-card hero-card--preview">
+      <h3>Tu operación en un panel</h3>
+      <p class="muted">
+        Vista del día, ventas anotadas e inventario. El cobro no pasa por Azenda: lo cierras tú (efectivo, transferencia,
+        WhatsApp…).
+      </p>
+      <div class="hero-preview" aria-hidden="true">
+        <div class="hero-preview-chrome">
+          <span class="hero-preview-dots"><i></i><i></i><i></i></span>
+          <span class="hero-preview-url">panel · Vista de hoy</span>
+        </div>
+        <div class="hero-preview-body">
+          <div class="hero-preview-kpis">
+            <div class="hero-kpi">
+              <span class="hero-kpi-value">12</span>
+              <span class="hero-kpi-label">Citas hoy</span>
+            </div>
+            <div class="hero-kpi hero-kpi--sales">
+              <span class="hero-kpi-value">8</span>
+              <span class="hero-kpi-label">Ventas registradas</span>
+            </div>
+            <div class="hero-kpi hero-kpi--alert">
+              <span class="hero-kpi-value">2</span>
+              <span class="hero-kpi-label">Stock bajo</span>
+            </div>
+          </div>
+          <div class="hero-preview-grid">
+            <div class="hero-preview-block hero-preview-block--chart">
+              <span class="hero-preview-block-title">Últimos 7 días</span>
+              <div class="hero-mini-bars" role="presentation">
+                <span style="--h: 38%"></span>
+                <span style="--h: 55%"></span>
+                <span style="--h: 44%"></span>
+                <span style="--h: 72%"></span>
+                <span style="--h: 61%"></span>
+                <span style="--h: 88%"></span>
+                <span style="--h: 66%"></span>
+              </div>
+              <span class="hero-chart-caption">Ilustración · el panel muestra datos reales de agenda y listados</span>
+            </div>
+            <div class="hero-preview-block hero-preview-block--list">
+              <span class="hero-preview-block-title">Próximas citas</span>
+              <ul class="hero-mini-agenda">
+                <li>
+                  <time>09:30</time>
+                  <span class="hero-mini-name">Laura M.</span>
+                  <span class="hero-mini-pill">Corte</span>
+                </li>
+                <li>
+                  <time>11:00</time>
+                  <span class="hero-mini-name">Equipo corporativo</span>
+                  <span class="hero-mini-pill hero-mini-pill--ok">Confirmada</span>
+                </li>
+                <li>
+                  <time>14:15</time>
+                  <span class="hero-mini-name">Andrés P.</span>
+                  <span class="hero-mini-pill">Coloración</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="hero-preview-toast">
+            <span class="hero-preview-toast-icon" aria-hidden="true">!</span>
+            <span><strong>Inventario:</strong> Tinte #3 por debajo del mínimo · reorden sugerido</span>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section" id="funciones">
+<section class="trust-strip" aria-label="Ventajas de la plataforma">
+  <div class="az-container trust-inner">
+    <div class="trust-item trust-card">
+      <span class="trust-k">Agenda</span>
+      <span class="trust-v">Por empleado y servicio</span>
+    </div>
+    <div class="trust-item trust-card">
+      <span class="trust-k">Ventas</span>
+      <span class="trust-v">Anotación interna · sin pasarela</span>
+    </div>
+    <div class="trust-item trust-card">
+      <span class="trust-k">Inventario</span>
+      <span class="trust-v">Stock y alertas</span>
+    </div>
+    <div class="trust-item trust-card">
+      <span class="trust-k">Roles</span>
+      <span class="trust-v">Admin y equipo</span>
+    </div>
+  </div>
+</section>
+
+<section class="section section--features" id="funciones">
   <div class="az-container">
+    <p class="section-kicker">En un solo lugar</p>
     <h2 class="section-title">{{ cfg.landing.sectionTitle }}</h2>
     <p class="section-sub">{{ cfg.landing.sectionSub }}</p>
     <div class="az-grid cols-3 cards">
       <article class="az-card feature">
-        <div class="icon">📅</div>
-        <h3>Citas</h3>
-        <p>Agenda visual, estados, duración por servicio y disponibilidad real por empleado.</p>
+        <div class="icon" aria-hidden="true">📅</div>
+        <h3>Citas y calendario</h3>
+        <p>Calendario, estados y disponibilidad real por persona.</p>
       </article>
       <article class="az-card feature">
-        <div class="icon">💳</div>
-        <h3>Ventas</h3>
-        <p>Registro rápido, métodos de pago e historial vinculable a citas.</p>
+        <div class="icon" aria-hidden="true">🧾</div>
+        <h3>Registro de ventas</h3>
+        <p>Anota importe y método para llevar el control. Sin cobro con tarjeta dentro de Azenda.</p>
       </article>
       <article class="az-card feature">
-        <div class="icon">📦</div>
+        <div class="icon" aria-hidden="true">📦</div>
         <h3>Inventario</h3>
-        <p>Stock, movimientos y alertas cuando un producto se agota.</p>
+        <p>Stock, movimientos y aviso cuando falta poco.</p>
+      </article>
+      <article class="az-card feature">
+        <div class="icon" aria-hidden="true">🌐</div>
+        <h3>Reserva pública</h3>
+        <p>Un enlace con tu marca: servicio, día y hora en pocos clics.</p>
+      </article>
+      <article class="az-card feature">
+        <div class="icon" aria-hidden="true">💬</div>
+        <h3>WhatsApp</h3>
+        <p>Enlaces y textos listos para confirmar y recordar.</p>
+      </article>
+      <article class="az-card feature">
+        <div class="icon" aria-hidden="true">🏢</div>
+        <h3>Multi-tenant</h3>
+        <p>Cada negocio con su espacio y usuarios (varias marcas o locales).</p>
       </article>
     </div>
   </div>
 </section>
 
-<section class="section alt" id="demo">
-  <div class="az-container demo-block">
+<section class="section alt" id="reservas">
+  <div class="az-container booking-block">
     <div>
       <h2 class="section-title">{{ cfg.landing.demoTitle }}</h2>
       <p class="section-sub">{{ cfg.landing.demoSub }}</p>
       <ul class="checks">
-        <li>URL por negocio: <code>/reservar/tu-slug</code></li>
-        <li>Branding por tenant</li>
-        <li>Flujo guiado en pocos pasos</li>
+        <li>Tu URL: <code>/reservar/tu-slug</code> con tu marca</li>
+        <li>Servicio → hora → contacto. Sin cobro en esa página</li>
       </ul>
+      <button type="button" class="az-btn az-btn-secondary booking-cta" (click)="openPublicBooking()">
+        Ver ejemplo de reserva pública
+      </button>
     </div>
     <div class="az-card preview">
-      <header>Paso 2 · Elige hora</header>
+      <header>Flujo del cliente · Paso 2</header>
+      <p class="preview-caption">Elige una hora disponible</p>
       <div class="slots">
         @for (t of ['09:00', '09:30', '10:00', '10:30', '11:00']; track t) {
           <span class="slot">{{ t }}</span>
         }
       </div>
-      <p class="hint">Simulación visual — la lógica real vivirá en el API.</p>
+      <p class="preview-foot">Las horas reales dependen de tu equipo y de cada servicio.</p>
     </div>
   </div>
 </section>
 
-<section class="section" id="planes">
+<section class="section" id="como-funciona">
   <div class="az-container">
+    <h2 class="section-title">Cómo empezar</h2>
+    <p class="section-sub">Tres pasos y listo.</p>
+    <ol class="steps">
+      <li class="az-card step">
+        <span class="step-num">1</span>
+        <h3>Crea tu cuenta</h3>
+        <p>Registro, plan y el nombre de tu enlace de reservas.</p>
+      </li>
+      <li class="az-card step">
+        <span class="step-num">2</span>
+        <h3>Configura servicios y equipo</h3>
+        <p>Servicios, precios en COP, equipo y horarios visibles para el cliente.</p>
+      </li>
+      <li class="az-card step">
+        <span class="step-num">3</span>
+        <h3>Comparte tu enlace</h3>
+        <p>Comparte el enlace. Citas, ventas e inventario desde el panel; cobras como siempre.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="section section--pricing alt" id="planes">
+  <div class="az-container">
+    <p class="section-kicker">Precios</p>
     <h2 class="section-title">{{ cfg.landing.plansSectionTitle }}</h2>
     <p class="section-sub">{{ cfg.landing.plansSectionSub }}</p>
     <div class="az-grid cols-3 plans">
       <article class="az-card plan">
+        <p class="plan-tier">Plan</p>
         <h3>Básico</h3>
         <p class="price">{{ formatCop(cfg.planPriceBasic) }}<span>/mes</span></p>
         <ul>
-          <li>Citas + reserva pública</li>
+          <li>Citas y reserva pública</li>
           <li>1 empleado</li>
           <li>WhatsApp (enlaces wa.me)</li>
         </ul>
@@ -120,43 +235,90 @@
       </article>
       <article class="az-card plan featured">
         <div class="ribbon">Popular</div>
+        <p class="plan-tier">Plan</p>
         <h3>Pro</h3>
         <p class="price">{{ formatCop(cfg.planPricePro) }}<span>/mes</span></p>
         <ul>
-          <li>+ Ventas</li>
+          <li>Registro de ventas (sin cobro online)</li>
           <li>Hasta 10 empleados</li>
           <li>Mensajes plantilla WA</li>
         </ul>
         <a routerLink="/auth/registro" class="az-btn az-btn-primary full">Elegir</a>
       </article>
       <article class="az-card plan">
+        <p class="plan-tier">Plan</p>
         <h3>Negocio</h3>
         <p class="price">{{ formatCop(cfg.planPriceBusiness) }}<span>/mes</span></p>
         <ul>
-          <li>+ Inventario</li>
-          <li>Empleados ilimitados (fair use)</li>
+          <li>Incluye inventario</li>
+          <li>Empleados amplios (uso razonable)</li>
           <li>Soporte prioritario</li>
         </ul>
         <a routerLink="/auth/registro" class="az-btn az-btn-secondary full">Elegir</a>
       </article>
     </div>
     <p class="muted plan-currency-note">
-      Precios en <strong>pesos colombianos (COP)</strong> · mismo criterio en catálogo y panel.
+      Valores en <strong>COP</strong>. Límites concretos (empleados, módulos) según contrato y configuración.
     </p>
   </div>
 </section>
 
-<section class="cta-final">
+<section class="section faq-section" id="preguntas">
   <div class="az-container">
+    <h2 class="section-title">Preguntas frecuentes</h2>
+    <p class="section-sub">Lo más consultado.</p>
+    <div class="faq-list">
+      <details class="faq-item az-card">
+        <summary>¿Para qué tipo de negocios sirve Azenda?</summary>
+        <p>
+          Peluquerías, spas, talleres, clínicas con cita y similares. Agenda y, si aplica, ventas anotadas e inventario. El
+          pago del cliente lo haces fuera de Azenda.
+        </p>
+      </details>
+      <details class="faq-item az-card">
+        <summary>¿Mis clientes reservan sin instalar una app?</summary>
+        <p>Sí: entran desde el navegador, eligen servicio y hora, y tú recibes el contacto para confirmar.</p>
+      </details>
+      <details class="faq-item az-card">
+        <summary>¿Puedo usar solo algunos módulos?</summary>
+        <p>Sí: cada plan incluye distintos módulos. Empieza básico y sube cuando lo necesites.</p>
+      </details>
+      <details class="faq-item az-card">
+        <summary>¿Los precios están en otra moneda?</summary>
+        <p>La referencia aquí es COP. Otro mercado: pregunta en soporte o comercial.</p>
+      </details>
+      <details class="faq-item az-card">
+        <summary>¿Puedo cobrar con tarjeta o link de pago desde Azenda?</summary>
+        <p>
+          No: no hay pasarela ni cobro con tarjeta en Azenda. Reservas y operación en el panel; el cobro lo haces por tus
+          canales habituales.
+        </p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="cta-final">
+  <div class="az-container cta-inner">
     <h2>{{ cfg.landing.ctaTitle }}</h2>
     <p>{{ cfg.landing.ctaLead }}</p>
-    <a routerLink="/auth/registro" class="az-btn az-btn-primary big">Crear mi espacio</a>
+    <a routerLink="/auth/registro" class="az-btn az-btn-primary big landing-btn-cta">Crear mi espacio</a>
   </div>
 </section>
 
 <footer class="footer">
   <div class="az-container footer-inner">
-    <span>{{ cfg.landing.footerNote }}</span>
-    <a routerLink="/auth/iniciar-sesion">Acceso</a>
+    <div class="footer-brand">
+      <span class="footer-logo">{{ cfg.landing.navBrand }}</span>
+      <span class="footer-note">{{ cfg.landing.footerNote }}</span>
+    </div>
+    <nav class="footer-links" aria-label="Enlaces de pie">
+      <a href="#funciones">Funciones</a>
+      <a href="#reservas">Reservas</a>
+      <a href="#planes">Planes</a>
+      <a routerLink="/auth/iniciar-sesion">Iniciar sesión</a>
+      <a routerLink="/auth/registro">Registro</a>
+    </nav>
   </div>
 </footer>
+</div>
