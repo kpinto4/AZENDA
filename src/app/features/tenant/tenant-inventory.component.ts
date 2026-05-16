@@ -4,6 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MockBusinessService, MockDataService, MockProduct } from '../../core/services/mock-data.service';
 import { environment } from '../../../environments/environment';
 import {
+  ApiTenantCatalogResponse,
   ApiTenantCatalogService,
   ApiTenantProductDto,
   ApiTenantServiceDto,
@@ -30,6 +31,9 @@ type PendingDelete =
       detail: string;
     };
 
+/** Fila de servicio en tabla inventario (mock o API). */
+type InventoryServiceRow = MockBusinessService | ApiTenantServiceDto;
+
 @Component({
   selector: 'app-tenant-inventory',
   imports: [ReactiveFormsModule, FormatCopPipe],
@@ -53,8 +57,21 @@ export class TenantInventoryComponent {
   readonly liveProducts = signal<ApiTenantProductDto[]>([]);
   readonly liveServices = signal<ApiTenantServiceDto[]>([]);
 
+  readonly canManageCatalog = computed(
+    () => this.session.role() === 'TENANT_ADMIN' && !this.session.isTenantRestricted(),
+  );
+  readonly inventoryBlockedMessage = computed(() => this.session.tenantRestrictionMessage());
+
+  readonly isInventoryLiveApi = computed(
+    () =>
+      environment.useLiveAuth &&
+      !!this.session.accessToken() &&
+      this.session.isTenantUser() &&
+      !this.session.isTenantRestricted(),
+  );
+
   readonly tenantProducts = computed(() => {
-    if (environment.useLiveAuth && this.session.accessToken()) {
+    if (this.isInventoryLiveApi()) {
       return this.liveProducts().map((p) => ({
         id: p.id,
         tenantId: p.tenantId,
@@ -72,11 +89,6 @@ export class TenantInventoryComponent {
     const tid = this.session.tenantId();
     return tid ? this.data.productsForTenant(tid) : [];
   });
-  readonly canManageCatalog = computed(
-    () => this.session.role() === 'TENANT_ADMIN' && !this.session.isTenantRestricted(),
-  );
-  readonly inventoryBlockedMessage = computed(() => this.session.tenantRestrictionMessage());
-
   readonly editorForm = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
     description: [''],
@@ -95,8 +107,8 @@ export class TenantInventoryComponent {
     reason: ['Ajuste demo', Validators.required],
   });
 
-  readonly businessServices = computed(() =>
-    environment.useLiveAuth && this.session.accessToken()
+  readonly businessServices = computed((): InventoryServiceRow[] =>
+    this.isInventoryLiveApi()
       ? this.liveServices().map((s) => ({
           id: s.id,
           name: s.name,
@@ -116,13 +128,27 @@ export class TenantInventoryComponent {
   });
 
   constructor() {
-    effect(() => {
-      const tenantId = this.session.tenantId();
-      const token = this.session.accessToken();
-      if (!tenantId || !environment.useLiveAuth || !token || this.session.isTenantRestricted()) {
+    effect((onCleanup) => {
+      if (!this.isInventoryLiveApi()) {
+        untracked(() => {
+          this.liveProducts.set([]);
+          this.liveServices.set([]);
+        });
         return;
       }
-      untracked(() => this.reloadCatalogFromApi());
+      const sub = this.apiCatalog.getCatalog().subscribe({
+        next: (res) => {
+          this.ingestCatalogResponse(res);
+        },
+        error: (err: unknown) => {
+          if (err instanceof HttpErrorResponse && err.status === 403) {
+            return;
+          }
+          this.flashMsg.set('No se pudo cargar catálogo desde API.');
+          this.alerts.error('No se pudo cargar catalogo desde API.');
+        },
+      });
+      onCleanup(() => sub.unsubscribe());
     });
   }
 
@@ -147,7 +173,7 @@ export class TenantInventoryComponent {
       return;
     }
     this.data.updateTenantBranding(tenantId, { catalogLayout: layout });
-    if (environment.useLiveAuth && this.session.accessToken()) {
+    if (this.isInventoryLiveApi()) {
       this.apiCatalog.patchBranding({ catalogLayout: layout }).subscribe({
         next: () => {
           this.flashMsg.set(
@@ -238,7 +264,7 @@ export class TenantInventoryComponent {
     this.isEditorOpen.set(true);
   }
 
-  openEditService(row: MockBusinessService): void {
+  openEditService(row: InventoryServiceRow): void {
     if (!this.canManageCatalog()) {
       this.notifyRestriction();
       return;
@@ -279,7 +305,7 @@ export class TenantInventoryComponent {
     });
   }
 
-  requestDeleteService(row: MockBusinessService): void {
+  requestDeleteService(row: InventoryServiceRow): void {
     if (!this.canManageCatalog()) {
       this.notifyRestriction();
       return;
@@ -385,7 +411,7 @@ export class TenantInventoryComponent {
       imageUrl: this.editorImageDataUrl(),
     };
     const editing = this.editingId();
-    if (environment.useLiveAuth && this.session.accessToken()) {
+    if (this.isInventoryLiveApi()) {
       const req = editing
         ? this.apiCatalog.updateProduct(editing, payload)
         : this.apiCatalog.createProduct(payload);
@@ -394,7 +420,7 @@ export class TenantInventoryComponent {
           this.flashMsg.set(editing ? 'Producto actualizado.' : 'Producto creado.');
           this.alerts.success(editing ? 'Producto actualizado.' : 'Producto creado.');
           this.closeEditor();
-          this.reloadCatalogFromApi();
+          this.refreshInventoryLive();
         },
         error: () => {
           this.flashMsg.set('No se pudo guardar producto en API.');
@@ -424,10 +450,6 @@ export class TenantInventoryComponent {
     promoPrice: number | null;
     promoLabel: string;
   }): void {
-    const slug = this.session.publicBookingSlug();
-    if (!slug) {
-      return;
-    }
     const payload = {
       name: v.name,
       description: v.description,
@@ -436,7 +458,7 @@ export class TenantInventoryComponent {
       promoLabel: v.promoLabel,
     };
     const editing = this.editingId();
-    if (environment.useLiveAuth && this.session.accessToken()) {
+    if (this.isInventoryLiveApi()) {
       const req = editing
         ? this.apiCatalog.updateService(editing, payload)
         : this.apiCatalog.createService(payload);
@@ -445,13 +467,17 @@ export class TenantInventoryComponent {
           this.flashMsg.set(editing ? 'Servicio actualizado.' : 'Servicio creado.');
           this.alerts.success(editing ? 'Servicio actualizado.' : 'Servicio creado.');
           this.closeEditor();
-          this.reloadCatalogFromApi();
+          this.refreshInventoryLive();
         },
         error: () => {
           this.flashMsg.set('No se pudo guardar servicio en API.');
           this.alerts.error('No se pudo guardar servicio en API.');
         },
       });
+      return;
+    }
+    const slug = this.session.publicBookingSlug();
+    if (!slug) {
       return;
     }
     if (editing) {
@@ -476,7 +502,45 @@ export class TenantInventoryComponent {
       return;
     }
     const v = this.moveForm.getRawValue();
-    this.data.applyStockMovement(this.session.tenantId(), v.productId, Number(v.delta), v.reason);
+    const delta = Number(v.delta);
+
+    if (this.isInventoryLiveApi()) {
+      const productId = v.productId;
+      const row = this.liveProducts().find((p) => p.id === productId);
+      if (!row) {
+        this.alerts.error('Producto no encontrado.');
+        return;
+      }
+      const nextStock = Math.max(0, row.stock + delta);
+      this.apiCatalog
+        .updateProduct(productId, {
+          name: row.name,
+          description: row.description ?? '',
+          price: row.price,
+          promoPrice: row.promoPrice,
+          sku: row.sku,
+          stock: nextStock,
+          imageUrl: row.imageUrl,
+        })
+        .subscribe({
+          next: () => {
+            this.flashMsg.set('Stock actualizado.');
+            this.alerts.success('Movimiento de stock aplicado.');
+            this.refreshInventoryLive();
+          },
+          error: () => {
+            this.flashMsg.set('No se pudo actualizar stock en API.');
+            this.alerts.error('No se pudo actualizar stock en API.');
+          },
+        });
+      return;
+    }
+
+    const tid = this.session.tenantId();
+    if (!tid) {
+      return;
+    }
+    this.data.applyStockMovement(tid, v.productId, delta, v.reason);
     this.alerts.success('Movimiento de stock aplicado.');
   }
 
@@ -489,12 +553,12 @@ export class TenantInventoryComponent {
     if (!tenantId) {
       return;
     }
-    if (environment.useLiveAuth && this.session.accessToken()) {
+    if (this.isInventoryLiveApi()) {
       this.apiCatalog.moveProduct(productId, dir).subscribe({
         next: () => {
           this.flashMsg.set('Orden de producto actualizado.');
           this.alerts.info('Orden de producto actualizada.');
-          this.reloadCatalogFromApi();
+          this.refreshInventoryLive();
         },
         error: () => {
           this.flashMsg.set('No se pudo reordenar producto en API.');
@@ -513,22 +577,22 @@ export class TenantInventoryComponent {
       this.notifyRestriction();
       return;
     }
-    const slug = this.session.publicBookingSlug();
-    if (!slug) {
-      return;
-    }
-    if (environment.useLiveAuth && this.session.accessToken()) {
+    if (this.isInventoryLiveApi()) {
       this.apiCatalog.moveService(serviceId, dir).subscribe({
         next: () => {
           this.flashMsg.set('Orden de servicio actualizado.');
           this.alerts.info('Orden de servicio actualizada.');
-          this.reloadCatalogFromApi();
+          this.refreshInventoryLive();
         },
         error: () => {
           this.flashMsg.set('No se pudo reordenar servicio en API.');
           this.alerts.error('No se pudo reordenar servicio en API.');
         },
       });
+      return;
+    }
+    const slug = this.session.publicBookingSlug();
+    if (!slug) {
       return;
     }
     this.data.moveBusinessService(slug, serviceId, dir);
@@ -545,7 +609,7 @@ export class TenantInventoryComponent {
     if (!tenantId) {
       return;
     }
-    if (environment.useLiveAuth && this.session.accessToken()) {
+    if (this.isInventoryLiveApi()) {
       this.apiCatalog.deleteProduct(productId).subscribe({
         next: () => {
           if (this.editingId() === productId) {
@@ -553,7 +617,7 @@ export class TenantInventoryComponent {
           }
           this.flashMsg.set('Producto eliminado.');
           this.alerts.warning('Producto eliminado.');
-          this.reloadCatalogFromApi();
+          this.refreshInventoryLive();
         },
         error: () => {
           this.flashMsg.set('No se pudo eliminar producto en API.');
@@ -575,11 +639,7 @@ export class TenantInventoryComponent {
       this.notifyRestriction();
       return;
     }
-    const slug = this.session.publicBookingSlug();
-    if (!slug) {
-      return;
-    }
-    if (environment.useLiveAuth && this.session.accessToken()) {
+    if (this.isInventoryLiveApi()) {
       this.apiCatalog.deleteService(serviceId).subscribe({
         next: () => {
           if (this.editingId() === serviceId) {
@@ -587,13 +647,17 @@ export class TenantInventoryComponent {
           }
           this.flashMsg.set('Servicio eliminado.');
           this.alerts.warning('Servicio eliminado.');
-          this.reloadCatalogFromApi();
+          this.refreshInventoryLive();
         },
         error: () => {
           this.flashMsg.set('No se pudo eliminar servicio en API.');
           this.alerts.error('No se pudo eliminar servicio en API.');
         },
       });
+      return;
+    }
+    const slug = this.session.publicBookingSlug();
+    if (!slug) {
       return;
     }
     this.data.deleteBusinessService(slug, serviceId);
@@ -604,34 +668,37 @@ export class TenantInventoryComponent {
     this.alerts.warning('Servicio eliminado.');
   }
 
-  private reloadCatalogFromApi(): void {
+  private ingestCatalogResponse(res: ApiTenantCatalogResponse): void {
+    this.liveProducts.set(res.products);
+    this.liveServices.set(res.services);
+    const tenantId = this.session.tenantId();
+    if (tenantId) {
+      this.data.updateTenantBranding(tenantId, {
+        displayName: res.branding.displayName,
+        logoUrl: res.branding.logoUrl,
+        publicAddress: res.branding.publicAddress,
+        publicMapsUrl: res.branding.publicMapsUrl,
+        cancellationPolicy: res.branding.cancellationPolicy,
+        reminderNotice: res.branding.reminderNotice,
+        catalogLayout: res.branding.catalogLayout,
+        primaryColor: res.branding.primaryColor,
+        accentColor: res.branding.accentColor,
+        bgColor: res.branding.bgColor,
+        surfaceColor: res.branding.surfaceColor,
+        textColor: res.branding.textColor,
+        borderRadiusPx: res.branding.borderRadiusPx,
+        useGradient: res.branding.useGradient,
+        gradientFrom: res.branding.gradientFrom,
+        gradientTo: res.branding.gradientTo,
+        gradientAngleDeg: res.branding.gradientAngleDeg,
+      });
+    }
+  }
+
+  /** Recarga lista local tras CRUD cuando el panel usa API real. */
+  private refreshInventoryLive(): void {
     this.apiCatalog.getCatalog().subscribe({
-      next: (res) => {
-        this.liveProducts.set(res.products);
-        this.liveServices.set(res.services);
-        const tenantId = this.session.tenantId();
-        if (tenantId) {
-          this.data.updateTenantBranding(tenantId, {
-            displayName: res.branding.displayName,
-            logoUrl: res.branding.logoUrl,
-            publicAddress: res.branding.publicAddress,
-            publicMapsUrl: res.branding.publicMapsUrl,
-            cancellationPolicy: res.branding.cancellationPolicy,
-            reminderNotice: res.branding.reminderNotice,
-            catalogLayout: res.branding.catalogLayout,
-            primaryColor: res.branding.primaryColor,
-            accentColor: res.branding.accentColor,
-            bgColor: res.branding.bgColor,
-            surfaceColor: res.branding.surfaceColor,
-            textColor: res.branding.textColor,
-            borderRadiusPx: res.branding.borderRadiusPx,
-            useGradient: res.branding.useGradient,
-            gradientFrom: res.branding.gradientFrom,
-            gradientTo: res.branding.gradientTo,
-            gradientAngleDeg: res.branding.gradientAngleDeg,
-          });
-        }
-      },
+      next: (res) => this.ingestCatalogResponse(res),
       error: (err: unknown) => {
         if (err instanceof HttpErrorResponse && err.status === 403) {
           return;

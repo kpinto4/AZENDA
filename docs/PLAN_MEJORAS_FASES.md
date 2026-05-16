@@ -15,7 +15,7 @@ Documento vivo para seguir **qué vamos haciendo**, **qué se arregla**, **qué 
 |----------|----------|
 | **Ahora** | **Piloto** con negocios reales (Fase 1 cerrada en código; smoke en `PRUEBAS_SISTEMA.md` al cambiar de entorno). |
 | **Se mantiene igual** | Monorepo, `SqlDbService` unificado, front híbrido mock/API, Neon, WhatsApp manual, polling en citas. |
-| **En pausa (hold)** | Fases **3** y **4** hasta piloto estable o necesidad clara (**Fase 2 cerrada en código**). |
+| **En pausa (hold)** | Fase **4** hasta piloto estable o necesidad clara (**Fase 3 activa** en front). |
 | **No hacer por ahora** | Varios repos Git, microservicios, refactor total de repositorios, ORM masivo. |
 
 **Veredicto operativo:** con Fase 1 cerrada → **piloto con negocios reales y cuentas serias**. Sin Fase 1 → solo demo interna o entornos de confianza.
@@ -41,7 +41,7 @@ Actualiza al cerrar ítems. Si cambia la estrategia, edita la sección [Estrateg
 |------|---------|-----------|--------|
 | **1** | Seguridad de cuentas y API expuesta | **Cerrada** | Obligatorio técnico hecho; opcionales de Fase 1 pendientes |
 | **2** | Arquitectura backend (repositorios, servicios) | **Cerrada** (código mayo 2026) | Repos por dominio + fachada `SqlDbService`; admin usa servicios; `api/migrations/README`; e2e smoke `/api`; tests billing / guard / reserva mínimos |
-| **3** | Unificación frontend (quitar mock) | HOLD | `[ ]` Pospuesta |
+| **3** | Unificación frontend (quitar mock en datos de negocio) | **ACTIVA** | Catálogo + inventario tenant → API (`useLiveAuth`); pendiente super-admin y limpiezas |
 | **4** | Operaciones, CI/CD y producto avanzado | HOLD | `[ ]` Pospuesta |
 
 ---
@@ -175,17 +175,18 @@ Usar esta tabla en revisiones de piloto y soporte. **No son fallos de la Fase 1*
 
 ---
 
-## Fase 3 — Unificación frontend (HOLD)
+## Fase 3 — Unificación frontend (**ACTIVA** · mock → API)
 
-> **Cuándo activar:** piloto con tenants que usan inventario/ventas a diario o reportes de datos incorrectos.
+> **Activada:** sustituir datos de negocio en panel/super-admin que aún leen `MockDataService` cuando `environment.useLiveAuth === true`.
 
-- [ ] Inventario tenant → API
-- [ ] Ventas tenant → API
+- [x] Inventario tenant → API (`tenant-inventory`: catálogo, ajustes de stock vía `PATCH` producto; historial demo solo si no hay API)
+- [x] Catálogo público tenant (`/app/catalogo`) — servicios CRUD + orden y foto de vitrina de productos vía API
+- [ ] Ventas tenant → API _(flujo ya híbrido; revisar retirada de ramas mock cuando no haga falta demo)_
 - [ ] Super admin (stats, módulos) → API
 - [ ] Dividir `public-booking-page` (subcomponentes + estado)
 - [ ] Utilidades compartidas (`customer-name-match`, horarios públicos)
-- [ ] Actualizar `README.md` y `api/ARCHITECTURE.md`
-- [ ] Tests en features críticas
+- [ ] Actualizar `README.md` y `docs` según avance Fase 3
+- [ ] Tests en features críticas del front
 
 **Criterio de cierre:** con `useLiveAuth: true`, pantallas principales sin `MockDataService` para datos de negocio.
 
@@ -266,7 +267,7 @@ Controller → Service (reglas HTTP / permisos) → Repository o SqlDbService (f
 
 1. **Piloto** — negocios reales (Fase 1 cerrada; smoke manual al cambiar de entorno).
 2. **Fase 2** — **cerrada** (repos, admin services, `api/migrations/` doc, e2e smoke, tests mínimos).
-3. **Activar Fase 3** si hay incoherencias mock/API en pantallas del piloto.
+3. **Fase 3 (ACTIVA)** — quitar datos de negocio mock en pantallas tenant/super-admin (`useLiveAuth: true`).
 4. **Activar Fase 4** con clientes de pago o releases regulares.
 
 ---
@@ -283,4 +284,7 @@ Controller → Service (reglas HTTP / permisos) → Repository o SqlDbService (f
 | 2026-05-16 | Fase 2: `TenantRepository` + defaults `plan-catalog` + mapper branding fila; tenants/plan_catalog parcialmente fuera del monolito |
 | 2026-05-16 | Fase 2: `AppointmentRepository`; SQL de citas extraído de `SqlDbService` (fachada sin cambio de llamadas) |
 | 2026-05-16 | Fase 2: `TenantCatalogRepository`; productos y servicios de tenant fuera de `SqlDbService` |
-| 2026-05-16 | **Fase 2 cerrada:** `TenantBrandingRepository`, `PlatformSiteConfigRepository`, `TenantBillingService`; servicios `Admin*Service` (controladores admin sin `SqlDbService`); `TenantStatusGuard` → `TenantRepository`; `api/migrations/README.md`; e2e `/api` sin BD; tests billing, guard, reserva pública mínima |
+| 2026-05-16 | Fase 2: `TenantRetailRepository`; ventas y visitas en tienda fuera de `SqlDbService` |
+| 2026-05-16 | **Fase 2 cerrada** (branding, site config, billing, admin services, tests, migrations doc) |
+| 2026-05-16 | **Fase 3 activada:** catálogo público tenant (`tenant-catalog`) contra API con `useLiveAuth` |
+| 2026-05-16 | Inventario tenant: `tenant-inventory` alineado a `tenant-catalog` (`isInventoryLiveApi`), carga con cleanup, stock con API y sin exigir slug antes de llamadas live |

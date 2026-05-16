@@ -19,7 +19,7 @@
     <div class="toolbar-actions">
       @if (canManageCatalog()) {
         <button type="button" class="az-btn az-btn-primary small" (click)="openCreateProduct()">Nuevo producto</button>
-        @if (session.publicBookingSlug()) {
+        @if (session.publicBookingSlug() || isInventoryLiveApi()) {
           <button type="button" class="az-btn az-btn-secondary small" (click)="openCreateService()">Nuevo servicio</button>
         }
       }
@@ -135,8 +135,17 @@
 
   @if (canManageCatalog()) {
     <div class="az-card mt">
-      <h3>Registrar movimiento (mock)</h3>
-      <p class="muted">Solo aplica para productos; usa delta negativo para salida (ej. −3) o positivo para entrada.</p>
+      <h3>
+        Registrar movimiento
+        @if (!isInventoryLiveApi()) {
+          <span class="muted">(mock)</span>
+        }
+      </h3>
+      @if (isInventoryLiveApi()) {
+        <p class="muted">Ajusta stock en servidor: delta negativo = salida, positivo = entrada. El motivo solo se registra en modo demo.</p>
+      } @else {
+        <p class="muted">Solo aplica para productos; usa delta negativo para salida (ej. −3) o positivo para entrada.</p>
+      }
       <form [formGroup]="moveForm" (ngSubmit)="applyMovement()" class="move-row">
         <div>
           <label class="az-label" for="pid">Producto</label>
@@ -159,29 +168,38 @@
       </form>
     </div>
 
-    <h2 class="sub-title">Movimientos recientes (simulado)</h2>
-    <div class="az-table-wrap">
-      <table class="az-table">
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Producto</th>
-            <th>Δ</th>
-            <th>Motivo</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (m of data.stockMovements(); track m.id) {
+    <h2 class="sub-title">
+      Movimientos recientes
+      @if (!isInventoryLiveApi()) {
+        <span class="muted">(simulado)</span>
+      }
+    </h2>
+    @if (isInventoryLiveApi()) {
+      <p class="muted">Historia de movimientos en panel solo existe en modo demo; con API usa la tabla de ventas o el stock actualizado arriba.</p>
+    } @else {
+      <div class="az-table-wrap">
+        <table class="az-table">
+          <thead>
             <tr>
-              <td>{{ m.at }}</td>
-              <td>{{ m.productName }}</td>
-              <td [class.neg]="m.delta < 0" [class.pos]="m.delta > 0">{{ m.delta > 0 ? '+' : '' }}{{ m.delta }}</td>
-              <td>{{ m.reason }}</td>
+              <th>Fecha</th>
+              <th>Producto</th>
+              <th>Δ</th>
+              <th>Motivo</th>
             </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            @for (m of data.stockMovements(); track m.id) {
+              <tr>
+                <td>{{ m.at }}</td>
+                <td>{{ m.productName }}</td>
+                <td [class.neg]="m.delta < 0" [class.pos]="m.delta > 0">{{ m.delta > 0 ? '+' : '' }}{{ m.delta }}</td>
+                <td>{{ m.reason }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
   }
 </div>
 
