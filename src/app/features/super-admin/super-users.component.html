@@ -3,19 +3,51 @@
     <div class="super-ui-header-main">
       <div class="super-ui-title-row">
         <h1 class="super-ui-title">Usuarios globales</h1>
-        <span class="super-ui-badge super-ui-badge--neutral">Mock</span>
+        <span
+          class="super-ui-badge"
+          [class.super-ui-badge--neutral]="!useApiUsers()"
+          [class.super-ui-badge--live]="useApiUsers()"
+        >
+          {{ useApiUsers() ? 'API' : 'Mock' }}
+        </span>
       </div>
-      <p class="super-ui-lead">Simulación: alta en memoria. En producción: invitaciones, verificación y permisos reales.</p>
+      <p class="super-ui-lead">
+        @if (useApiUsers()) {
+          Alta y baja contra <code>/admin/users</code>. Elige tenant para ADMIN y EMPLEADO; SUPER_ADMIN no lleva tenant.
+        } @else {
+          Simulación: alta en memoria. En producción: invitaciones, verificación y permisos reales.
+        }
+      </p>
     </div>
   </header>
 
+  @if (apiFlash()) {
+    <p class="services-msg">{{ apiFlash() }}</p>
+  }
+  @if (apiError()) {
+    <p class="field-error">{{ apiError() }}</p>
+  }
+
   <div class="super-ui-surface">
-    <h3 class="super-ui-surface-title">Añadir usuario (mock)</h3>
+    <h3 class="super-ui-surface-title">{{ useApiUsers() ? 'Añadir usuario' : 'Añadir usuario (mock)' }}</h3>
     <form [formGroup]="form" (ngSubmit)="add()" class="user-form">
       <div>
         <label class="az-label" for="em">Correo</label>
-        <input id="em" class="az-input wide" type="email" formControlName="email" />
+        <input id="em" class="az-input wide" type="email" formControlName="email" autocomplete="username" />
       </div>
+      @if (useApiUsers()) {
+        <div>
+          <label class="az-label" for="pw">Contraseña inicial</label>
+          <input
+            id="pw"
+            class="az-input wide"
+            type="password"
+            formControlName="password"
+            autocomplete="new-password"
+          />
+          <p class="muted small">Minimo 6 caracteres. El usuario podra cambiarla cuando exista flujo de recuperacion.</p>
+        </div>
+      }
       <div>
         <label class="az-label" for="role">Rol</label>
         <div id="role" class="role-pills" role="radiogroup" aria-label="Rol">
@@ -27,10 +59,27 @@
           }
         </div>
       </div>
-      <div class="grow">
-        <label class="az-label" for="tl">Tenant (etiqueta)</label>
-        <input id="tl" class="az-input wide" formControlName="tenantLabel" />
-      </div>
+      @if (useApiUsers()) {
+        <div class="grow">
+          <label class="az-label" for="tid">Tenant</label>
+          <select
+            id="tid"
+            class="az-select wide"
+            formControlName="tenantId"
+            [disabled]="form.controls.role.value === 'SUPER_ADMIN'"
+          >
+            <option value="">— Elegir tenant —</option>
+            @for (t of tenantOptions(); track t.id) {
+              <option [value]="t.id">{{ t.name }} ({{ t.slug }})</option>
+            }
+          </select>
+        </div>
+      } @else {
+        <div class="grow">
+          <label class="az-label" for="tl">Tenant (etiqueta)</label>
+          <input id="tl" class="az-input wide" formControlName="tenantLabel" />
+        </div>
+      }
       <button type="submit" class="az-btn az-btn-primary end">Añadir</button>
     </form>
   </div>
@@ -41,22 +90,45 @@
         <tr>
           <th>Correo</th>
           <th>Rol</th>
+          @if (useApiUsers()) {
+            <th>Estado</th>
+          }
           <th>Tenant</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
-        @for (u of data.platformUsers(); track u.id) {
-          <tr>
-            <td>{{ u.email }}</td>
-            <td><span class="az-badge">{{ u.role }}</span></td>
-            <td>{{ u.tenantLabel }}</td>
-            <td>
-              <button type="button" class="az-btn az-btn-ghost small" (click)="data.removePlatformUser(u.id)">
-                Quitar
-              </button>
-            </td>
-          </tr>
+        @if (useApiUsers()) {
+          @for (u of tableRowsLive(); track u.id) {
+            <tr>
+              <td>{{ u.email }}</td>
+              <td><span class="az-badge">{{ u.role }}</span></td>
+              <td><span class="az-badge success">{{ u.status }}</span></td>
+              <td>{{ u.tenantLabel }}</td>
+              <td>
+                <button type="button" class="az-btn az-btn-ghost small" (click)="remove(u)">Quitar</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td [attr.colspan]="5">No hay usuarios o no se pudo cargar la lista.</td>
+            </tr>
+          }
+        } @else {
+          @for (u of data.platformUsers(); track u.id) {
+            <tr>
+              <td>{{ u.email }}</td>
+              <td><span class="az-badge">{{ u.role }}</span></td>
+              <td>{{ u.tenantLabel }}</td>
+              <td>
+                <button type="button" class="az-btn az-btn-ghost small" (click)="remove(u)">Quitar</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4">Sin usuarios en mock.</td>
+            </tr>
+          }
         }
       </tbody>
     </table>

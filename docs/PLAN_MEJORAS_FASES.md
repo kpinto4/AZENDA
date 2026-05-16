@@ -15,7 +15,7 @@ Documento vivo para seguir **qué vamos haciendo**, **qué se arregla**, **qué 
 |----------|----------|
 | **Ahora** | **Piloto** con negocios reales (Fase 1 cerrada en código; smoke en `PRUEBAS_SISTEMA.md` al cambiar de entorno). |
 | **Se mantiene igual** | Monorepo, `SqlDbService` unificado, front híbrido mock/API, Neon, WhatsApp manual, polling en citas. |
-| **En pausa (hold)** | Fase **4** hasta piloto estable o necesidad clara (**Fase 3 activa** en front). |
+| **En pausa (hold)** | Fase **4** hasta piloto estable o necesidad clara (**Fase 3 cerrada** en código mayo 2026). |
 | **No hacer por ahora** | Varios repos Git, microservicios, refactor total de repositorios, ORM masivo. |
 
 **Veredicto operativo:** con Fase 1 cerrada → **piloto con negocios reales y cuentas serias**. Sin Fase 1 → solo demo interna o entornos de confianza.
@@ -41,7 +41,7 @@ Actualiza al cerrar ítems. Si cambia la estrategia, edita la sección [Estrateg
 |------|---------|-----------|--------|
 | **1** | Seguridad de cuentas y API expuesta | **Cerrada** | Obligatorio técnico hecho; opcionales de Fase 1 pendientes |
 | **2** | Arquitectura backend (repositorios, servicios) | **Cerrada** (código mayo 2026) | Repos por dominio + fachada `SqlDbService`; admin usa servicios; `api/migrations/README`; e2e smoke `/api`; tests billing / guard / reserva mínimos |
-| **3** | Unificación frontend (quitar mock en datos de negocio) | **ACTIVA** | Catálogo + inventario + KPIs super-admin sobre API; pendiente `super-users` mock, `public-booking-page`, utilidades, tests |
+| **3** | Unificación frontend (quitar mock en datos de negocio) | **Cerrada** (mayo 2026) | Con `useLiveAuth: true`, panel tenant y super-admin usan API; mock solo demo y rutas públicas; utilidades reserva pública extraídas + tests Karma (guards, horarios, utils) |
 | **4** | Operaciones, CI/CD y producto avanzado | HOLD | `[ ]` Pospuesta |
 
 ---
@@ -65,7 +65,7 @@ Actualiza al cerrar ítems. Si cambia la estrategia, edita la sección [Estrateg
 | Área | Situación | Motivo |
 |------|-----------|--------|
 | `SqlDbService` voluminoso | Fachada + bootstrap/esquema; dominio en repos / servicios aplicación | Migrar solo con runner explícito cuando Fase 4 lo pida |
-| Front mock + API (`MockDataService`) | Híbrido | Ya funciona para demo/piloto; unificar en Fase 3 |
+| Front mock + API (`MockDataService`) | Híbrido solo donde aporta demo (`useLiveAuth: false`) o UI auxiliar | Fase 3 cerró datos de negocio tenant/super en API con `useLiveAuth: true` |
 | Sin CI/CD en repo | Manual | Fase 4; no impide hashing |
 | Confirmación asistencia solo id + nombre | Sin OTP aún | Ítem opcional Fase 1; ver riesgos residuales |
 | WhatsApp manual (`wa.me`) | Igual | Alineado con bajo costo operativo |
@@ -81,8 +81,8 @@ Usar esta tabla en revisiones de piloto y soporte. **No son fallos de la Fase 1*
 
 | Riesgo | Impacto | Mitigación hasta Fase 3+ | Fase que lo aborda |
 |--------|---------|---------------------------|-------------------|
-| Datos distintos mock vs API en pantallas | Tenant ve inventario/ventas/stats incoherentes | Usar solo flujos ya en API; documentar en pruebas | Fase 3 |
-| `MockDataService` en ~20 componentes | Bugs “solo en prod” o solo en demo | Priorizar pantallas del piloto en API real | Fase 3 |
+| Datos distintos mock vs API en pantallas | Tenant ve inventario/ventas/stats incoherentes | Usar `useLiveAuth: true` en piloto; checklist `PRUEBAS_SISTEMA.md` | Fase 3 (mitigado en panel) |
+| `MockDataService` en ~20 componentes | Bugs “solo en prod” o solo en demo | Prioridad en rutas `/app` y `/super` con API; landing/reserva pública puede seguir mock | Fase 3 + Fase 4 |
 | Pocos tests automatizados vs dominio creciente | Regresiones silenciosas | `npm test` / `npm run test:e2e`; checklist manual (`docs/PRUEBAS_SISTEMA.md`) | Fase 4 amplía cobertura |
 
 ### Riesgo medio
@@ -175,26 +175,34 @@ Usar esta tabla en revisiones de piloto y soporte. **No son fallos de la Fase 1*
 
 ---
 
-## Fase 3 — Unificación frontend (**ACTIVA** · mock → API)
+## Fase 3 — Unificación frontend (**CERRADA** · mayo 2026)
 
-> **Activada:** sustituir datos de negocio en panel/super-admin que aún leen `MockDataService` cuando `environment.useLiveAuth === true`.
+> **Cierre:** con `environment.useLiveAuth === true`, las pantallas **tenant** (`/app/…`) y **super-admin** (`/super/…`) obtienen datos de negocio desde el API. `MockDataService` queda para demo (`useLiveAuth: false`), landing y piezas auxiliares sin bloquear piloto.
 
-- [x] Inventario tenant → API (`tenant-inventory`: catálogo, ajustes de stock vía `PATCH` producto; historial demo solo si no hay API)
-- [x] Catálogo público tenant (`/app/catalogo`) — servicios CRUD + orden y foto de vitrina de productos vía API
-- [ ] Ventas tenant → API _(flujo ya híbrido; revisar retirada de ramas mock cuando no haga falta demo)_
-- [x] Super admin — dashboard / estadísticas / módulos desde `GET /admin/platform-stats` _(pantalla usuarios globales `super-users` sigue en mock)_
-- [ ] Dividir `public-booking-page` (subcomponentes + estado)
-- [ ] Utilidades compartidas (`customer-name-match`, horarios públicos)
-- [ ] Actualizar `README.md` y `docs` según avance Fase 3
-- [ ] Tests en features críticas del front
+- [x] Inventario tenant → API (`tenant-inventory`)
+- [x] Catálogo público tenant (`/app/catalogo` / inventario) — productos y servicios vía API
+- [x] Ventas tenant → API (`tenant-sales`: ventas, catálogo para stock, visitas tienda; mock solo sin API o sin módulo ventas)
+- [x] Super admin — `GET /admin/platform-stats`, usuarios `admin/users`, resto de pantallas ya enlazadas al API donde aplica
+- [x] Utilidades alineadas con API — `src/app/core/customer-name-match.ts`, `public-booking-hours.ts` (convención compartida con Nest)
+- [x] `README.md` y este plan actualizados
+- [x] Tests front Karma — `customer-name-match.spec.ts`, `public-booking-hours.spec.ts`, `public-booking-page.utils.spec.ts`, `auth.guards.spec.ts` (con `provideHttpClient` / testing en TestBed)
+- [x] Reserva pública más testeable — lógica auxiliar en `public-booking-page.utils.ts` consumida por `public-booking-page.component.ts`
 
-**Criterio de cierre:** con `useLiveAuth: true`, pantallas principales sin `MockDataService` para datos de negocio.
+**Criterio de cierre (alcanzado):** rutas principales de panel tenant y super-admin **sin** depender de `MockDataService` para datos de negocio cuando hay sesión API.
+
+**Diferido a Fase 4 (no bloquea cierre):** refactor grande de `public-booking-page` en subcomponentes (la extracción a `public-booking-page.utils.ts` es solo el primer paso); más tests (login redirect, flujo venta API); retirar por completo el mock en landing/reserva si el producto deja de necesitar demo sin API.
 
 ---
 
 ## Fase 4 — Operaciones y producto (HOLD)
 
 > **Cuándo activar:** primeros clientes de pago, releases frecuentes o necesidad de email/push.
+
+### Arrastre opcional (calidad front, post–Fase 3)
+
+- [ ] Dividir `public-booking-page` en subcomponentes y estado más testeable
+- [ ] Más tests front (login redirect, flujo venta API); guards y utils/horarios de reserva pública cubiertos en cierre Fase 3
+- [ ] Reducir aún `MockDataService` en landing/reserva si solo se despliega modo API
 
 ### Infra y calidad
 
@@ -238,9 +246,9 @@ Actualizar cuando cambien fases o coberturas.
 | Throttler en `public/*` | No | **Sí** (+ login acotado) | Sí |
 | Helmet en API | No | **Sí** | Sí |
 | Tests API (Jest `src`) | 3 suites | **6 suites**, ~19 casos (Fase 2) | ≥ 15 casos |
-| Tests front | 0 | 0 | Críticos |
+| Tests front | 0 | **~19 casos Karma** (`customer-name-match`, `public-booking-hours`, `public-booking-page.utils`, `auth.guards`) | Críticos + smoke UI |
 | Líneas `sql-db.service.ts` | ~2100 | Menor; fachada + bootstrap (Fase 2) | Opcional afilar con runner migraciones |
-| Uso mock datos reales | ~20+ comp. | ~20+ (OK) | 0 si Fase 3 |
+| Uso mock datos reales | ~20+ comp. | **Reducido en `/app` y `/super` con API** | 0 en todo el front solo si Fase 4 |
 | CI/CD | No | No (OK) | Sí si Fase 4 |
 
 ---
@@ -267,7 +275,7 @@ Controller → Service (reglas HTTP / permisos) → Repository o SqlDbService (f
 
 1. **Piloto** — negocios reales (Fase 1 cerrada; smoke manual al cambiar de entorno).
 2. **Fase 2** — **cerrada** (repos, admin services, `api/migrations/` doc, e2e smoke, tests mínimos).
-3. **Fase 3 (ACTIVA)** — quitar datos de negocio mock en pantallas tenant/super-admin (`useLiveAuth: true`).
+3. **Fase 3** — **cerrada** (panel tenant + super-admin con API si `useLiveAuth: true`; README; tests core + guards + horarios públicos + utils reserva pública).
 4. **Activar Fase 4** con clientes de pago o releases regulares.
 
 ---
@@ -289,3 +297,4 @@ Controller → Service (reglas HTTP / permisos) → Repository o SqlDbService (f
 | 2026-05-16 | **Fase 3 activada:** catálogo público tenant (`tenant-catalog`) contra API con `useLiveAuth` |
 | 2026-05-16 | Inventario tenant: `tenant-inventory` alineado a `tenant-catalog` (`isInventoryLiveApi`), carga con cleanup, stock con API y sin exigir slug antes de llamadas live |
 | 2026-05-16 | Fase 3: `GET /admin/platform-stats` + super dashboard / estadísticas / módulos leen BD con `useLiveAuth` |
+| 2026-05-16 | **Fase 3 cerrada:** panel tenant + super-admin con API (`useLiveAuth`); README; tests Karma (`customer-name-match`, `public-booking-hours`, `public-booking-page.utils`, `auth.guards` con `provideHttpClient`); `public-booking-page.utils.ts`; split mayor de reserva pública y más tests → Fase 4 |

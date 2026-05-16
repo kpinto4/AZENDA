@@ -1,10 +1,18 @@
 # Azenda
 
-SaaS multi-tenant (front-end) para **citas**, **ventas** e **inventario**, construido con **Angular 19**. Los datos son **simulados en memoria** para poder enseñar flujos y UI; el trabajo de API y persistencia está descrito en [`docs/BACKEND.md`](docs/BACKEND.md).
+SaaS multi-tenant (**Angular 19** + **NestJS**) para **citas**, **ventas** e **inventario**. El front puede trabajar en **dos modos**:
+
+| Modo | Cómo | Datos |
+|------|------|--------|
+| **Piloto / API** | `src/environments/environment.ts` → `useLiveAuth: true` | Login JWT, tenant y super-admin contra PostgreSQL (Neon). Ver [`docs/BACKEND.md`](docs/BACKEND.md) y [`docs/PRUEBAS_SISTEMA.md`](docs/PRUEBAS_SISTEMA.md). |
+| **Demo solo front** | `useLiveAuth: false` | `MockDataService` en memoria (sin persistencia al recargar). |
+
+Plan de evolución por fases: [`docs/PLAN_MEJORAS_FASES.md`](docs/PLAN_MEJORAS_FASES.md) (**Fase 3 cerrada** en código: panel tenant y super-admin usan API cuando `useLiveAuth` es true).
 
 ## Requisitos
 
-- Node.js LTS recomendado (el CLI de Angular 19 suele probarse con versiones LTS).
+- Node.js LTS.
+- Para el API: `DATABASE_URL` en `api/.env` (Neón). Sin base, el backend no arranca en modo completo.
 
 ## Desarrollo
 
@@ -13,7 +21,13 @@ npm install
 npm run dev
 ```
 
-Eso levanta el **API** (por defecto `http://localhost:3000`) y la **web** en `http://localhost:4200/`. Para solo el front: `npm start`.
+Levanta el **API** (`http://localhost:3000` por defecto) y la **web** (`http://localhost:4200`). El front en dev proxea `/api` al Nest (ver `proxy.conf.json`). Solo Angular: `npm start`.
+
+Primera vez con base vacía (usuarios/tenants demo hasheados):
+
+```bash
+npm run db:bootstrap
+```
 
 ## Build
 
@@ -21,37 +35,44 @@ Eso levanta el **API** (por defecto `http://localhost:3000`) y la **web** en `ht
 npm run build
 ```
 
-Salida en `dist/azenda`.
+Salida en `dist/azenda`. API: `npm --prefix api run build`.
 
-## Mapa de rutas (demo)
+## Tests
+
+```bash
+npm test
+```
+
+(Karma + ChromeHeadless; incluye tests mínimos del core, p. ej. coincidencia de nombre en reserva pública.)
+
+## Mapa de rutas
 
 | Ruta | Descripción |
 |------|-------------|
-| `/` | Landing de ventas |
-| `/auth/iniciar-sesion` | Login simulado |
-| `/auth/registro` | Registro simulado |
-| `/app/...` | Panel cliente (requiere sesión tenant; guard) |
-| `/super/...` | Super Admin (requiere rol simulado; guard) |
-| `/reservar/:slug` | Reserva pública (wizard simulado) |
+| `/` | Landing |
+| `/auth/iniciar-sesion` | Login (API si `useLiveAuth`, si no reglas demo por correo) |
+| `/auth/registro` | Registro (demo) |
+| `/app/...` | Panel tenant (guard + JWT en modo API) |
+| `/super/...` | Super admin (guard + JWT en modo API) |
+| `/reservar/:slug` | Reserva pública |
 
-### Simulación completa (misma pestaña)
+### Modo demo (`useLiveAuth: false`)
 
-Todo comparte **`MockDataService`**: lo que haces en Super Admin, panel, ventas con stock, inventario, etc. se refleja al instante. **No hay persistencia**: al recargar la página se pierde (salvo que vuelvas al estado inicial con el botón de la landing).
+Todo comparte **`MockDataService`**. **Restablecer demo** en la landing; accesos rápidos sin contraseña real.
 
-- **Restablecer demo**: en la franja superior de la landing, **“Restablecer demo”** (cierra sesión y vuelve datos y catálogo al estado inicial).
-- **Sincronía tenant**: si editas módulos o nombre de un tenant en **Super Admin → Tenants**, al tener abierto el panel con ese mismo `tenant_id`, el menú lateral se actualiza solo (efecto en `TenantShell`).
-- **Registro**: crea un tenant nuevo en memoria y entra al panel como su admin.
-
-### Login de demostración
+**Login de demostración** (correo contiene):
 
 - **`super`** → Super Admin.
-- **`spa`** → Spa Relax (sin módulo inventario en el mock inicial).
-- **`clinica`** o **`trial`** → Clínica Demo (tenant **pausado**: verás aviso en el panel).
-- **`empleado`** → empleado en Barbería Centro.
-- Cualquier otro correo válido → admin de **Barbería Centro**.
+- **`spa`** → Spa Relax · **`clinica`** / **`trial`** → Clínica · **`empleado`** → empleado · otro correo → Barbería Centro.
 
-Desde la landing: accesos rápidos “Panel cliente” y “Super Admin”.
+### Modo API (`useLiveAuth: true`)
 
-## Documentación backend
+Usuarios y contraseñas reales en base (p. ej. `super@azenda.dev` tras `db:bootstrap`). El `?redirect=` del login respeta el rol (no manda un super admin a `/app` por un redirect antiguo).
 
-Ver [`docs/BACKEND.md`](docs/BACKEND.md) para endpoints sugeridos, multi-tenant y reglas de negocio pendientes.
+## Documentación
+
+| Documento | Contenido |
+|-----------|------------|
+| [`docs/BACKEND.md`](docs/BACKEND.md) | API, variables, prefijos de rutas |
+| [`docs/PRUEBAS_SISTEMA.md`](docs/PRUEBAS_SISTEMA.md) | Comandos, smoke, roles |
+| [`docs/PLAN_MEJORAS_FASES.md`](docs/PLAN_MEJORAS_FASES.md) | Fases 1–4 y criterios de cierre |

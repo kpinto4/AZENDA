@@ -16,7 +16,7 @@ Guía única para que cualquier persona entienda cómo levantar AZENDA, probarla
 | [6 Runbook de errores](#6-corrección-de-errores-runbook) | Síntomas → causas probables → pasos de arreglo |
 | [7 Criterio de salida](#7-criterio-de-salida) | Cuándo considerar el sistema “listo” |
 
-Documentos relacionados: [BACKEND.md](BACKEND.md), [PLANES_Y_FACTURACION.md](PLANES_Y_FACTURACION.md), [DESPLIEGUE_PRUEBA_NGROK.md](DESPLIEGUE_PRUEBA_NGROK.md), [RECORDATORIOS_Y_WHATSAPP.md](RECORDATORIOS_Y_WHATSAPP.md).
+Documentos relacionados: [BACKEND.md](BACKEND.md), [PLAN_MEJORAS_FASES.md](PLAN_MEJORAS_FASES.md), [PLANES_Y_FACTURACION.md](PLANES_Y_FACTURACION.md), [DESPLIEGUE_PRUEBA_NGROK.md](DESPLIEGUE_PRUEBA_NGROK.md), [RECORDATORIOS_Y_WHATSAPP.md](RECORDATORIOS_Y_WHATSAPP.md).
 
 ---
 

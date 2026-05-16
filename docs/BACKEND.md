@@ -63,7 +63,7 @@ La lista ayuda a orientarse en el código y en herramientas tipo Postman. Las ru
 
 | Área | Prefijo orientativo | Para quién |
 | --- | --- | --- |
-| Administración | `/api/admin/...` | Super admin; operaciones globales. Incluye **`GET /admin/platform-stats`** (métricas agregadas: tenants, citas, ventas, módulos por tenant, MRR nominal). |
+| Administración | `/api/admin/...` | Super admin. Incluye **`GET /admin/platform-stats`**, **`/admin/users`** (CRUD usuarios globales), tenants, plan-catalog, site-config. |
 | Tenant | `/api/tenant/...` | Usuarios del negocio (admin/empleado) con JWT. |
 | Público | `/api/public/...` | Sin login; reserva por slug, etc. |
 | Acceso / salud | según código | Ping o helpers si existen en el proyecto. |
@@ -74,6 +74,7 @@ La lista ayuda a orientarse en el código y en herramientas tipo Postman. Las ru
 
 | Documento | Contenido |
 | --- | --- |
+| [PLAN_MEJORAS_FASES.md](PLAN_MEJORAS_FASES.md) | Fases del proyecto (Fase 3 cerrada: front tenant/super con API cuando `useLiveAuth`). |
 | [PRUEBAS_SISTEMA.md](PRUEBAS_SISTEMA.md) | Despliegue, comandos uno a uno, pruebas por rol, runbook. |
 | [PLANES_Y_FACTURACION.md](PLANES_Y_FACTURACION.md) | Endpoints y lógica de facturación por tenant. |
 | [DESPLIEGUE_PRUEBA_NGROK.md](DESPLIEGUE_PRUEBA_NGROK.md) | Exponer el front local con ngrok. |
