@@ -16,7 +16,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { Systems } from '../auth/decorators/systems.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
+import { AdminUsersService } from './admin-users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -25,11 +25,11 @@ import { UpdateUserDto } from './dto/update-user.dto';
 @Roles(UserRole.SUPER_ADMIN)
 @Systems(AppSystem.SUPER_ADMIN)
 export class AdminUsersController {
-  constructor(private readonly sqlDbService: SqlDbService) {}
+  constructor(private readonly adminUsers: AdminUsersService) {}
 
   @Get()
   async listUsers() {
-    const users = await this.sqlDbService.listUsers();
+    const users = await this.adminUsers.listUsers();
     return users.map((user) => {
       const { password: _password, ...safeUser } = user;
       return safeUser;
@@ -38,7 +38,7 @@ export class AdminUsersController {
 
   @Get(':userId')
   async getUserById(@Param('userId') userId: string) {
-    const user = await this.sqlDbService.findUserById(userId);
+    const user = await this.adminUsers.findById(userId);
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
     }
@@ -48,7 +48,7 @@ export class AdminUsersController {
 
   @Post()
   async createUser(@Body() body: CreateUserDto) {
-    const created = await this.sqlDbService.createUser({
+    const created = await this.adminUsers.create({
       id: body.id,
       email: body.email,
       password: body.password,
@@ -64,7 +64,7 @@ export class AdminUsersController {
 
   @Patch(':userId')
   async updateUser(@Param('userId') userId: string, @Body() body: UpdateUserDto) {
-    const updated = await this.sqlDbService.updateUser(userId, {
+    const updated = await this.adminUsers.update(userId, {
       email: body.email,
       password: body.password,
       role: body.role,
@@ -83,7 +83,7 @@ export class AdminUsersController {
   @Delete(':userId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteUser(@Param('userId') userId: string) {
-    const deleted = await this.sqlDbService.deleteUser(userId);
+    const deleted = await this.adminUsers.delete(userId);
     if (!deleted) {
       throw new NotFoundException('Usuario no encontrado');
     }

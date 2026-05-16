@@ -1,14 +1,26 @@
 import { OnModuleInit } from '@nestjs/common';
 import { AppointmentAttendance, AppointmentEntity, AppointmentStatus, BillingCycle, PlanCatalogEntry, PlatformSiteConfig, PlatformSiteLandingCopy, StoreVisitLogEntity, TenantBillingSnapshot, TenantBrandingEntity, TenantEntity, TenantProductEntity, TenantSaleEntity, TenantServiceEntity, UserEntity } from './sql-db.types';
+import { AppointmentRepository } from './repositories/appointment.repository';
+import { PlatformSiteConfigRepository } from './repositories/platform-site-config.repository';
+import { TenantBrandingRepository } from './repositories/tenant-branding.repository';
 import { PgClientService } from './pg-client.service';
+import { TenantCatalogRepository } from './repositories/tenant-catalog.repository';
+import { TenantRetailRepository } from './repositories/tenant-retail.repository';
 import { TenantRepository } from './repositories/tenant.repository';
 import { UserRepository } from './repositories/user.repository';
+import { TenantBillingService } from './tenant-billing.service';
 export declare class SqlDbService implements OnModuleInit {
     private readonly pg;
     private readonly users;
     private readonly tenants;
+    private readonly appointments;
+    private readonly catalog;
+    private readonly retail;
+    private readonly tenantBranding;
+    private readonly platformSite;
+    private readonly tenantBilling;
     private readonly logger;
-    constructor(pg: PgClientService, users: UserRepository, tenants: TenantRepository);
+    constructor(pg: PgClientService, users: UserRepository, tenants: TenantRepository, appointments: AppointmentRepository, catalog: TenantCatalogRepository, retail: TenantRetailRepository, tenantBranding: TenantBrandingRepository, platformSite: PlatformSiteConfigRepository, tenantBilling: TenantBillingService);
     onModuleInit(): Promise<void>;
     runBootstrap(): Promise<void>;
     private pingOrThrow;
@@ -113,23 +125,14 @@ export declare class SqlDbService implements OnModuleInit {
     private seedIfEmpty;
     private ensureSeedTenant;
     private ensureSeedUser;
-    private round2;
     getPlanCatalogPrices(planKey: string): Promise<{
         monthly: number;
         yearly: number;
     }>;
     listPlanCatalog(): Promise<PlanCatalogEntry[]>;
     replacePlanCatalog(entries: PlanCatalogEntry[]): Promise<PlanCatalogEntry[]>;
-    private mergePlatformSiteConfig;
-    private ensurePlatformSiteConfig;
-    private ensureTenantSalesTable;
     getPlatformSiteConfig(): Promise<PlatformSiteConfig>;
     patchPlatformSiteConfig(patch: Partial<PlatformSiteConfig> & {
         landing?: Partial<PlatformSiteLandingCopy>;
     }): Promise<PlatformSiteConfig>;
-    private mapAppointmentRow;
-    private mapStoreVisitRow;
-    private mapTenantSaleRow;
-    private mapTenantProductRow;
-    private mapTenantServiceRow;
 }

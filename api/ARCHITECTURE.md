@@ -14,10 +14,14 @@ Nada del backend depende de `../src` (Angular).
 ## Modulos actuales
 
 - `auth/`: login JWT y endpoint `auth/me`
-- `admin/`: endpoints de super admin
-- `tenant/`: endpoints de contexto para usuarios tenant
-- `infrastructure/sql-db/`: PostgreSQL (Neon) vía `DATABASE_URL`; `PgClientService` (pool y consultas), `UserRepository`, `TenantRepository` (CRUD tenants, branding por defecto, `plan_catalog`), `SqlDbService` (fachada + resto de dominios)
+- `admin/`: super admin; servicios de aplicación (`AdminUsersService`, `AdminTenantsService`, `AdminPlanCatalogService`, `AdminSiteConfigService`; repositorios/`TenantBillingService` inyectados desde `SqlDbModule` global).
+- `tenant/`: contexto y operaciones tenant; `TenantStatusGuard` usa `TenantRepository`
+- `public/`: reserva pública (`PublicBookingService`)
+- `infrastructure/sql-db/`: PostgreSQL (Neon); `PgClientService`; repositorios (`UserRepository`, `TenantRepository`, `AppointmentRepository`, `TenantCatalogRepository`, `TenantRetailRepository`, `TenantBrandingRepository`, `PlatformSiteConfigRepository`); `TenantBillingService` (snapshot y cotización sin SQL extra); `SqlDbService` (fachada estable, bootstrap y migraciones ligeras de esquema)
 
+## Migraciones
+
+- Historial explícito futuro: carpeta `api/migrations/` (ver `README.md` allí).
 ## Endpoints implementados (CRUD SQL)
 
 - `POST /api/auth/login`

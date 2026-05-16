@@ -1,10 +1,10 @@
 import { AppSystem, UserRole } from '../auth/auth.types';
-import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
+import { AdminUsersService } from './admin-users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 export declare class AdminUsersController {
-    private readonly sqlDbService;
-    constructor(sqlDbService: SqlDbService);
+    private readonly adminUsers;
+    constructor(adminUsers: AdminUsersService);
     listUsers(): Promise<{
         id: string;
         email: string;

@@ -19,18 +19,18 @@ const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const systems_decorator_1 = require("../auth/decorators/systems.decorator");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
-const sql_db_service_1 = require("../infrastructure/sql-db/sql-db.service");
+const admin_site_config_service_1 = require("./admin-site-config.service");
 const patch_site_config_dto_1 = require("./dto/patch-site-config.dto");
 let AdminSiteConfigController = class AdminSiteConfigController {
-    constructor(sqlDb) {
-        this.sqlDb = sqlDb;
+    constructor(adminSiteConfig) {
+        this.adminSiteConfig = adminSiteConfig;
     }
     get() {
-        return this.sqlDb.getPlatformSiteConfig();
+        return this.adminSiteConfig.get();
     }
     patch(dto) {
         const patch = dto;
-        return this.sqlDb.patchPlatformSiteConfig(patch);
+        return this.adminSiteConfig.patch(patch);
     }
 };
 exports.AdminSiteConfigController = AdminSiteConfigController;
@@ -52,6 +52,6 @@ exports.AdminSiteConfigController = AdminSiteConfigController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(auth_types_1.UserRole.SUPER_ADMIN),
     (0, systems_decorator_1.Systems)(auth_types_1.AppSystem.SUPER_ADMIN),
-    __metadata("design:paramtypes", [sql_db_service_1.SqlDbService])
+    __metadata("design:paramtypes", [admin_site_config_service_1.AdminSiteConfigService])
 ], AdminSiteConfigController);
 //# sourceMappingURL=admin-site-config.controller.js.map

@@ -10,9 +10,15 @@ exports.SqlDbModule = void 0;
 const common_1 = require("@nestjs/common");
 const password_module_1 = require("../../auth/password.module");
 const pg_client_service_1 = require("./pg-client.service");
+const appointment_repository_1 = require("./repositories/appointment.repository");
+const platform_site_config_repository_1 = require("./repositories/platform-site-config.repository");
+const tenant_branding_repository_1 = require("./repositories/tenant-branding.repository");
+const tenant_catalog_repository_1 = require("./repositories/tenant-catalog.repository");
+const tenant_retail_repository_1 = require("./repositories/tenant-retail.repository");
 const tenant_repository_1 = require("./repositories/tenant.repository");
 const user_repository_1 = require("./repositories/user.repository");
 const sql_db_service_1 = require("./sql-db.service");
+const tenant_billing_service_1 = require("./tenant-billing.service");
 let SqlDbModule = class SqlDbModule {
 };
 exports.SqlDbModule = SqlDbModule;
@@ -20,8 +26,26 @@ exports.SqlDbModule = SqlDbModule = __decorate([
     (0, common_1.Global)(),
     (0, common_1.Module)({
         imports: [password_module_1.PasswordModule],
-        providers: [pg_client_service_1.PgClientService, user_repository_1.UserRepository, tenant_repository_1.TenantRepository, sql_db_service_1.SqlDbService],
-        exports: [sql_db_service_1.SqlDbService],
+        providers: [
+            pg_client_service_1.PgClientService,
+            user_repository_1.UserRepository,
+            tenant_repository_1.TenantRepository,
+            tenant_billing_service_1.TenantBillingService,
+            tenant_branding_repository_1.TenantBrandingRepository,
+            platform_site_config_repository_1.PlatformSiteConfigRepository,
+            appointment_repository_1.AppointmentRepository,
+            tenant_catalog_repository_1.TenantCatalogRepository,
+            tenant_retail_repository_1.TenantRetailRepository,
+            sql_db_service_1.SqlDbService,
+        ],
+        exports: [
+            sql_db_service_1.SqlDbService,
+            user_repository_1.UserRepository,
+            tenant_repository_1.TenantRepository,
+            tenant_billing_service_1.TenantBillingService,
+            tenant_branding_repository_1.TenantBrandingRepository,
+            platform_site_config_repository_1.PlatformSiteConfigRepository,
+        ],
     })
 ], SqlDbModule);
 //# sourceMappingURL=sql-db.module.js.map

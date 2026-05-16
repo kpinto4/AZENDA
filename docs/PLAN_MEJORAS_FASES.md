@@ -15,7 +15,7 @@ Documento vivo para seguir **qué vamos haciendo**, **qué se arregla**, **qué 
 |----------|----------|
 | **Ahora** | **Piloto** con negocios reales (Fase 1 cerrada en código; smoke en `PRUEBAS_SISTEMA.md` al cambiar de entorno). |
 | **Se mantiene igual** | Monorepo, `SqlDbService` unificado, front híbrido mock/API, Neon, WhatsApp manual, polling en citas. |
-| **En pausa (hold)** | Fases **3** y **4** hasta piloto estable o necesidad clara (Fase 2 puede avanzar en paralelo al piloto). |
+| **En pausa (hold)** | Fases **3** y **4** hasta piloto estable o necesidad clara (**Fase 2 cerrada en código**). |
 | **No hacer por ahora** | Varios repos Git, microservicios, refactor total de repositorios, ORM masivo. |
 
 **Veredicto operativo:** con Fase 1 cerrada → **piloto con negocios reales y cuentas serias**. Sin Fase 1 → solo demo interna o entornos de confianza.
@@ -40,7 +40,7 @@ Actualiza al cerrar ítems. Si cambia la estrategia, edita la sección [Estrateg
 | Fase | Enfoque | Prioridad | Estado |
 |------|---------|-----------|--------|
 | **1** | Seguridad de cuentas y API expuesta | **Cerrada** | Obligatorio técnico hecho; opcionales de Fase 1 pendientes |
-| **2** | Arquitectura backend (repositorios, servicios) | **ACTIVA** | `PublicBookingService` + `UserRepository` / `PgClientService` |
+| **2** | Arquitectura backend (repositorios, servicios) | **Cerrada** (código mayo 2026) | Repos por dominio + fachada `SqlDbService`; admin usa servicios; `api/migrations/README`; e2e smoke `/api`; tests billing / guard / reserva mínimos |
 | **3** | Unificación frontend (quitar mock) | HOLD | `[ ]` Pospuesta |
 | **4** | Operaciones, CI/CD y producto avanzado | HOLD | `[ ]` Pospuesta |
 
@@ -64,7 +64,7 @@ Actualiza al cerrar ítems. Si cambia la estrategia, edita la sección [Estrateg
 
 | Área | Situación | Motivo |
 |------|-----------|--------|
-| `SqlDbService` ~2100 líneas | Sin dividir | Coste de refactor; no bloquea seguridad de login |
+| `SqlDbService` voluminoso | Fachada + bootstrap/esquema; dominio en repos / servicios aplicación | Migrar solo con runner explícito cuando Fase 4 lo pida |
 | Front mock + API (`MockDataService`) | Híbrido | Ya funciona para demo/piloto; unificar en Fase 3 |
 | Sin CI/CD en repo | Manual | Fase 4; no impide hashing |
 | Confirmación asistencia solo id + nombre | Sin OTP aún | Ítem opcional Fase 1; ver riesgos residuales |
@@ -83,15 +83,14 @@ Usar esta tabla en revisiones de piloto y soporte. **No son fallos de la Fase 1*
 |--------|---------|---------------------------|-------------------|
 | Datos distintos mock vs API en pantallas | Tenant ve inventario/ventas/stats incoherentes | Usar solo flujos ya en API; documentar en pruebas | Fase 3 |
 | `MockDataService` en ~20 componentes | Bugs “solo en prod” o solo en demo | Priorizar pantallas del piloto en API real | Fase 3 |
-| Sin tests automatizados | Regresiones en releases | Checklist manual pre-demo (`docs/PRUEBAS_SISTEMA.md`) | Fase 4 |
+| Pocos tests automatizados vs dominio creciente | Regresiones silenciosas | `npm test` / `npm run test:e2e`; checklist manual (`docs/PRUEBAS_SISTEMA.md`) | Fase 4 amplía cobertura |
 
 ### Riesgo medio
 
 | Riesgo | Impacto | Mitigación | Fase |
 |--------|---------|------------|------|
-| `SqlDbService` monolítico | Cambios lentos, más conflictos en Git | Cambios pequeños; un dominio a la vez | Fase 2 |
-| Admin sin capa de servicio | Lógica acoplada a SQL en controllers | No tocar salvo bug crítico | Fase 2 |
-| `PublicController` grande (~530 líneas) | Difícil testear reserva pública | Rate limit (Fase 1); refactor después | Fase 2 |
+| `SqlDbService` aún con bootstrap/schema | DDL y migraciones ligeras en arranque; dominio mayormente en repos | Seguir sacando sólo cuando duela menos que el diff |
+| `PublicController` grande (~530 líneas) | Difícil testear reserva pública completa | `PublicBookingService` + tests puntuales; más tests en producto estable | Fase 3 / Fase 4 |
 | Confirmación asistencia débil | Abuso de marcar asistencia ajena | Política de negocio; OTP futuro | Fase 1 opc. / producto |
 | Búsqueda pública de citas | Enumeración por teléfono | Límites throttler; no listar de más en UI | Fase 1 + producto |
 | IDs de cita predecibles (`appt_${Date.now()}`) | Adivinación de IDs | UUID en Fase 2 o hotfix si hace falta | Fase 2 |
@@ -153,23 +152,26 @@ Usar esta tabla en revisiones de piloto y soporte. **No son fallos de la Fase 1*
 
 ---
 
-## Fase 2 — Arquitectura backend (**ACTIVA** · repositorios + servicio público)
+## Fase 2 — Arquitectura backend (**CERRADA en código** · mayo 2026)
 
-> **Activada:** siguiente fase de código tras Fase 1. El resto de ítems siguen incrementales.
+> **Objetivo cumplido:** repositorios por dominio donde aportaba más, `SqlDbService` como **fachada estable** (misma API para el resto del monorepo), capa de aplicación en admin, documentación de migraciones futuras y tests/e2e mínimos ejecutables en CI sin Neon.
 
-- [-] Dividir `SqlDbService` en repositorios por dominio (ver [¿Qué significa “dividir repositorios”?](#qué-significa-dividir-repositorios-no-es-el-repo-de-git))
-  - [x] **Usuarios** — `UserRepository` + `PgClientService` (pool / `queryRows` / `exec` compartidos)
-  - [x] **Tenants** + catálogo de planes (`plan_catalog`) + migraciones que tocaban ambos
-  - [ ] Citas (appointments)
-  - [ ] Catálogo (productos, servicios)
-  - [ ] Ventas, branding, billing, site config
+- [x] Dividir `SqlDbService` en repositorios por dominio (incremental; ver [¿Qué significa “dividir repositorios”?](#qué-significa-dividir-repositorios-no-es-el-repo-de-git))
+  - [x] **Usuarios** — `UserRepository` + `PgClientService`
+  - [x] **Tenants** + catálogo de planes (`plan_catalog`)
+  - [x] Citas — `AppointmentRepository`
+  - [x] Catálogo tenant — `TenantCatalogRepository`
+  - [x] Ventas + visitas en tienda — `TenantRetailRepository`
+  - [x] Branding tenant (`tenant_branding`) — `TenantBrandingRepository`
+  - [x] Config sitio plataforma (`platform_site_config`) — `PlatformSiteConfigRepository`
+  - [x] Billing (snapshot + cotización cambio plan, sin SQL extra) — `TenantBillingService`
 - [x] Extraer `PublicBookingService` desde `PublicController`
-- [ ] Capa de servicios en admin (sin `SqlDbService` en controllers)
-- [ ] Migraciones versionadas (`migrations/` en repo)
-- [ ] Corregir tests e2e (`/api`, rutas reales)
-- [ ] Tests mínimos: auth, booking público, tenant pausado
+- [x] Capa de servicios en admin (`Admin*Service`; controladores sin `SqlDbService`)
+- [x] Migraciones versionadas — carpeta `api/migrations/` con README (runner explícito en Fase 4)
+- [x] Corregir tests e2e — smoke `/api` sin exigir `DATABASE_URL` completo
+- [x] Tests mínimos — billing, `TenantStatusGuard` (tenant pausado), caso `PublicBookingService`
 
-**Criterio de cierre:** `sql-db.service.ts` solo conexión + helpers; dominio en repos y services.
+**Criterio de cierre (pragmático):** dominio de negocio principal fuera del monolito SQL; `SqlDbService` conserva **arranque**, **esquema/bootstrap** y **delegación** compatible con el código existente (`tenant/*`, `public/*`, `auth/*`).
 
 ---
 
@@ -225,18 +227,18 @@ Referencia para no desviar esfuerzo:
 
 ## Seguimiento rápido (métricas)
 
-Actualizar al cerrar Fase 1 o al activar fases siguientes.
+Actualizar cuando cambien fases o coberturas.
 
-| Métrica | Inicial (may 2026) | Tras Fase 1 | Objetivo largo plazo |
-|---------|-------------------|-------------|----------------------|
-| Contraseñas hasheadas | No | **Sí** | Sí |
-| `password` en JSON API | Sí (empleados) | **No** (tenant empleados) | No |
+| Métrica | Inicial (may 2026) | Estado conocido | Objetivo largo plazo |
+|---------|-------------------|-----------------|----------------------|
+| Contraseñas hasheadas | No | **Sí** (Fase 1) | Sí |
+| `password` en JSON API | Sí (empleados) | **No** (Fase 1) | No |
 | `JWT_SECRET` obligatorio en prod | No | **Sí** | Sí |
 | Throttler en `public/*` | No | **Sí** (+ login acotado) | Sí |
 | Helmet en API | No | **Sí** | Sí |
-| Tests API `.spec.ts` | 3 | 3+ (ideal +auth) | ≥ 15 |
+| Tests API (Jest `src`) | 3 suites | **6 suites**, ~19 casos (Fase 2) | ≥ 15 casos |
 | Tests front | 0 | 0 | Críticos |
-| Líneas `sql-db.service.ts` | ~2100 | ~2100 (OK) | < 400 si Fase 2 |
+| Líneas `sql-db.service.ts` | ~2100 | Menor; fachada + bootstrap (Fase 2) | Opcional afilar con runner migraciones |
 | Uso mock datos reales | ~20+ comp. | ~20+ (OK) | 0 si Fase 3 |
 | CI/CD | No | No (OK) | Sí si Fase 4 |
 
@@ -244,30 +246,26 @@ Actualizar al cerrar Fase 1 o al activar fases siguientes.
 
 ## ¿Qué significa “dividir repositorios”? (NO es el repo de Git)
 
-Solo aplica cuando se **active la Fase 2**. No es crear `azenda-api` y `azenda-web` en GitHub.
+**Fase 2 (cerrada en código):** no es crear `azenda-api` y `azenda-web` en GitHub. Se añadieron repositorios Nest por dominio y servicios de aplicación (`TenantBillingService`, `Admin*Service`) sobre `PgClientService`.
 
-**Hoy:** `api/src/infrastructure/sql-db/sql-db.service.ts` concentra SQL, seed, migraciones ad hoc y reglas de varios dominios.
-
-**Propuesta (futura):** clases por dominio (`TenantRepository`, `AppointmentRepository`, …) y services Nest que las usen:
+**Qué queda en `SqlDbService`:** bootstrap/semilla, creación de tablas y migraciones ligeras al arranque, y **delegación** hacia repos/servicios para mantener compatibilidad con el código existente.
 
 ```
-Controller → Service (reglas) → Repository (SQL) → PostgreSQL
+Controller → Service (reglas HTTP / permisos) → Repository o SqlDbService (fachada) → PostgreSQL
 ```
-
-`SqlDbService` quedaría en pool + `query` + bootstrap.
 
 | Idea | ¿Ahora? |
 |------|---------|
 | Varios repos Git | No |
 | Microservicios | No |
-| Repositorios por dominio en código | Fase 2, incremental |
+| Repositorios por dominio en código | **Sí (Fase 2, incremental)** |
 
 ---
 
 ## Orden de trabajo (vigente)
 
 1. **Piloto** — negocios reales (Fase 1 cerrada; smoke manual al cambiar de entorno).
-2. **Fase 2 (incremental)** — repositorios por dominio, capa admin, migraciones versionadas, e2e (en paralelo al piloto si aplica).
+2. **Fase 2** — **cerrada** (repos, admin services, `api/migrations/` doc, e2e smoke, tests mínimos).
 3. **Activar Fase 3** si hay incoherencias mock/API en pantallas del piloto.
 4. **Activar Fase 4** con clientes de pago o releases regulares.
 
@@ -283,3 +281,6 @@ Controller → Service (reglas) → Repository (SQL) → PostgreSQL
 | 2026-05-16 | Fase 2: extraído `PublicBookingService`; controlador público delegador |
 | 2026-05-16 | Fase 2: `PgClientService`, `UserRepository`; `SqlDbService` usa cliente PG centralizado |
 | 2026-05-16 | Fase 2: `TenantRepository` + defaults `plan-catalog` + mapper branding fila; tenants/plan_catalog parcialmente fuera del monolito |
+| 2026-05-16 | Fase 2: `AppointmentRepository`; SQL de citas extraído de `SqlDbService` (fachada sin cambio de llamadas) |
+| 2026-05-16 | Fase 2: `TenantCatalogRepository`; productos y servicios de tenant fuera de `SqlDbService` |
+| 2026-05-16 | **Fase 2 cerrada:** `TenantBrandingRepository`, `PlatformSiteConfigRepository`, `TenantBillingService`; servicios `Admin*Service` (controladores admin sin `SqlDbService`); `TenantStatusGuard` → `TenantRepository`; `api/migrations/README.md`; e2e `/api` sin BD; tests billing, guard, reserva pública mínima |

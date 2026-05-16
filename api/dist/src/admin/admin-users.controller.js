@@ -19,22 +19,22 @@ const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const systems_decorator_1 = require("../auth/decorators/systems.decorator");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
-const sql_db_service_1 = require("../infrastructure/sql-db/sql-db.service");
+const admin_users_service_1 = require("./admin-users.service");
 const create_user_dto_1 = require("./dto/create-user.dto");
 const update_user_dto_1 = require("./dto/update-user.dto");
 let AdminUsersController = class AdminUsersController {
-    constructor(sqlDbService) {
-        this.sqlDbService = sqlDbService;
+    constructor(adminUsers) {
+        this.adminUsers = adminUsers;
     }
     async listUsers() {
-        const users = await this.sqlDbService.listUsers();
+        const users = await this.adminUsers.listUsers();
         return users.map((user) => {
             const { password: _password, ...safeUser } = user;
             return safeUser;
         });
     }
     async getUserById(userId) {
-        const user = await this.sqlDbService.findUserById(userId);
+        const user = await this.adminUsers.findById(userId);
         if (!user) {
             throw new common_1.NotFoundException('Usuario no encontrado');
         }
@@ -42,7 +42,7 @@ let AdminUsersController = class AdminUsersController {
         return safeUser;
     }
     async createUser(body) {
-        const created = await this.sqlDbService.createUser({
+        const created = await this.adminUsers.create({
             id: body.id,
             email: body.email,
             password: body.password,
@@ -55,7 +55,7 @@ let AdminUsersController = class AdminUsersController {
         return safeUser;
     }
     async updateUser(userId, body) {
-        const updated = await this.sqlDbService.updateUser(userId, {
+        const updated = await this.adminUsers.update(userId, {
             email: body.email,
             password: body.password,
             role: body.role,
@@ -70,7 +70,7 @@ let AdminUsersController = class AdminUsersController {
         return safeUser;
     }
     async deleteUser(userId) {
-        const deleted = await this.sqlDbService.deleteUser(userId);
+        const deleted = await this.adminUsers.delete(userId);
         if (!deleted) {
             throw new common_1.NotFoundException('Usuario no encontrado');
         }
@@ -118,6 +118,6 @@ exports.AdminUsersController = AdminUsersController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(auth_types_1.UserRole.SUPER_ADMIN),
     (0, systems_decorator_1.Systems)(auth_types_1.AppSystem.SUPER_ADMIN),
-    __metadata("design:paramtypes", [sql_db_service_1.SqlDbService])
+    __metadata("design:paramtypes", [admin_users_service_1.AdminUsersService])
 ], AdminUsersController);
 //# sourceMappingURL=admin-users.controller.js.map

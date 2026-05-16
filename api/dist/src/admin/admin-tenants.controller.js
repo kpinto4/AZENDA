@@ -19,26 +19,26 @@ const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const systems_decorator_1 = require("../auth/decorators/systems.decorator");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
-const sql_db_service_1 = require("../infrastructure/sql-db/sql-db.service");
+const admin_tenants_service_1 = require("./admin-tenants.service");
 const admin_upgrade_quote_dto_1 = require("./dto/admin-upgrade-quote.dto");
 const create_tenant_dto_1 = require("./dto/create-tenant.dto");
 const update_tenant_dto_1 = require("./dto/update-tenant.dto");
 let AdminTenantsController = class AdminTenantsController {
-    constructor(sqlDbService) {
-        this.sqlDbService = sqlDbService;
+    constructor(adminTenants) {
+        this.adminTenants = adminTenants;
     }
     listTenants() {
-        return this.sqlDbService.listTenants();
+        return this.adminTenants.listTenants();
     }
     async getTenantById(tenantId) {
-        const tenant = await this.sqlDbService.findTenantById(tenantId);
+        const tenant = await this.adminTenants.findById(tenantId);
         if (!tenant) {
             throw new common_1.NotFoundException('Tenant no encontrado');
         }
         return tenant;
     }
     async upgradeQuote(tenantId, body) {
-        const quote = await this.sqlDbService.getUpgradeQuote({
+        const quote = await this.adminTenants.getUpgradeQuote({
             tenantId,
             targetPlan: body.targetPlan,
             targetCycle: body.targetCycle,
@@ -49,7 +49,7 @@ let AdminTenantsController = class AdminTenantsController {
         return quote;
     }
     createTenant(body) {
-        return this.sqlDbService.createTenant({
+        return this.adminTenants.createTenant({
             id: body.id,
             name: body.name,
             slug: body.slug,
@@ -76,7 +76,7 @@ let AdminTenantsController = class AdminTenantsController {
         if (body.inventario !== undefined) {
             modPatch.inventario = body.inventario;
         }
-        const updated = await this.sqlDbService.updateTenant(tenantId, {
+        const updated = await this.adminTenants.updateTenant(tenantId, {
             name: body.name,
             slug: body.slug,
             status: body.status,
@@ -92,7 +92,7 @@ let AdminTenantsController = class AdminTenantsController {
         return updated;
     }
     async deleteTenant(tenantId) {
-        const deleted = await this.sqlDbService.deleteTenant(tenantId);
+        const deleted = await this.adminTenants.deleteTenant(tenantId);
         if (!deleted) {
             throw new common_1.NotFoundException('Tenant no encontrado');
         }
@@ -148,6 +148,6 @@ exports.AdminTenantsController = AdminTenantsController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(auth_types_1.UserRole.SUPER_ADMIN),
     (0, systems_decorator_1.Systems)(auth_types_1.AppSystem.SUPER_ADMIN),
-    __metadata("design:paramtypes", [sql_db_service_1.SqlDbService])
+    __metadata("design:paramtypes", [admin_tenants_service_1.AdminTenantsService])
 ], AdminTenantsController);
 //# sourceMappingURL=admin-tenants.controller.js.map

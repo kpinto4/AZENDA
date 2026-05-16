@@ -12,10 +12,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TenantStatusGuard = void 0;
 const common_1 = require("@nestjs/common");
 const auth_types_1 = require("../auth.types");
-const sql_db_service_1 = require("../../infrastructure/sql-db/sql-db.service");
+const tenant_repository_1 = require("../../infrastructure/sql-db/repositories/tenant.repository");
 let TenantStatusGuard = class TenantStatusGuard {
-    constructor(sqlDb) {
-        this.sqlDb = sqlDb;
+    constructor(tenants) {
+        this.tenants = tenants;
     }
     async canActivate(context) {
         const req = context.switchToHttp().getRequest();
@@ -29,7 +29,7 @@ let TenantStatusGuard = class TenantStatusGuard {
         if (isAllowedInRestrictedTenant) {
             return true;
         }
-        const tenant = await this.sqlDb.findTenantById(user.tenantId);
+        const tenant = await this.tenants.findById(user.tenantId);
         if (!tenant) {
             throw new common_1.ForbiddenException('Tenant no disponible');
         }
@@ -43,6 +43,6 @@ let TenantStatusGuard = class TenantStatusGuard {
 exports.TenantStatusGuard = TenantStatusGuard;
 exports.TenantStatusGuard = TenantStatusGuard = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [sql_db_service_1.SqlDbService])
+    __metadata("design:paramtypes", [tenant_repository_1.TenantRepository])
 ], TenantStatusGuard);
 //# sourceMappingURL=tenant-status.guard.js.map

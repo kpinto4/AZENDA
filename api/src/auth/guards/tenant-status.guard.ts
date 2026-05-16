@@ -6,13 +6,13 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthUser, UserRole } from '../auth.types';
-import { SqlDbService } from '../../infrastructure/sql-db/sql-db.service';
+import { TenantRepository } from '../../infrastructure/sql-db/repositories/tenant.repository';
 
 type AuthenticatedRequest = Request & { user?: AuthUser };
 
 @Injectable()
 export class TenantStatusGuard implements CanActivate {
-  constructor(private readonly sqlDb: SqlDbService) {}
+  constructor(private readonly tenants: TenantRepository) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
@@ -30,7 +30,7 @@ export class TenantStatusGuard implements CanActivate {
       return true;
     }
 
-    const tenant = await this.sqlDb.findTenantById(user.tenantId);
+    const tenant = await this.tenants.findById(user.tenantId);
     if (!tenant) {
       throw new ForbiddenException('Tenant no disponible');
     }

@@ -19,17 +19,17 @@ const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const systems_decorator_1 = require("../auth/decorators/systems.decorator");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
-const sql_db_service_1 = require("../infrastructure/sql-db/sql-db.service");
+const admin_plan_catalog_service_1 = require("./admin-plan-catalog.service");
 const replace_plan_catalog_dto_1 = require("./dto/replace-plan-catalog.dto");
 let AdminPlanCatalogController = class AdminPlanCatalogController {
-    constructor(sqlDbService) {
-        this.sqlDbService = sqlDbService;
+    constructor(planCatalog) {
+        this.planCatalog = planCatalog;
     }
     list() {
-        return this.sqlDbService.listPlanCatalog();
+        return this.planCatalog.list();
     }
     replace(body) {
-        return this.sqlDbService.replacePlanCatalog(body.entries.map((e) => ({
+        return this.planCatalog.replace(body.entries.map((e) => ({
             planKey: e.planKey,
             priceMonthly: e.priceMonthly,
             priceYearly: e.priceYearly,
@@ -55,6 +55,6 @@ exports.AdminPlanCatalogController = AdminPlanCatalogController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(auth_types_1.UserRole.SUPER_ADMIN),
     (0, systems_decorator_1.Systems)(auth_types_1.AppSystem.SUPER_ADMIN),
-    __metadata("design:paramtypes", [sql_db_service_1.SqlDbService])
+    __metadata("design:paramtypes", [admin_plan_catalog_service_1.AdminPlanCatalogService])
 ], AdminPlanCatalogController);
 //# sourceMappingURL=admin-plan-catalog.controller.js.map

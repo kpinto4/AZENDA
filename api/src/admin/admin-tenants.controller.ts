@@ -16,7 +16,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { Systems } from '../auth/decorators/systems.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
+import { AdminTenantsService } from './admin-tenants.service';
 import { TenantEntity } from '../infrastructure/sql-db/sql-db.types';
 import { AdminUpgradeQuoteDto } from './dto/admin-upgrade-quote.dto';
 import { CreateTenantDto } from './dto/create-tenant.dto';
@@ -27,16 +27,16 @@ import { UpdateTenantDto } from './dto/update-tenant.dto';
 @Roles(UserRole.SUPER_ADMIN)
 @Systems(AppSystem.SUPER_ADMIN)
 export class AdminTenantsController {
-  constructor(private readonly sqlDbService: SqlDbService) {}
+  constructor(private readonly adminTenants: AdminTenantsService) {}
 
   @Get()
   listTenants() {
-    return this.sqlDbService.listTenants();
+    return this.adminTenants.listTenants();
   }
 
   @Get(':tenantId')
   async getTenantById(@Param('tenantId') tenantId: string) {
-    const tenant = await this.sqlDbService.findTenantById(tenantId);
+    const tenant = await this.adminTenants.findById(tenantId);
     if (!tenant) {
       throw new NotFoundException('Tenant no encontrado');
     }
@@ -48,7 +48,7 @@ export class AdminTenantsController {
     @Param('tenantId') tenantId: string,
     @Body() body: AdminUpgradeQuoteDto,
   ) {
-    const quote = await this.sqlDbService.getUpgradeQuote({
+    const quote = await this.adminTenants.getUpgradeQuote({
       tenantId,
       targetPlan: body.targetPlan,
       targetCycle: body.targetCycle,
@@ -61,7 +61,7 @@ export class AdminTenantsController {
 
   @Post()
   createTenant(@Body() body: CreateTenantDto) {
-    return this.sqlDbService.createTenant({
+    return this.adminTenants.createTenant({
       id: body.id,
       name: body.name,
       slug: body.slug,
@@ -94,7 +94,7 @@ export class AdminTenantsController {
       modPatch.inventario = body.inventario;
     }
 
-    const updated = await this.sqlDbService.updateTenant(tenantId, {
+    const updated = await this.adminTenants.updateTenant(tenantId, {
       name: body.name,
       slug: body.slug,
       status: body.status,
@@ -114,7 +114,7 @@ export class AdminTenantsController {
   @Delete(':tenantId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteTenant(@Param('tenantId') tenantId: string) {
-    const deleted = await this.sqlDbService.deleteTenant(tenantId);
+    const deleted = await this.adminTenants.deleteTenant(tenantId);
     if (!deleted) {
       throw new NotFoundException('Tenant no encontrado');
     }

@@ -9,9 +9,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminModule = void 0;
 const common_1 = require("@nestjs/common");
 const admin_plan_catalog_controller_1 = require("./admin-plan-catalog.controller");
+const admin_plan_catalog_service_1 = require("./admin-plan-catalog.service");
 const admin_site_config_controller_1 = require("./admin-site-config.controller");
+const admin_site_config_service_1 = require("./admin-site-config.service");
 const admin_tenants_controller_1 = require("./admin-tenants.controller");
+const admin_tenants_service_1 = require("./admin-tenants.service");
 const admin_users_controller_1 = require("./admin-users.controller");
+const admin_users_service_1 = require("./admin-users.service");
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
@@ -23,6 +27,7 @@ exports.AdminModule = AdminModule = __decorate([
             admin_plan_catalog_controller_1.AdminPlanCatalogController,
             admin_site_config_controller_1.AdminSiteConfigController,
         ],
+        providers: [admin_tenants_service_1.AdminTenantsService, admin_users_service_1.AdminUsersService, admin_plan_catalog_service_1.AdminPlanCatalogService, admin_site_config_service_1.AdminSiteConfigService],
     })
 ], AdminModule);
 //# sourceMappingURL=admin.module.js.map
