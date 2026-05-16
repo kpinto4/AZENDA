@@ -3,28 +3,53 @@
     <div class="super-ui-header-main">
       <div class="super-ui-title-row">
         <h1 class="super-ui-title">Módulos del catálogo</h1>
-        <span class="super-ui-badge super-ui-badge--neutral">Mock</span>
+        <span
+          class="super-ui-badge"
+          [class.super-ui-badge--neutral]="!useLivePlatformModules()"
+          [class.super-ui-badge--live]="useLivePlatformModules()"
+        >
+          {{ useLivePlatformModules() ? 'API' : 'Mock' }}
+        </span>
       </div>
       <p class="super-ui-lead">
-        Simulación de interruptores globales (solo afecta a esta vista y al estado mock). Los menús del panel cliente
-        siguen el <strong>tenant</strong> en Tenants.
+        @if (useLivePlatformModules()) {
+          Conteo por tenant en base de datos; activar o desactivar por negocio en
+          <a routerLink="/super/tenants">Tenants</a>.
+        } @else {
+          Simulación de interruptores globales (solo afecta a esta vista y al estado mock). Los menús del panel cliente siguen el
+          <strong>tenant</strong> en Tenants.
+        }
       </p>
     </div>
   </header>
-  <div class="az-grid cols-3">
-    @for (m of data.platformModuleCatalog(); track m.key) {
-      <div class="az-card">
-        <div class="row">
-          <h3>{{ m.name }}</h3>
-          <span class="az-badge" [class.success]="m.enabled" [class.warn]="!m.enabled">{{
-            m.enabled ? 'Activo' : 'Off'
-          }}</span>
+  @if (useLivePlatformModules()) {
+    <div class="az-grid cols-3">
+      @for (m of liveModuleCards(); track m.key) {
+        <div class="az-card">
+          <div class="row">
+            <h3>{{ m.name }}</h3>
+            <span class="az-badge success">{{ m.tenantsWithModule }} tenant(s)</span>
+          </div>
+          <p class="muted">{{ m.desc }}</p>
         </div>
-        <p class="muted">{{ m.desc }}</p>
-        <button type="button" class="az-btn az-btn-secondary" (click)="data.toggleCatalogModule(m.key)">
-          Alternar estado
-        </button>
-      </div>
-    }
-  </div>
+      }
+    </div>
+  } @else {
+    <div class="az-grid cols-3">
+      @for (m of data.platformModuleCatalog(); track m.key) {
+        <div class="az-card">
+          <div class="row">
+            <h3>{{ m.name }}</h3>
+            <span class="az-badge" [class.success]="m.enabled" [class.warn]="!m.enabled">{{
+              m.enabled ? 'Activo' : 'Off'
+            }}</span>
+          </div>
+          <p class="muted">{{ m.desc }}</p>
+          <button type="button" class="az-btn az-btn-secondary" (click)="data.toggleCatalogModule(m.key)">
+            Alternar estado
+          </button>
+        </div>
+      }
+    </div>
+  }
 </div>

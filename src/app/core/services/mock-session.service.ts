@@ -266,18 +266,20 @@ export class MockSessionService {
     this.currentUserId.set(u.id);
     this.apiTenantId.set(u.tenantId);
 
-    if (u.role === 'SUPER_ADMIN') {
+    const roleKey = typeof u.role === 'string' ? u.role.trim().toUpperCase() : '';
+
+    if (roleKey === 'SUPER_ADMIN') {
       this.loginAsSuperAdmin();
       return of(undefined);
     }
 
-    if (u.role === 'ADMIN' || u.role === 'EMPLEADO') {
+    if (roleKey === 'ADMIN' || roleKey === 'EMPLEADO') {
       if (!u.tenantId) {
         this.logout();
         return throwError(() => new Error('Usuario sin tenant asignado'));
       }
 
-      const role = u.role === 'EMPLEADO' ? 'EMPLOYEE' : 'TENANT_ADMIN';
+      const role = roleKey === 'EMPLEADO' ? 'EMPLOYEE' : 'TENANT_ADMIN';
 
       // Primero `/tenant/context`: crea o actualiza el mapeo API→mock (`syncTenantsFromApi`).
       // Antes se exigía el mapeo antes de esta llamada y el login fallaba para tenants nuevos solo en API.

@@ -3,10 +3,20 @@
     <div class="super-ui-header-main">
       <div class="super-ui-title-row">
         <h1 class="super-ui-title">Dashboard plataforma</h1>
-        <span class="super-ui-badge super-ui-badge--neutral">Mock</span>
+        <span
+          class="super-ui-badge"
+          [class.super-ui-badge--neutral]="!useLivePlatformStats()"
+          [class.super-ui-badge--live]="useLivePlatformStats()"
+        >
+          {{ useLivePlatformStats() ? 'API' : 'Mock' }}
+        </span>
       </div>
       <p class="super-ui-lead">
-        Métricas leídas del mock en memoria (mismos datos que editas en Tenants, Citas, etc.).
+        @if (useLivePlatformStats()) {
+          Resumen desde <code>/admin/platform-stats</code> (PostgreSQL).
+        } @else {
+          Métricas leídas del mock en memoria (mismos datos que editas en Tenants, Citas, etc.).
+        }
       </p>
     </div>
   </header>
@@ -18,11 +28,11 @@
     </div>
     <div class="az-card kpi">
       <div class="az-kpi-label">Tenants totales</div>
-      <div class="az-kpi">{{ data.tenants().length }}</div>
+      <div class="az-kpi">{{ totalTenantCount() }}</div>
     </div>
     <div class="az-card kpi">
-      <div class="az-kpi-label">MRR ficticio (COP)</div>
-      <div class="az-kpi">{{ mrrDemoCop }}</div>
+      <div class="az-kpi-label">{{ useLivePlatformStats() ? 'MRR nominal (lista mensual, COP)' : 'MRR ficticio (COP)' }}</div>
+      <div class="az-kpi">{{ mrrKpiFormatted() }}</div>
     </div>
   </div>
 

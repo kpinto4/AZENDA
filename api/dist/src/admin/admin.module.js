@@ -8,6 +8,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminModule = void 0;
 const common_1 = require("@nestjs/common");
+const admin_platform_stats_controller_1 = require("./admin-platform-stats.controller");
+const admin_platform_stats_service_1 = require("./admin-platform-stats.service");
 const admin_plan_catalog_controller_1 = require("./admin-plan-catalog.controller");
 const admin_plan_catalog_service_1 = require("./admin-plan-catalog.service");
 const admin_site_config_controller_1 = require("./admin-site-config.controller");
@@ -26,8 +28,15 @@ exports.AdminModule = AdminModule = __decorate([
             admin_users_controller_1.AdminUsersController,
             admin_plan_catalog_controller_1.AdminPlanCatalogController,
             admin_site_config_controller_1.AdminSiteConfigController,
+            admin_platform_stats_controller_1.AdminPlatformStatsController,
         ],
-        providers: [admin_tenants_service_1.AdminTenantsService, admin_users_service_1.AdminUsersService, admin_plan_catalog_service_1.AdminPlanCatalogService, admin_site_config_service_1.AdminSiteConfigService],
+        providers: [
+            admin_tenants_service_1.AdminTenantsService,
+            admin_users_service_1.AdminUsersService,
+            admin_plan_catalog_service_1.AdminPlanCatalogService,
+            admin_site_config_service_1.AdminSiteConfigService,
+            admin_platform_stats_service_1.AdminPlatformStatsService,
+        ],
     })
 ], AdminModule);
 //# sourceMappingURL=admin.module.js.map

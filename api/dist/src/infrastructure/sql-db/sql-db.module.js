@@ -12,6 +12,7 @@ const password_module_1 = require("../../auth/password.module");
 const pg_client_service_1 = require("./pg-client.service");
 const appointment_repository_1 = require("./repositories/appointment.repository");
 const platform_site_config_repository_1 = require("./repositories/platform-site-config.repository");
+const platform_stats_repository_1 = require("./repositories/platform-stats.repository");
 const tenant_branding_repository_1 = require("./repositories/tenant-branding.repository");
 const tenant_catalog_repository_1 = require("./repositories/tenant-catalog.repository");
 const tenant_retail_repository_1 = require("./repositories/tenant-retail.repository");
@@ -33,6 +34,7 @@ exports.SqlDbModule = SqlDbModule = __decorate([
             tenant_billing_service_1.TenantBillingService,
             tenant_branding_repository_1.TenantBrandingRepository,
             platform_site_config_repository_1.PlatformSiteConfigRepository,
+            platform_stats_repository_1.PlatformStatsRepository,
             appointment_repository_1.AppointmentRepository,
             tenant_catalog_repository_1.TenantCatalogRepository,
             tenant_retail_repository_1.TenantRetailRepository,
@@ -45,6 +47,7 @@ exports.SqlDbModule = SqlDbModule = __decorate([
             tenant_billing_service_1.TenantBillingService,
             tenant_branding_repository_1.TenantBrandingRepository,
             platform_site_config_repository_1.PlatformSiteConfigRepository,
+            platform_stats_repository_1.PlatformStatsRepository,
         ],
     })
 ], SqlDbModule);

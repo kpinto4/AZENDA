@@ -3,9 +3,21 @@
     <div class="super-ui-header-main">
       <div class="super-ui-title-row">
         <h1 class="super-ui-title">Estadísticas</h1>
-        <span class="super-ui-badge super-ui-badge--neutral">Mock</span>
+        <span
+          class="super-ui-badge"
+          [class.super-ui-badge--neutral]="!useLivePlatformStats()"
+          [class.super-ui-badge--live]="useLivePlatformStats()"
+        >
+          {{ useLivePlatformStats() ? 'API' : 'Mock' }}
+        </span>
       </div>
-      <p class="super-ui-lead">Cifras calculadas en vivo desde el mock compartido (misma sesión del navegador).</p>
+      <p class="super-ui-lead">
+        @if (useLivePlatformStats()) {
+          Cifras agregadas desde PostgreSQL vía endpoint <code>/admin/platform-stats</code>.
+        } @else {
+          Cifras calculadas en vivo desde el mock compartido (misma sesión del navegador).
+        }
+      </p>
     </div>
   </header>
 
@@ -19,7 +31,7 @@
       <div class="az-kpi">{{ summary().active }}</div>
     </div>
     <div class="az-card">
-      <div class="az-kpi-label">Citas (mock)</div>
+      <div class="az-kpi-label">{{ useLivePlatformStats() ? 'Citas' : 'Citas (mock)' }}</div>
       <div class="az-kpi">{{ summary().appt }}</div>
     </div>
     <div class="az-card">
@@ -31,13 +43,17 @@
       <div class="az-kpi">{{ salesSumFormatted() }}</div>
     </div>
     <div class="az-card">
-      <div class="az-kpi-label">Movimientos stock</div>
+      <div class="az-kpi-label">{{ useLivePlatformStats() ? 'Usuarios panel (con tenant)' : 'Empleados (mock lista)' }}</div>
+      <div class="az-kpi">{{ summary().employees }}</div>
+    </div>
+    <div class="az-card">
+      <div class="az-kpi-label">{{ useLivePlatformStats() ? 'Movimientos stock (sin tabla audit.)' : 'Movimientos stock' }}</div>
       <div class="az-kpi">{{ summary().movements }}</div>
     </div>
   </div>
 
   <div class="az-card chart">
-    <p class="muted">Volumen relativo (decorativo, derivado del mock)</p>
+    <p class="muted">{{ useLivePlatformStats() ? 'Volumen relativo (decorativo, datos API)' : 'Volumen relativo (decorativo, derivado del mock)' }}</p>
     <div class="bars">
       @for (h of barHeights(); track $index) {
         <div class="bar" [style.height.%]="h"></div>

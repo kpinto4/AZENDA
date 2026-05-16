@@ -47,9 +47,12 @@ export class LoginPageComponent {
             next: () => {
               const remember = this.form.controls.rememberMe.getRawValue();
               this.session.persistAuthIfRequested(res.accessToken, remember);
-              const fallback =
-                res.user.role === 'SUPER_ADMIN' ? '/super' : '/app';
-              void this.navigateAfterLogin(fallback);
+              const isSuper =
+                String(res.user.role ?? '').trim().toUpperCase() === 'SUPER_ADMIN';
+              const fallback = isSuper ? '/super' : '/app';
+              void this.navigateAfterLogin(fallback, {
+                allowPathPrefixes: isSuper ? ['/super'] : ['/app'],
+              });
             },
             error: (err: unknown) => {
               if (err instanceof HttpErrorResponse && err.status) {
@@ -88,7 +91,7 @@ export class LoginPageComponent {
 
     if (email.includes('super')) {
       this.session.loginAsSuperAdmin();
-      void this.navigateAfterLogin('/super');
+      void this.navigateAfterLogin('/super', { allowPathPrefixes: ['/super'] });
       return;
     }
 
@@ -97,30 +100,45 @@ export class LoginPageComponent {
     if (email.includes('spa')) {
       const t = pick('t2');
       this.session.loginFromTenant(t, { userName: 'Admin Spa', role: 'TENANT_ADMIN' });
-      void this.navigateAfterLogin('/app');
+      void this.navigateAfterLogin('/app', { allowPathPrefixes: ['/app'] });
       return;
     }
     if (email.includes('clinica') || email.includes('trial')) {
       const t = pick('t3');
       this.session.loginFromTenant(t, { userName: 'Admin Clínica', role: 'TENANT_ADMIN' });
-      void this.navigateAfterLogin('/app');
+      void this.navigateAfterLogin('/app', { allowPathPrefixes: ['/app'] });
       return;
     }
     if (email.includes('empleado') || email.includes('employee')) {
       const t = pick('t1');
       this.session.loginFromTenant(t, { userName: 'Carlos Ruiz', role: 'EMPLOYEE' });
-      void this.navigateAfterLogin('/app');
+      void this.navigateAfterLogin('/app', { allowPathPrefixes: ['/app'] });
       return;
     }
 
     const t = pick('t1');
     this.session.loginFromTenant(t, { userName: 'María López', role: 'TENANT_ADMIN' });
-    void this.navigateAfterLogin('/app');
+    void this.navigateAfterLogin('/app', { allowPathPrefixes: ['/app'] });
   }
 
-  private navigateAfterLogin(fallback: string): void {
+  /**
+   * Respeta `?redirect=` solo si encaja con el rol (evita que un super admin caiga en `/app` por un redirect viejo
+   * y vuelva al login sin mensaje claro).
+   */
+  private navigateAfterLogin(
+    fallback: string,
+    opts: { allowPathPrefixes: string[] },
+  ): void {
     const redirect = this.route.snapshot.queryParamMap.get('redirect');
-    const target = redirect && redirect.startsWith('/') ? redirect : fallback;
+    let target = fallback;
+    if (redirect && redirect.startsWith('/')) {
+      const allowed = opts.allowPathPrefixes.some(
+        (p) => redirect === p || redirect.startsWith(`${p}/`),
+      );
+      if (allowed) {
+        target = redirect;
+      }
+    }
     void this.router.navigateByUrl(target);
   }
 

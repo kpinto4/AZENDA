@@ -41,7 +41,7 @@ Actualiza al cerrar ítems. Si cambia la estrategia, edita la sección [Estrateg
 |------|---------|-----------|--------|
 | **1** | Seguridad de cuentas y API expuesta | **Cerrada** | Obligatorio técnico hecho; opcionales de Fase 1 pendientes |
 | **2** | Arquitectura backend (repositorios, servicios) | **Cerrada** (código mayo 2026) | Repos por dominio + fachada `SqlDbService`; admin usa servicios; `api/migrations/README`; e2e smoke `/api`; tests billing / guard / reserva mínimos |
-| **3** | Unificación frontend (quitar mock en datos de negocio) | **ACTIVA** | Catálogo + inventario tenant → API (`useLiveAuth`); pendiente super-admin y limpiezas |
+| **3** | Unificación frontend (quitar mock en datos de negocio) | **ACTIVA** | Catálogo + inventario + KPIs super-admin sobre API; pendiente `super-users` mock, `public-booking-page`, utilidades, tests |
 | **4** | Operaciones, CI/CD y producto avanzado | HOLD | `[ ]` Pospuesta |
 
 ---
@@ -182,7 +182,7 @@ Usar esta tabla en revisiones de piloto y soporte. **No son fallos de la Fase 1*
 - [x] Inventario tenant → API (`tenant-inventory`: catálogo, ajustes de stock vía `PATCH` producto; historial demo solo si no hay API)
 - [x] Catálogo público tenant (`/app/catalogo`) — servicios CRUD + orden y foto de vitrina de productos vía API
 - [ ] Ventas tenant → API _(flujo ya híbrido; revisar retirada de ramas mock cuando no haga falta demo)_
-- [ ] Super admin (stats, módulos) → API
+- [x] Super admin — dashboard / estadísticas / módulos desde `GET /admin/platform-stats` _(pantalla usuarios globales `super-users` sigue en mock)_
 - [ ] Dividir `public-booking-page` (subcomponentes + estado)
 - [ ] Utilidades compartidas (`customer-name-match`, horarios públicos)
 - [ ] Actualizar `README.md` y `docs` según avance Fase 3
@@ -288,3 +288,4 @@ Controller → Service (reglas HTTP / permisos) → Repository o SqlDbService (f
 | 2026-05-16 | **Fase 2 cerrada** (branding, site config, billing, admin services, tests, migrations doc) |
 | 2026-05-16 | **Fase 3 activada:** catálogo público tenant (`tenant-catalog`) contra API con `useLiveAuth` |
 | 2026-05-16 | Inventario tenant: `tenant-inventory` alineado a `tenant-catalog` (`isInventoryLiveApi`), carga con cleanup, stock con API y sin exigir slug antes de llamadas live |
+| 2026-05-16 | Fase 3: `GET /admin/platform-stats` + super dashboard / estadísticas / módulos leen BD con `useLiveAuth` |

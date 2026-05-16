@@ -1,6 +1,9 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { environment } from '../../../environments/environment';
+import { ApiAdminPlatformStatsService, ApiPlatformOverviewDto } from '../../core/services/api-admin-platform-stats.service';
 import { formatCop } from '../../core/format-currency';
 import { MockDataService } from '../../core/services/mock-data.service';
+import { MockSessionService } from '../../core/services/mock-session.service';
 
 @Component({
   selector: 'app-super-stats',
@@ -9,8 +12,43 @@ import { MockDataService } from '../../core/services/mock-data.service';
 })
 export class SuperStatsComponent {
   readonly data = inject(MockDataService);
+  private readonly session = inject(MockSessionService);
+  private readonly apiStats = inject(ApiAdminPlatformStatsService);
+
+  readonly apiOverview = signal<ApiPlatformOverviewDto | null>(null);
+
+  readonly useLivePlatformStats = computed(
+    () => environment.useLiveAuth && !!this.session.accessToken() && this.session.isSuperAdmin(),
+  );
+
+  constructor() {
+    effect((onCleanup) => {
+      if (!this.useLivePlatformStats()) {
+        untracked(() => this.apiOverview.set(null));
+        return;
+      }
+      const sub = this.apiStats.overview().subscribe({
+        next: (row) => this.apiOverview.set(row),
+        error: () => this.apiOverview.set(null),
+      });
+      onCleanup(() => sub.unsubscribe());
+    });
+  }
 
   readonly summary = computed(() => {
+    const live = this.useLivePlatformStats();
+    const row = live ? this.apiOverview() : null;
+    if (live && row) {
+      return {
+        tenants: row.tenantCount,
+        active: row.activeTenantCount,
+        appt: row.appointmentCount,
+        salesCount: row.salesCount,
+        salesSum: row.salesTotalCop,
+        employees: row.tenantPanelUserCount,
+        movements: row.stockMovementsCount,
+      };
+    }
     const tenants = this.data.tenants();
     const sales = this.data.sales();
     return {

@@ -63,7 +63,7 @@ La lista ayuda a orientarse en el código y en herramientas tipo Postman. Las ru
 
 | Área | Prefijo orientativo | Para quién |
 | --- | --- | --- |
-| Administración | `/api/admin/...` | Super admin; operaciones globales. |
+| Administración | `/api/admin/...` | Super admin; operaciones globales. Incluye **`GET /admin/platform-stats`** (métricas agregadas: tenants, citas, ventas, módulos por tenant, MRR nominal). |
 | Tenant | `/api/tenant/...` | Usuarios del negocio (admin/empleado) con JWT. |
 | Público | `/api/public/...` | Sin login; reserva por slug, etc. |
 | Acceso / salud | según código | Ping o helpers si existen en el proyecto. |
