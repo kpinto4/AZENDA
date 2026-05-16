@@ -71,7 +71,6 @@ export declare class TenantService {
         id: string;
         name: string;
         email: string;
-        password: string;
         role: string;
         status: import("../auth/auth.types").UserStatus;
     }[]>;
@@ -79,7 +78,6 @@ export declare class TenantService {
         id: string;
         name: string;
         email: string;
-        password: string;
         role: string;
         status: import("../auth/auth.types").UserStatus;
     }>;
@@ -87,7 +85,6 @@ export declare class TenantService {
         id: string;
         name: string;
         email: string;
-        password: string;
         role: string;
         status: import("../auth/auth.types").UserStatus;
     }>;

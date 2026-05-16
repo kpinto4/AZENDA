@@ -13,17 +13,33 @@ const passport_1 = require("@nestjs/passport");
 const auth_controller_1 = require("./auth.controller");
 const auth_service_1 = require("./auth.service");
 const jwt_strategy_1 = require("./strategies/jwt.strategy");
+const password_module_1 = require("./password.module");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
 exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            password_module_1.PasswordModule,
             passport_1.PassportModule,
-            jwt_1.JwtModule.register({
-                secret: process.env.JWT_SECRET ?? 'dev-only-secret-change-me',
-                signOptions: {
-                    expiresIn: Number(process.env.JWT_EXPIRES_IN_SEC) || 60 * 60 * 12,
+            jwt_1.JwtModule.registerAsync({
+                useFactory: () => {
+                    const isProd = (process.env.NODE_ENV ?? '').trim().toLowerCase() === 'production';
+                    const secret = (process.env.JWT_SECRET ?? '').trim();
+                    if (isProd) {
+                        if (!secret) {
+                            throw new Error('JWT_SECRET es obligatorio cuando NODE_ENV es production');
+                        }
+                        if (secret === 'dev-only-secret-change-me') {
+                            throw new Error('JWT_SECRET no puede ser el valor de desarrollo en production');
+                        }
+                    }
+                    return {
+                        secret: secret || 'dev-only-secret-change-me',
+                        signOptions: {
+                            expiresIn: Number(process.env.JWT_EXPIRES_IN_SEC) || 60 * 60 * 12,
+                        },
+                    };
                 },
             }),
         ],

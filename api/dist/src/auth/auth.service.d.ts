@@ -1,10 +1,12 @@
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
+import { PasswordService } from './password.service';
 export declare class AuthService {
     private readonly jwtService;
     private readonly sqlDbService;
-    constructor(jwtService: JwtService, sqlDbService: SqlDbService);
+    private readonly passwordService;
+    constructor(jwtService: JwtService, sqlDbService: SqlDbService, passwordService: PasswordService);
     login(dto: LoginDto): Promise<{
         accessToken: string;
         tokenType: string;

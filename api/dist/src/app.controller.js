@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppController = void 0;
 const common_1 = require("@nestjs/common");
+const throttler_1 = require("@nestjs/throttler");
 const app_service_1 = require("./app.service");
 let AppController = class AppController {
     constructor(appService) {
@@ -22,6 +23,7 @@ let AppController = class AppController {
 };
 exports.AppController = AppController;
 __decorate([
+    (0, throttler_1.SkipThrottle)(),
     (0, common_1.Get)(),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),

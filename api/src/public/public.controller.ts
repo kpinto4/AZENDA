@@ -12,6 +12,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { normalizePhoneToWaDigits } from '../common/phone-e164.util';
 import { parseWeeklyHoursJson, slotsForPublicBookingDate } from '../common/public-booking-hours.util';
 import { UserRole } from '../auth/auth.types';
@@ -125,6 +126,7 @@ function applyUnknownOccupancy(
   return out;
 }
 
+@Throttle({ default: { limit: 60, ttl: 60000 } })
 @Controller('public')
 export class PublicController {
   constructor(private readonly sqlDb: SqlDbService) {}

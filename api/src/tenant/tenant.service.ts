@@ -190,7 +190,6 @@ export class TenantService {
         id: u.id,
         name: u.email.split('@')[0],
         email: u.email,
-        password: u.password,
         role: u.role === UserRole.ADMIN ? 'ADMIN' : 'EMPLEADO',
         status: u.status,
       }));
@@ -211,7 +210,6 @@ export class TenantService {
       id: created.id,
       name: dto.name.trim(),
       email: created.email,
-      password: created.password,
       role: created.role === UserRole.ADMIN ? 'ADMIN' : 'EMPLEADO',
       status: created.status,
     };
@@ -228,9 +226,10 @@ export class TenantService {
         ? UserRole.ADMIN
         : UserRole.EMPLEADO
       : current.role;
+    const pwd = dto.password?.trim();
     const updated = await this.sqlDbService.updateUser(userId, {
       email: dto.email?.trim().toLowerCase(),
-      password: dto.password?.trim(),
+      ...(pwd ? { password: pwd } : {}),
       role,
       systems: role === UserRole.ADMIN ? [AppSystem.TENANT, AppSystem.PUBLIC_BOOKING] : [AppSystem.TENANT],
     });
@@ -241,7 +240,6 @@ export class TenantService {
       id: updated.id,
       name: dto.name?.trim() || updated.email.split('@')[0],
       email: updated.email,
-      password: updated.password,
       role: updated.role === UserRole.ADMIN ? 'ADMIN' : 'EMPLEADO',
       status: updated.status,
     };

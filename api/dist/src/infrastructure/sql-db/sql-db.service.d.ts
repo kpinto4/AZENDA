@@ -1,10 +1,12 @@
 import { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { PasswordService } from '../../auth/password.service';
 import { AppointmentAttendance, AppointmentEntity, AppointmentStatus, BillingCycle, PlanCatalogEntry, PlatformSiteConfig, PlatformSiteLandingCopy, StoreVisitLogEntity, TenantBillingSnapshot, TenantBrandingEntity, TenantEntity, TenantProductEntity, TenantSaleEntity, TenantServiceEntity, UserEntity } from './sql-db.types';
 export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
+    private readonly passwordService;
     private readonly logger;
     private readonly dialect;
     private readonly pool;
-    constructor();
+    constructor(passwordService: PasswordService);
     onModuleInit(): Promise<void>;
     runBootstrap(): Promise<void>;
     private pingOrThrow;
@@ -16,7 +18,7 @@ export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
     private exec;
     private execScript;
     private ensureIndex;
-    findUserByCredentials(email: string, password: string): Promise<UserEntity | undefined>;
+    findUserByEmailNormalized(normalizedEmail: string): Promise<UserEntity | undefined>;
     findUserById(userId: string): Promise<UserEntity | undefined>;
     listUsers(): Promise<UserEntity[]>;
     listUsersByTenantId(tenantId: string): Promise<UserEntity[]>;
@@ -115,6 +117,7 @@ export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
     private ensureSchemaMigrations;
     private createSchema;
     private normalizeTenantBillingPeriods;
+    private migrateLegacyPlaintextPasswords;
     private seedIfEmpty;
     private ensureSeedTenant;
     private ensureSeedUser;

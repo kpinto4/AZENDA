@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SqlDbModule = void 0;
 const common_1 = require("@nestjs/common");
+const password_module_1 = require("../../auth/password.module");
 const sql_db_service_1 = require("./sql-db.service");
 let SqlDbModule = class SqlDbModule {
 };
@@ -15,6 +16,7 @@ exports.SqlDbModule = SqlDbModule;
 exports.SqlDbModule = SqlDbModule = __decorate([
     (0, common_1.Global)(),
     (0, common_1.Module)({
+        imports: [password_module_1.PasswordModule],
         providers: [sql_db_service_1.SqlDbService],
         exports: [sql_db_service_1.SqlDbService],
     })

@@ -3,37 +3,54 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthUser } from './auth.types';
 import { LoginDto } from './dto/login.dto';
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
+import { PasswordService } from './password.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly sqlDbService: SqlDbService,
+    private readonly passwordService: PasswordService,
   ) {}
 
   async login(dto: LoginDto) {
-    const user = await this.sqlDbService.findUserByCredentials(dto.email, dto.password);
+    const email = dto.email.trim().toLowerCase();
+    const user = await this.sqlDbService.findUserByEmailNormalized(email);
 
     if (!user) {
       throw new UnauthorizedException('Credenciales invalidas');
     }
 
-    if (user.status !== 'ACTIVE') {
+    const valid = await this.passwordService.verify(dto.password, user.password);
+    if (!valid) {
+      throw new UnauthorizedException('Credenciales invalidas');
+    }
+
+    let authUser = user;
+    if (!this.passwordService.isBcryptHash(user.password)) {
+      const hash = await this.passwordService.hash(dto.password);
+      const updated = await this.sqlDbService.updateUser(user.id, { password: hash });
+      if (updated) {
+        authUser = updated;
+      }
+    }
+
+    if (authUser.status !== 'ACTIVE') {
       throw new UnauthorizedException('Usuario no activo');
     }
 
     const payload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-      tenantId: user.tenantId,
-      systems: user.systems,
+      sub: authUser.id,
+      email: authUser.email,
+      role: authUser.role,
+      tenantId: authUser.tenantId,
+      systems: authUser.systems,
     };
 
     return {
       accessToken: this.jwtService.sign(payload),
       tokenType: 'Bearer',
-      user: this.toSafeUser(user),
+      user: this.toSafeUser(authUser),
     };
   }
 

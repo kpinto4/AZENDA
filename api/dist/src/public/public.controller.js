@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PublicController = void 0;
 const common_1 = require("@nestjs/common");
+const throttler_1 = require("@nestjs/throttler");
 const phone_e164_util_1 = require("../common/phone-e164.util");
 const public_booking_hours_util_1 = require("../common/public-booking-hours.util");
 const auth_types_1 = require("../auth/auth.types");
@@ -500,6 +501,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], PublicController.prototype, "createStoreVisit", null);
 exports.PublicController = PublicController = __decorate([
+    (0, throttler_1.Throttle)({ default: { limit: 60, ttl: 60000 } }),
     (0, common_1.Controller)('public'),
     __metadata("design:paramtypes", [sql_db_service_1.SqlDbService])
 ], PublicController);

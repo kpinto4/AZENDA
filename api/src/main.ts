@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { json, type Application, NextFunction, Request, Response, urlencoded } from 'express';
+import helmet from 'helmet';
 
 /** .env en la raiz del monorepo y en api/ (Neon DATABASE_URL); api/.env pisa claves de la raiz. */
 const cwd = process.cwd();
@@ -13,6 +14,25 @@ if (existsSync(resolve(monoRoot, '.env'))) {
   loadEnv({ path: resolve(monoRoot, '.env') });
 }
 loadEnv({ path: resolve(cwd, '.env'), override: true });
+
+function assertProductionEnvOrThrow(): void {
+  const isProd = (process.env.NODE_ENV ?? '').trim().toLowerCase() === 'production';
+  if (!isProd) {
+    return;
+  }
+  const jwt = (process.env.JWT_SECRET ?? '').trim();
+  if (!jwt) {
+    throw new Error('JWT_SECRET es obligatorio cuando NODE_ENV=production');
+  }
+  if (jwt === 'dev-only-secret-change-me') {
+    throw new Error('JWT_SECRET no puede ser el valor de desarrollo en production');
+  }
+  if (!(process.env.CORS_ORIGINS ?? '').trim()) {
+    throw new Error(
+      'CORS_ORIGINS es obligatorio en production (origenes permitidos, separados por coma).',
+    );
+  }
+}
 
 function isLocalDevOrigin(origin: string | undefined): boolean {
   if (!origin) {
@@ -32,7 +52,9 @@ function isLocalDevOrigin(origin: string | undefined): boolean {
 }
 
 async function bootstrap() {
+  assertProductionEnvOrThrow();
   const app = await NestFactory.create(AppModule);
+  app.use(helmet());
   const extraOrigins = (process.env.CORS_ORIGINS ?? '')
     .split(',')
     .map((s) => s.trim())

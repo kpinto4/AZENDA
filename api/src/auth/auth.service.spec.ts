@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import { AppSystem, AuthUser, UserRole } from './auth.types';
 import { AuthService } from './auth.service';
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
+import { PasswordService } from './password.service';
 
 describe('AuthService', () => {
   const activeUser: AuthUser = {
@@ -18,18 +19,30 @@ describe('AuthService', () => {
 
   let service: AuthService;
   let jwtService: { sign: jest.Mock };
+  let passwordService: {
+    verify: jest.Mock;
+    isBcryptHash: jest.Mock;
+    hash: jest.Mock;
+  };
   let sqlDbService: {
-    findUserByCredentials: jest.Mock<Promise<AuthUser | undefined>, [string, string]>;
+    findUserByEmailNormalized: jest.Mock<Promise<AuthUser | undefined>, [string]>;
     findUserById: jest.Mock<Promise<AuthUser | undefined>, [string]>;
+    updateUser: jest.Mock;
   };
 
   beforeEach(async () => {
     jwtService = {
       sign: jest.fn(() => 'signed-token'),
     };
+    passwordService = {
+      verify: jest.fn(),
+      isBcryptHash: jest.fn(() => true),
+      hash: jest.fn(async () => '$2b$10$abcdefghijklmnopqrstuv'),
+    };
     sqlDbService = {
-      findUserByCredentials: jest.fn(),
+      findUserByEmailNormalized: jest.fn(),
       findUserById: jest.fn(),
+      updateUser: jest.fn(),
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -37,6 +50,7 @@ describe('AuthService', () => {
         AuthService,
         { provide: JwtService, useValue: jwtService },
         { provide: SqlDbService, useValue: sqlDbService },
+        { provide: PasswordService, useValue: passwordService },
       ],
     }).compile();
 
@@ -44,14 +58,13 @@ describe('AuthService', () => {
   });
 
   it('hace login y devuelve usuario sin password', async () => {
-    sqlDbService.findUserByCredentials.mockResolvedValue(activeUser);
+    sqlDbService.findUserByEmailNormalized.mockResolvedValue(activeUser);
+    passwordService.verify.mockResolvedValue(true);
 
     const res = await service.login({ email: activeUser.email, password: 'secret' });
 
-    expect(sqlDbService.findUserByCredentials).toHaveBeenCalledWith(
-      activeUser.email,
-      'secret',
-    );
+    expect(sqlDbService.findUserByEmailNormalized).toHaveBeenCalledWith(activeUser.email.trim().toLowerCase());
+    expect(passwordService.verify).toHaveBeenCalledWith('secret', activeUser.password);
     expect(jwtService.sign).toHaveBeenCalledWith({
       sub: activeUser.id,
       email: activeUser.email,
@@ -72,7 +85,7 @@ describe('AuthService', () => {
   });
 
   it('rechaza credenciales invalidas', async () => {
-    sqlDbService.findUserByCredentials.mockResolvedValue(undefined);
+    sqlDbService.findUserByEmailNormalized.mockResolvedValue(undefined);
 
     await expect(
       service.login({ email: 'missing@azenda.dev', password: 'bad' }),
@@ -80,11 +93,22 @@ describe('AuthService', () => {
     expect(jwtService.sign).not.toHaveBeenCalled();
   });
 
+  it('rechaza contrasena incorrecta', async () => {
+    sqlDbService.findUserByEmailNormalized.mockResolvedValue(activeUser);
+    passwordService.verify.mockResolvedValue(false);
+
+    await expect(service.login({ email: activeUser.email, password: 'wrong' })).rejects.toThrow(
+      new UnauthorizedException('Credenciales invalidas'),
+    );
+    expect(jwtService.sign).not.toHaveBeenCalled();
+  });
+
   it('rechaza usuarios no activos', async () => {
-    sqlDbService.findUserByCredentials.mockResolvedValue({
+    sqlDbService.findUserByEmailNormalized.mockResolvedValue({
       ...activeUser,
       status: 'PAUSED',
     });
+    passwordService.verify.mockResolvedValue(true);
 
     await expect(service.login({ email: activeUser.email, password: 'secret' })).rejects.toThrow(
       new UnauthorizedException('Usuario no activo'),

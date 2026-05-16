@@ -14,6 +14,7 @@ exports.SqlDbService = void 0;
 const common_1 = require("@nestjs/common");
 const pg_1 = require("pg");
 const auth_types_1 = require("../../auth/auth.types");
+const password_service_1 = require("../../auth/password.service");
 const customer_name_match_util_1 = require("../../common/customer-name-match.util");
 const phone_e164_util_1 = require("../../common/phone-e164.util");
 const sql_db_types_1 = require("./sql-db.types");
@@ -24,7 +25,8 @@ const DEFAULT_PLAN_CATALOG_SEED = [
     { planKey: 'Negocio', priceMonthly: 99, priceYearly: 990 },
 ];
 let SqlDbService = SqlDbService_1 = class SqlDbService {
-    constructor() {
+    constructor(passwordService) {
+        this.passwordService = passwordService;
         this.logger = new common_1.Logger(SqlDbService_1.name);
         this.dialect = 'postgres';
         const connectionString = process.env.DATABASE_URL?.trim();
@@ -60,6 +62,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         await this.pingOrThrow();
         await this.createSchema();
         await this.ensureSchemaMigrations();
+        await this.migrateLegacyPlaintextPasswords();
         this.logger.log('PostgreSQL: tablas y migraciones ligeras verificadas en el arranque. ' +
             'Semilla (usuarios demo): npm run db:bootstrap en la raiz si la base esta vacia. ' +
             'DB_BOOTSTRAP_ON_START=1 fuerza bootstrap en cada arranque.');
@@ -86,6 +89,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         try {
             await this.createSchema();
             await this.ensureSchemaMigrations();
+            await this.migrateLegacyPlaintextPasswords();
             await this.seedIfEmpty();
             this.logger.log(`PostgreSQL listo (${context}): esquema y semilla verificados`);
         }
@@ -131,13 +135,12 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             throw e;
         }
     }
-    async findUserByCredentials(email, password) {
-        const normalizedEmail = email.trim().toLowerCase();
+    async findUserByEmailNormalized(normalizedEmail) {
         const row = await this.queryOne(`
         SELECT id, email, password, role, tenant_id, systems, status
         FROM users
-        WHERE LOWER(TRIM(email)) = ? AND password = ?
-      `, [normalizedEmail, password]);
+        WHERE LOWER(TRIM(email)) = ?
+      `, [normalizedEmail.trim().toLowerCase()]);
         return row ? this.mapUserRow(row) : undefined;
     }
     async findUserById(userId) {
@@ -166,29 +169,42 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         return rows.map((row) => this.mapUserRow(row));
     }
     async createUser(data) {
+        const passwordStored = this.passwordService.isBcryptHash(data.password)
+            ? data.password
+            : await this.passwordService.hash(data.password);
+        const row = { ...data, password: passwordStored };
         await this.exec(`
         INSERT INTO users (id, email, password, role, tenant_id, systems, status)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `, [
-            data.id,
-            data.email,
-            data.password,
-            data.role,
-            data.tenantId,
-            JSON.stringify(data.systems),
-            data.status,
+            row.id,
+            row.email,
+            row.password,
+            row.role,
+            row.tenantId,
+            JSON.stringify(row.systems),
+            row.status,
         ]);
-        return data;
+        return row;
     }
     async updateUser(userId, patch) {
         const current = await this.findUserById(userId);
         if (!current) {
             return undefined;
         }
+        let nextPassword = current.password;
+        if (patch.password !== undefined && String(patch.password).trim().length > 0) {
+            const p = String(patch.password);
+            nextPassword = this.passwordService.isBcryptHash(p) ? p : await this.passwordService.hash(p);
+        }
         const next = {
-            ...current,
-            ...patch,
-            systems: patch.systems ?? current.systems,
+            id: current.id,
+            email: patch.email !== undefined ? patch.email : current.email,
+            password: nextPassword,
+            role: patch.role !== undefined ? patch.role : current.role,
+            tenantId: patch.tenantId !== undefined ? patch.tenantId : current.tenantId,
+            systems: patch.systems !== undefined ? patch.systems : current.systems,
+            status: patch.status !== undefined ? patch.status : current.status,
         };
         await this.exec(`
         UPDATE users
@@ -1207,6 +1223,16 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             await this.exec(`UPDATE tenants SET current_period_start = ?, current_period_end = ?, next_renewal_at = ? WHERE id = ?`, [start.toISOString(), end.toISOString(), nextRenewalAt, tenant.id]);
         }
     }
+    async migrateLegacyPlaintextPasswords() {
+        const rows = await this.queryRows(`SELECT id, password FROM users WHERE password IS NOT NULL AND password NOT LIKE '$2%'`);
+        for (const r of rows) {
+            const id = String(r.id);
+            const plain = String(r.password);
+            const hash = await this.passwordService.hash(plain);
+            await this.exec(`UPDATE users SET password = ? WHERE id = ?`, [hash, id]);
+            this.logger.log(`Clave de usuario ${id} migrada a hash (login compatible).`);
+        }
+    }
     async seedIfEmpty() {
         const countRow = await this.queryOne(`SELECT COUNT(*) AS cnt FROM users`);
         const count = Number(countRow?.cnt ?? 0);
@@ -1641,6 +1667,6 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
 exports.SqlDbService = SqlDbService;
 exports.SqlDbService = SqlDbService = SqlDbService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [])
+    __metadata("design:paramtypes", [password_service_1.PasswordService])
 ], SqlDbService);
 //# sourceMappingURL=sql-db.service.js.map

@@ -7,12 +7,29 @@ const core_1 = require("@nestjs/core");
 const app_module_1 = require("./app.module");
 const common_1 = require("@nestjs/common");
 const express_1 = require("express");
+const helmet_1 = require("helmet");
 const cwd = process.cwd();
 const monoRoot = (0, node_path_1.resolve)(cwd, '..');
 if ((0, node_fs_1.existsSync)((0, node_path_1.resolve)(monoRoot, '.env'))) {
     (0, dotenv_1.config)({ path: (0, node_path_1.resolve)(monoRoot, '.env') });
 }
 (0, dotenv_1.config)({ path: (0, node_path_1.resolve)(cwd, '.env'), override: true });
+function assertProductionEnvOrThrow() {
+    const isProd = (process.env.NODE_ENV ?? '').trim().toLowerCase() === 'production';
+    if (!isProd) {
+        return;
+    }
+    const jwt = (process.env.JWT_SECRET ?? '').trim();
+    if (!jwt) {
+        throw new Error('JWT_SECRET es obligatorio cuando NODE_ENV=production');
+    }
+    if (jwt === 'dev-only-secret-change-me') {
+        throw new Error('JWT_SECRET no puede ser el valor de desarrollo en production');
+    }
+    if (!(process.env.CORS_ORIGINS ?? '').trim()) {
+        throw new Error('CORS_ORIGINS es obligatorio en production (origenes permitidos, separados por coma).');
+    }
+}
 function isLocalDevOrigin(origin) {
     if (!origin) {
         return true;
@@ -29,7 +46,9 @@ function isLocalDevOrigin(origin) {
     }
 }
 async function bootstrap() {
+    assertProductionEnvOrThrow();
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.use((0, helmet_1.default)());
     const extraOrigins = (process.env.CORS_ORIGINS ?? '')
         .split(',')
         .map((s) => s.trim())

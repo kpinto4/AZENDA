@@ -20,6 +20,8 @@ Este documento resume **qué es** el backend del monorepo AZENDA, **con qué hab
 | Archivo / variable | Qué hace |
 | --- | --- |
 | `api/.env` → `DATABASE_URL` | URL de conexión a Neon. Sin ella el servicio de base de datos del API no puede funcionar correctamente. |
+| `api/.env` → `JWT_SECRET` | Firma de tokens JWT. En **`NODE_ENV=production`** es **obligatorio** (el API no arranca sin un valor fuerte; no uses el secreto de desarrollo). |
+| `api/.env` → `CORS_ORIGINS` | Lista separada por comas de orígenes permitidos (p. ej. `https://app.tudominio.com`). En **`NODE_ENV=production`** es **obligatorio** (sin comodín `*` con credenciales). En local, `localhost` / `127.0.0.1` siguen permitidos sin esta variable. |
 | (Opcional) `PORT` | Puerto HTTP del API si el proyecto lo define en `main.ts` / env. |
 
 Inicializar esquema y datos demo (primera vez o tras base vacía):
@@ -28,7 +30,9 @@ Inicializar esquema y datos demo (primera vez o tras base vacía):
 npm run db:bootstrap
 ```
 
-**Qué hace `db:bootstrap`:** ejecuta el script del API que crea o ajusta tablas y, si no hay usuarios, inserta tenants y usuarios de prueba. Detalle en [PRUEBAS_SISTEMA.md → db:bootstrap](PRUEBAS_SISTEMA.md#npm-run-dbbootstrap).
+**Qué hace `db:bootstrap`:** ejecuta el script del API que crea o ajusta tablas y, si no hay usuarios, inserta tenants y usuarios de prueba (contraseñas de demo **hasheadas** en base). También migra a hash **bcrypt** cualquier fila de `users` que aún tuviera contraseña en texto plano. Detalle en [PRUEBAS_SISTEMA.md → db:bootstrap](PRUEBAS_SISTEMA.md#npm-run-dbbootstrap).
+
+En cada **arranque normal** del API (sin solo `db:bootstrap`) se aplican la misma migración ligera de esquema y la migración de contraseñas en claro → hash, de modo que una base antigua se corrige al desplegar sin paso manual extra.
 
 ---
 

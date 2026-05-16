@@ -75,7 +75,6 @@ export declare class TenantController {
         id: string;
         name: string;
         email: string;
-        password: string;
         role: string;
         status: import("../auth/auth.types").UserStatus;
     }[]>;
@@ -83,7 +82,6 @@ export declare class TenantController {
         id: string;
         name: string;
         email: string;
-        password: string;
         role: string;
         status: import("../auth/auth.types").UserStatus;
     }>;
@@ -91,7 +89,6 @@ export declare class TenantController {
         id: string;
         name: string;
         email: string;
-        password: string;
         role: string;
         status: import("../auth/auth.types").UserStatus;
     }>;

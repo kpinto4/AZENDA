@@ -13,30 +13,45 @@ exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const sql_db_service_1 = require("../infrastructure/sql-db/sql-db.service");
+const password_service_1 = require("./password.service");
 let AuthService = class AuthService {
-    constructor(jwtService, sqlDbService) {
+    constructor(jwtService, sqlDbService, passwordService) {
         this.jwtService = jwtService;
         this.sqlDbService = sqlDbService;
+        this.passwordService = passwordService;
     }
     async login(dto) {
-        const user = await this.sqlDbService.findUserByCredentials(dto.email, dto.password);
+        const email = dto.email.trim().toLowerCase();
+        const user = await this.sqlDbService.findUserByEmailNormalized(email);
         if (!user) {
             throw new common_1.UnauthorizedException('Credenciales invalidas');
         }
-        if (user.status !== 'ACTIVE') {
+        const valid = await this.passwordService.verify(dto.password, user.password);
+        if (!valid) {
+            throw new common_1.UnauthorizedException('Credenciales invalidas');
+        }
+        let authUser = user;
+        if (!this.passwordService.isBcryptHash(user.password)) {
+            const hash = await this.passwordService.hash(dto.password);
+            const updated = await this.sqlDbService.updateUser(user.id, { password: hash });
+            if (updated) {
+                authUser = updated;
+            }
+        }
+        if (authUser.status !== 'ACTIVE') {
             throw new common_1.UnauthorizedException('Usuario no activo');
         }
         const payload = {
-            sub: user.id,
-            email: user.email,
-            role: user.role,
-            tenantId: user.tenantId,
-            systems: user.systems,
+            sub: authUser.id,
+            email: authUser.email,
+            role: authUser.role,
+            tenantId: authUser.tenantId,
+            systems: authUser.systems,
         };
         return {
             accessToken: this.jwtService.sign(payload),
             tokenType: 'Bearer',
-            user: this.toSafeUser(user),
+            user: this.toSafeUser(authUser),
         };
     }
     async me(userId) {
@@ -59,6 +74,7 @@ exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [jwt_1.JwtService,
-        sql_db_service_1.SqlDbService])
+        sql_db_service_1.SqlDbService,
+        password_service_1.PasswordService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

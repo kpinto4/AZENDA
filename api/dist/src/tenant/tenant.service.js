@@ -176,7 +176,6 @@ let TenantService = class TenantService {
             id: u.id,
             name: u.email.split('@')[0],
             email: u.email,
-            password: u.password,
             role: u.role === auth_types_1.UserRole.ADMIN ? 'ADMIN' : 'EMPLEADO',
             status: u.status,
         }));
@@ -196,7 +195,6 @@ let TenantService = class TenantService {
             id: created.id,
             name: dto.name.trim(),
             email: created.email,
-            password: created.password,
             role: created.role === auth_types_1.UserRole.ADMIN ? 'ADMIN' : 'EMPLEADO',
             status: created.status,
         };
@@ -212,9 +210,10 @@ let TenantService = class TenantService {
                 ? auth_types_1.UserRole.ADMIN
                 : auth_types_1.UserRole.EMPLEADO
             : current.role;
+        const pwd = dto.password?.trim();
         const updated = await this.sqlDbService.updateUser(userId, {
             email: dto.email?.trim().toLowerCase(),
-            password: dto.password?.trim(),
+            ...(pwd ? { password: pwd } : {}),
             role,
             systems: role === auth_types_1.UserRole.ADMIN ? [auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING] : [auth_types_1.AppSystem.TENANT],
         });
@@ -225,7 +224,6 @@ let TenantService = class TenantService {
             id: updated.id,
             name: dto.name?.trim() || updated.email.split('@')[0],
             email: updated.email,
-            password: updated.password,
             role: updated.role === auth_types_1.UserRole.ADMIN ? 'ADMIN' : 'EMPLEADO',
             status: updated.status,
         };
