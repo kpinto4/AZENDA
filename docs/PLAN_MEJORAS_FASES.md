@@ -15,7 +15,7 @@ Documento vivo para seguir **qué vamos haciendo**, **qué se arregla**, **qué 
 |----------|----------|
 | **Ahora** | **Piloto** con negocios reales (Fase 1 cerrada en código; smoke en `PRUEBAS_SISTEMA.md` al cambiar de entorno). |
 | **Se mantiene igual** | Monorepo, `SqlDbService` unificado, front híbrido mock/API, Neon, WhatsApp manual, polling en citas. |
-| **En pausa (hold)** | Fases 2, 3 y 4 hasta piloto estable o dolor real de mantenimiento. |
+| **En pausa (hold)** | Fases **3** y **4** hasta piloto estable o necesidad clara (Fase 2 puede avanzar en paralelo al piloto). |
 | **No hacer por ahora** | Varios repos Git, microservicios, refactor total de repositorios, ORM masivo. |
 
 **Veredicto operativo:** con Fase 1 cerrada → **piloto con negocios reales y cuentas serias**. Sin Fase 1 → solo demo interna o entornos de confianza.
@@ -40,7 +40,7 @@ Actualiza al cerrar ítems. Si cambia la estrategia, edita la sección [Estrateg
 | Fase | Enfoque | Prioridad | Estado |
 |------|---------|-----------|--------|
 | **1** | Seguridad de cuentas y API expuesta | **Cerrada** | Obligatorio técnico hecho; opcionales de Fase 1 pendientes |
-| **2** | Arquitectura backend (repositorios, servicios) | HOLD | `[ ]` Pospuesta |
+| **2** | Arquitectura backend (repositorios, servicios) | **ACTIVA** | `PublicBookingService` + `UserRepository` / `PgClientService` |
 | **3** | Unificación frontend (quitar mock) | HOLD | `[ ]` Pospuesta |
 | **4** | Operaciones, CI/CD y producto avanzado | HOLD | `[ ]` Pospuesta |
 
@@ -153,16 +153,17 @@ Usar esta tabla en revisiones de piloto y soporte. **No son fallos de la Fase 1*
 
 ---
 
-## Fase 2 — Arquitectura backend (HOLD)
+## Fase 2 — Arquitectura backend (**ACTIVA** · repositorios + servicio público)
 
-> **Cuándo activar:** dolor de mantenimiento en `sql-db.service.ts`, segundo dev en API, o antes de features grandes en billing/citas.
+> **Activada:** siguiente fase de código tras Fase 1. El resto de ítems siguen incrementales.
 
-- [ ] Dividir `SqlDbService` en repositorios por dominio (ver [¿Qué significa “dividir repositorios”?](#qué-significa-dividir-repositorios-no-es-el-repo-de-git))
-  - [ ] Tenants / usuarios
+- [-] Dividir `SqlDbService` en repositorios por dominio (ver [¿Qué significa “dividir repositorios”?](#qué-significa-dividir-repositorios-no-es-el-repo-de-git))
+  - [x] **Usuarios** — `UserRepository` + `PgClientService` (pool / `queryRows` / `exec` compartidos)
+  - [x] **Tenants** + catálogo de planes (`plan_catalog`) + migraciones que tocaban ambos
   - [ ] Citas (appointments)
   - [ ] Catálogo (productos, servicios)
   - [ ] Ventas, branding, billing, site config
-- [ ] Extraer `PublicBookingService` desde `PublicController`
+- [x] Extraer `PublicBookingService` desde `PublicController`
 - [ ] Capa de servicios en admin (sin `SqlDbService` en controllers)
 - [ ] Migraciones versionadas (`migrations/` en repo)
 - [ ] Corregir tests e2e (`/api`, rutas reales)
@@ -266,8 +267,8 @@ Controller → Service (reglas) → Repository (SQL) → PostgreSQL
 ## Orden de trabajo (vigente)
 
 1. **Piloto** — negocios reales (Fase 1 cerrada; smoke manual al cambiar de entorno).
-2. **Activar Fase 3** si hay incoherencias mock/API en pantallas del piloto.
-3. **Activar Fase 2** si el mantenimiento de `sql-db.service.ts` frena entregas.
+2. **Fase 2 (incremental)** — repositorios por dominio, capa admin, migraciones versionadas, e2e (en paralelo al piloto si aplica).
+3. **Activar Fase 3** si hay incoherencias mock/API en pantallas del piloto.
 4. **Activar Fase 4** con clientes de pago o releases regulares.
 
 ---
@@ -279,4 +280,6 @@ Controller → Service (reglas) → Repository (SQL) → PostgreSQL
 | 2026-05-15 | Documento creado (evaluación técnica) |
 | 2026-05-15 | Estrategia “solo Fase 1”; fases 2–4 en HOLD; tablas qué se arregla / riesgos residuales; principios coste vs calidad |
 | 2026-05-16 | Fase 1 obligatoria en código: bcrypt, migración plaintext→hash al arranque/bootstrap, sin `password` en JSON tenant empleados, JWT/CORS/Helmet/throttler en prod y límites en `public` + `auth/login` |
-| 2026-05-16 | Fase 1 declarada **cerrada** en plan; estrategia pasa a piloto; smoke manual como paso operativo antes de terceros |
+| 2026-05-16 | Fase 2: extraído `PublicBookingService`; controlador público delegador |
+| 2026-05-16 | Fase 2: `PgClientService`, `UserRepository`; `SqlDbService` usa cliente PG centralizado |
+| 2026-05-16 | Fase 2: `TenantRepository` + defaults `plan-catalog` + mapper branding fila; tenants/plan_catalog parcialmente fuera del monolito |

@@ -9,6 +9,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SqlDbModule = void 0;
 const common_1 = require("@nestjs/common");
 const password_module_1 = require("../../auth/password.module");
+const pg_client_service_1 = require("./pg-client.service");
+const tenant_repository_1 = require("./repositories/tenant.repository");
+const user_repository_1 = require("./repositories/user.repository");
 const sql_db_service_1 = require("./sql-db.service");
 let SqlDbModule = class SqlDbModule {
 };
@@ -17,7 +20,7 @@ exports.SqlDbModule = SqlDbModule = __decorate([
     (0, common_1.Global)(),
     (0, common_1.Module)({
         imports: [password_module_1.PasswordModule],
-        providers: [sql_db_service_1.SqlDbService],
+        providers: [pg_client_service_1.PgClientService, user_repository_1.UserRepository, tenant_repository_1.TenantRepository, sql_db_service_1.SqlDbService],
         exports: [sql_db_service_1.SqlDbService],
     })
 ], SqlDbModule);

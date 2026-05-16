@@ -1,23 +1,18 @@
-import { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { PasswordService } from '../../auth/password.service';
+import { OnModuleInit } from '@nestjs/common';
 import { AppointmentAttendance, AppointmentEntity, AppointmentStatus, BillingCycle, PlanCatalogEntry, PlatformSiteConfig, PlatformSiteLandingCopy, StoreVisitLogEntity, TenantBillingSnapshot, TenantBrandingEntity, TenantEntity, TenantProductEntity, TenantSaleEntity, TenantServiceEntity, UserEntity } from './sql-db.types';
-export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
-    private readonly passwordService;
+import { PgClientService } from './pg-client.service';
+import { TenantRepository } from './repositories/tenant.repository';
+import { UserRepository } from './repositories/user.repository';
+export declare class SqlDbService implements OnModuleInit {
+    private readonly pg;
+    private readonly users;
+    private readonly tenants;
     private readonly logger;
-    private readonly dialect;
-    private readonly pool;
-    constructor(passwordService: PasswordService);
+    constructor(pg: PgClientService, users: UserRepository, tenants: TenantRepository);
     onModuleInit(): Promise<void>;
     runBootstrap(): Promise<void>;
     private pingOrThrow;
     private runBootstrapInternal;
-    onModuleDestroy(): Promise<void>;
-    private toPgSql;
-    private queryRows;
-    private queryOne;
-    private exec;
-    private execScript;
-    private ensureIndex;
     findUserByEmailNormalized(normalizedEmail: string): Promise<UserEntity | undefined>;
     findUserById(userId: string): Promise<UserEntity | undefined>;
     listUsers(): Promise<UserEntity[]>;
@@ -65,8 +60,6 @@ export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
         amountDueNow: number;
         carryOverBalance: number;
     } | undefined>;
-    listPlanCatalog(): Promise<PlanCatalogEntry[]>;
-    replacePlanCatalog(entries: PlanCatalogEntry[]): Promise<PlanCatalogEntry[]>;
     listAppointmentsByTenantId(tenantId: string): Promise<AppointmentEntity[]>;
     createAppointment(data: {
         tenantId: string;
@@ -117,21 +110,16 @@ export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
     private ensureSchemaMigrations;
     private createSchema;
     private normalizeTenantBillingPeriods;
-    private migrateLegacyPlaintextPasswords;
     private seedIfEmpty;
     private ensureSeedTenant;
     private ensureSeedUser;
-    private ensureTenantBranding;
-    private computeCycleEnd;
     private round2;
-    private mergeTenantWithCatalog;
-    private fetchPlanCatalogMap;
     getPlanCatalogPrices(planKey: string): Promise<{
         monthly: number;
         yearly: number;
     }>;
-    private syncTenantPlanPricesFromCatalog;
-    private ensurePlanCatalog;
+    listPlanCatalog(): Promise<PlanCatalogEntry[]>;
+    replacePlanCatalog(entries: PlanCatalogEntry[]): Promise<PlanCatalogEntry[]>;
     private mergePlatformSiteConfig;
     private ensurePlatformSiteConfig;
     private ensureTenantSalesTable;
@@ -139,12 +127,9 @@ export declare class SqlDbService implements OnModuleInit, OnModuleDestroy {
     patchPlatformSiteConfig(patch: Partial<PlatformSiteConfig> & {
         landing?: Partial<PlatformSiteLandingCopy>;
     }): Promise<PlatformSiteConfig>;
-    private mapUserRow;
-    private mapTenantRow;
     private mapAppointmentRow;
     private mapStoreVisitRow;
     private mapTenantSaleRow;
-    private mapTenantBrandingRow;
     private mapTenantProductRow;
     private mapTenantServiceRow;
 }

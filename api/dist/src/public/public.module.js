@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PublicModule = void 0;
 const common_1 = require("@nestjs/common");
+const public_booking_service_1 = require("./public-booking.service");
 const public_controller_1 = require("./public.controller");
 let PublicModule = class PublicModule {
 };
@@ -15,6 +16,7 @@ exports.PublicModule = PublicModule;
 exports.PublicModule = PublicModule = __decorate([
     (0, common_1.Module)({
         controllers: [public_controller_1.PublicController],
+        providers: [public_booking_service_1.PublicBookingService],
     })
 ], PublicModule);
 //# sourceMappingURL=public.module.js.map

@@ -1,12 +1,16 @@
+import { UserRole } from '../auth/auth.types';
+import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
+import { AppointmentEntity } from '../infrastructure/sql-db/sql-db.types';
 import { ConfirmPublicAttendanceDto } from './dto/confirm-public-attendance.dto';
 import { CreatePublicAppointmentDto } from './dto/create-public-appointment.dto';
 import { CreatePublicStoreVisitDto } from './dto/create-public-store-visit.dto';
 import { LookupPublicAppointmentsDto } from './dto/lookup-public-appointments.dto';
 import { ReschedulePublicAppointmentDto } from './dto/reschedule-public-appointment.dto';
-import { PublicBookingService } from './public-booking.service';
-export declare class PublicController {
-    private readonly booking;
-    constructor(booking: PublicBookingService);
+export declare class PublicBookingService {
+    private readonly sqlDb;
+    constructor(sqlDb: SqlDbService);
+    private listActivePublicEmployees;
+    private computeOpenSlotsForDate;
     getSiteConfig(): Promise<import("../infrastructure/sql-db/sql-db.types").PlatformSiteConfig>;
     getPublicMeta(slug: string): Promise<{
         slug: string;
@@ -29,7 +33,7 @@ export declare class PublicController {
         employees: {
             id: string;
             name: string;
-            role: import("../auth/auth.types").UserRole;
+            role: UserRole;
         }[];
     }>;
     getPublicAvailability(slug: string, date: string): Promise<{
@@ -39,12 +43,12 @@ export declare class PublicController {
         employees: {
             id: string;
             name: string;
-            role: import("../auth/auth.types").UserRole;
+            role: UserRole;
         }[];
     }>;
-    createBooking(slug: string, dto: CreatePublicAppointmentDto): Promise<import("../infrastructure/sql-db/sql-db.types").AppointmentEntity>;
-    reprogramarCita(slug: string, dto: ReschedulePublicAppointmentDto): Promise<import("../infrastructure/sql-db/sql-db.types").AppointmentEntity>;
-    confirmAttendance(slug: string, dto: ConfirmPublicAttendanceDto): Promise<import("../infrastructure/sql-db/sql-db.types").AppointmentEntity>;
+    createBooking(slug: string, dto: CreatePublicAppointmentDto): Promise<AppointmentEntity>;
+    reprogramarCita(slug: string, dto: ReschedulePublicAppointmentDto): Promise<AppointmentEntity>;
+    confirmAttendance(slug: string, dto: ConfirmPublicAttendanceDto): Promise<AppointmentEntity>;
     buscarCitasActivas(slug: string, dto: LookupPublicAppointmentsDto): Promise<{
         appointments: {
             id: string;

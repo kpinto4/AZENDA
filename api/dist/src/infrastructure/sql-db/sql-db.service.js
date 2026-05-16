@@ -12,46 +12,20 @@ var SqlDbService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SqlDbService = void 0;
 const common_1 = require("@nestjs/common");
-const pg_1 = require("pg");
 const auth_types_1 = require("../../auth/auth.types");
-const password_service_1 = require("../../auth/password.service");
 const customer_name_match_util_1 = require("../../common/customer-name-match.util");
 const phone_e164_util_1 = require("../../common/phone-e164.util");
 const sql_db_types_1 = require("./sql-db.types");
-const DEFAULT_PLAN_CATALOG_SEED = [
-    { planKey: 'Trial', priceMonthly: 0, priceYearly: 0 },
-    { planKey: 'Básico', priceMonthly: 29, priceYearly: 290 },
-    { planKey: 'Pro', priceMonthly: 59, priceYearly: 590 },
-    { planKey: 'Negocio', priceMonthly: 99, priceYearly: 990 },
-];
+const pg_client_service_1 = require("./pg-client.service");
+const tenant_repository_1 = require("./repositories/tenant.repository");
+const user_repository_1 = require("./repositories/user.repository");
+const tenant_branding_row_mapper_1 = require("./tenant-branding-row.mapper");
 let SqlDbService = SqlDbService_1 = class SqlDbService {
-    constructor(passwordService) {
-        this.passwordService = passwordService;
+    constructor(pg, users, tenants) {
+        this.pg = pg;
+        this.users = users;
+        this.tenants = tenants;
         this.logger = new common_1.Logger(SqlDbService_1.name);
-        this.dialect = 'postgres';
-        const connectionString = process.env.DATABASE_URL?.trim();
-        if (!connectionString) {
-            throw new Error('DATABASE_URL es obligatorio. Este proyecto usa Neon como base principal.');
-        }
-        const sslMode = (process.env.PGSSLMODE ?? '').trim().toLowerCase();
-        const requireSsl = sslMode === 'require' ||
-            ['1', 'true', 'yes', 'on'].includes(String(process.env.PGSSL ?? '').trim().toLowerCase()) ||
-            (connectionString?.toLowerCase().includes('sslmode=require') ?? false);
-        const ssl = requireSsl ? { rejectUnauthorized: false } : undefined;
-        this.pool = new pg_1.Pool({
-            connectionString,
-            ssl,
-            max: 10,
-        });
-        let hostHint = 'remoto';
-        try {
-            const u = new URL(connectionString);
-            if (u.hostname)
-                hostHint = u.hostname;
-        }
-        catch {
-        }
-        this.logger.log(`Postgres por DATABASE_URL (${hostHint}; p. ej. Neon)`);
     }
     async onModuleInit() {
         const runOnStart = ['1', 'true', 'yes', 'on'].includes(String(process.env.DB_BOOTSTRAP_ON_START ?? '').trim().toLowerCase());
@@ -62,7 +36,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         await this.pingOrThrow();
         await this.createSchema();
         await this.ensureSchemaMigrations();
-        await this.migrateLegacyPlaintextPasswords();
+        await this.users.migrateLegacyPlaintextPasswords();
         this.logger.log('PostgreSQL: tablas y migraciones ligeras verificadas en el arranque. ' +
             'Semilla (usuarios demo): npm run db:bootstrap en la raiz si la base esta vacia. ' +
             'DB_BOOTSTRAP_ON_START=1 fuerza bootstrap en cada arranque.');
@@ -72,7 +46,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     }
     async pingOrThrow() {
         try {
-            await this.queryRows('SELECT 1');
+            await this.pg.queryRows('SELECT 1');
         }
         catch (err) {
             const code = err.code;
@@ -89,7 +63,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         try {
             await this.createSchema();
             await this.ensureSchemaMigrations();
-            await this.migrateLegacyPlaintextPasswords();
+            await this.users.migrateLegacyPlaintextPasswords();
             await this.seedIfEmpty();
             this.logger.log(`PostgreSQL listo (${context}): esquema y semilla verificados`);
         }
@@ -102,291 +76,47 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             throw err;
         }
     }
-    async onModuleDestroy() {
-        await this.pool.end();
-    }
-    toPgSql(sql) {
-        let n = 0;
-        return sql.replace(/\?/g, () => `$${++n}`);
-    }
-    async queryRows(sql, params = []) {
-        const res = await this.pool.query(this.toPgSql(sql), params);
-        return res.rows;
-    }
-    async queryOne(sql, params = []) {
-        const rows = await this.queryRows(sql, params);
-        return rows[0];
-    }
-    async exec(sql, params = []) {
-        await this.pool.query(this.toPgSql(sql), params);
-    }
-    async execScript(sql) {
-        await this.pool.query(sql);
-    }
-    async ensureIndex(createSql) {
-        try {
-            await this.pool.query(createSql);
-        }
-        catch (e) {
-            const code = e.code;
-            if (code === '42P07') {
-                return;
-            }
-            throw e;
-        }
-    }
     async findUserByEmailNormalized(normalizedEmail) {
-        const row = await this.queryOne(`
-        SELECT id, email, password, role, tenant_id, systems, status
-        FROM users
-        WHERE LOWER(TRIM(email)) = ?
-      `, [normalizedEmail.trim().toLowerCase()]);
-        return row ? this.mapUserRow(row) : undefined;
+        return this.users.findByEmailNormalized(normalizedEmail);
     }
     async findUserById(userId) {
-        const row = await this.queryOne(`
-        SELECT id, email, password, role, tenant_id, systems, status
-        FROM users
-        WHERE id = ?
-      `, [userId]);
-        return row ? this.mapUserRow(row) : undefined;
+        return this.users.findById(userId);
     }
     async listUsers() {
-        const rows = await this.queryRows(`
-        SELECT id, email, password, role, tenant_id, systems, status
-        FROM users
-        ORDER BY email ASC
-      `);
-        return rows.map((row) => this.mapUserRow(row));
+        return this.users.listAll();
     }
     async listUsersByTenantId(tenantId) {
-        const rows = await this.queryRows(`
-        SELECT id, email, password, role, tenant_id, systems, status
-        FROM users
-        WHERE tenant_id = ?
-        ORDER BY email ASC
-      `, [tenantId]);
-        return rows.map((row) => this.mapUserRow(row));
+        return this.users.listByTenantId(tenantId);
     }
     async createUser(data) {
-        const passwordStored = this.passwordService.isBcryptHash(data.password)
-            ? data.password
-            : await this.passwordService.hash(data.password);
-        const row = { ...data, password: passwordStored };
-        await this.exec(`
-        INSERT INTO users (id, email, password, role, tenant_id, systems, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [
-            row.id,
-            row.email,
-            row.password,
-            row.role,
-            row.tenantId,
-            JSON.stringify(row.systems),
-            row.status,
-        ]);
-        return row;
+        return this.users.create(data);
     }
     async updateUser(userId, patch) {
-        const current = await this.findUserById(userId);
-        if (!current) {
-            return undefined;
-        }
-        let nextPassword = current.password;
-        if (patch.password !== undefined && String(patch.password).trim().length > 0) {
-            const p = String(patch.password);
-            nextPassword = this.passwordService.isBcryptHash(p) ? p : await this.passwordService.hash(p);
-        }
-        const next = {
-            id: current.id,
-            email: patch.email !== undefined ? patch.email : current.email,
-            password: nextPassword,
-            role: patch.role !== undefined ? patch.role : current.role,
-            tenantId: patch.tenantId !== undefined ? patch.tenantId : current.tenantId,
-            systems: patch.systems !== undefined ? patch.systems : current.systems,
-            status: patch.status !== undefined ? patch.status : current.status,
-        };
-        await this.exec(`
-        UPDATE users
-        SET email = ?, password = ?, role = ?, tenant_id = ?, systems = ?, status = ?
-        WHERE id = ?
-      `, [
-            next.email,
-            next.password,
-            next.role,
-            next.tenantId,
-            JSON.stringify(next.systems),
-            next.status,
-            userId,
-        ]);
-        return next;
+        return this.users.update(userId, patch);
     }
     async deleteUser(userId) {
-        const existing = await this.findUserById(userId);
-        if (!existing) {
-            return false;
-        }
-        await this.exec(`DELETE FROM users WHERE id = ?`, [userId]);
-        return true;
+        return this.users.delete(userId);
     }
     async deleteUserByTenant(userId, tenantId) {
-        const existing = await this.findUserById(userId);
-        if (!existing || existing.tenantId !== tenantId) {
-            return false;
-        }
-        await this.exec(`DELETE FROM users WHERE id = ? AND tenant_id = ?`, [userId, tenantId]);
-        return true;
+        return this.users.deleteByTenant(userId, tenantId);
     }
     async listTenants() {
-        const catalog = await this.fetchPlanCatalogMap();
-        const rows = await this.queryRows(`
-        SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
-             , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
-        FROM tenants
-        ORDER BY name ASC
-      `);
-        return rows.map((row) => this.mergeTenantWithCatalog(this.mapTenantRow(row), catalog));
+        return this.tenants.listTenants();
     }
     async findTenantBySlug(slug) {
-        const row = await this.queryOne(`
-        SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
-             , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
-        FROM tenants
-        WHERE slug = ?
-      `, [slug]);
-        if (!row) {
-            return undefined;
-        }
-        const t = this.mapTenantRow(row);
-        return this.mergeTenantWithCatalog(t, await this.fetchPlanCatalogMap());
+        return this.tenants.findBySlug(slug);
     }
     async findTenantById(tenantId) {
-        const row = await this.queryOne(`
-        SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
-             , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
-        FROM tenants
-        WHERE id = ?
-      `, [tenantId]);
-        if (!row) {
-            return undefined;
-        }
-        const t = this.mapTenantRow(row);
-        return this.mergeTenantWithCatalog(t, await this.fetchPlanCatalogMap());
+        return this.tenants.findById(tenantId);
     }
     async createTenant(data) {
-        const now = new Date();
-        const defaultCycle = data.billingCycle ?? 'MONTHLY';
-        const periodStart = data.currentPeriodStart ?? now.toISOString();
-        const periodEnd = data.currentPeriodEnd ??
-            this.computeCycleEnd(periodStart, defaultCycle);
-        const plan = data.plan ?? 'Trial';
-        const catalogPrices = await this.getPlanCatalogPrices(plan);
-        const row = {
-            ...data,
-            plan,
-            storefrontEnabled: data.storefrontEnabled ?? false,
-            manualBookingEnabled: data.manualBookingEnabled ?? true,
-            billingCycle: defaultCycle,
-            planPriceMonthly: catalogPrices.monthly,
-            planPriceYearly: catalogPrices.yearly,
-            subscriptionStartedAt: data.subscriptionStartedAt ?? periodStart,
-            currentPeriodStart: periodStart,
-            currentPeriodEnd: periodEnd,
-            nextRenewalAt: data.nextRenewalAt ?? periodEnd,
-        };
-        await this.exec(`
-        INSERT INTO tenants (
-          id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled,
-          billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-            row.id,
-            row.name,
-            row.slug,
-            row.status,
-            row.plan,
-            row.storefrontEnabled ? true : false,
-            row.manualBookingEnabled ? true : false,
-            row.modules.citas ? true : false,
-            row.modules.ventas ? true : false,
-            row.modules.inventario ? true : false,
-            row.billingCycle,
-            row.planPriceMonthly,
-            row.planPriceYearly,
-            row.subscriptionStartedAt,
-            row.currentPeriodStart,
-            row.currentPeriodEnd,
-            row.nextRenewalAt,
-        ]);
-        await this.ensureTenantBranding(row.id, row.name);
-        return (await this.findTenantById(row.id)) ?? row;
+        return this.tenants.createTenant(data);
     }
     async updateTenant(tenantId, patch) {
-        const current = await this.findTenantById(tenantId);
-        if (!current) {
-            return undefined;
-        }
-        const next = {
-            ...current,
-            name: patch.name ?? current.name,
-            slug: patch.slug ?? current.slug,
-            status: patch.status ?? current.status,
-            plan: patch.plan ?? current.plan,
-            storefrontEnabled: patch.storefrontEnabled !== undefined ? patch.storefrontEnabled : current.storefrontEnabled,
-            manualBookingEnabled: patch.manualBookingEnabled !== undefined
-                ? patch.manualBookingEnabled
-                : current.manualBookingEnabled,
-            billingCycle: patch.billingCycle ?? current.billingCycle,
-            planPriceMonthly: current.planPriceMonthly,
-            planPriceYearly: current.planPriceYearly,
-            subscriptionStartedAt: patch.subscriptionStartedAt ?? current.subscriptionStartedAt,
-            currentPeriodStart: patch.currentPeriodStart ?? current.currentPeriodStart,
-            currentPeriodEnd: patch.currentPeriodEnd ?? current.currentPeriodEnd,
-            nextRenewalAt: patch.nextRenewalAt ?? current.nextRenewalAt,
-            modules: {
-                ...current.modules,
-                ...(patch.modules ?? {}),
-            },
-        };
-        const catalogPrices = await this.getPlanCatalogPrices(next.plan);
-        next.planPriceMonthly = catalogPrices.monthly;
-        next.planPriceYearly = catalogPrices.yearly;
-        await this.exec(`
-        UPDATE tenants
-        SET name = ?, slug = ?, status = ?, plan = ?, storefront_enabled = ?, manual_booking_enabled = ?,
-            citas_enabled = ?, ventas_enabled = ?, inventario_enabled = ?, billing_cycle = ?,
-            plan_price_monthly = ?, plan_price_yearly = ?, subscription_started_at = ?,
-            current_period_start = ?, current_period_end = ?, next_renewal_at = ?
-        WHERE id = ?
-      `, [
-            next.name,
-            next.slug,
-            next.status,
-            next.plan,
-            next.storefrontEnabled ? true : false,
-            next.manualBookingEnabled ? true : false,
-            next.modules.citas ? true : false,
-            next.modules.ventas ? true : false,
-            next.modules.inventario ? true : false,
-            next.billingCycle,
-            next.planPriceMonthly,
-            next.planPriceYearly,
-            next.subscriptionStartedAt,
-            next.currentPeriodStart,
-            next.currentPeriodEnd,
-            next.nextRenewalAt,
-            tenantId,
-        ]);
-        return next;
+        return this.tenants.updateTenant(tenantId, patch);
     }
     async deleteTenant(tenantId) {
-        const existing = await this.findTenantById(tenantId);
-        if (!existing) {
-            return false;
-        }
-        await this.exec(`DELETE FROM tenants WHERE id = ?`, [tenantId]);
-        return true;
+        return this.tenants.deleteTenant(tenantId);
     }
     async getTenantBillingSnapshot(tenantId) {
         const tenant = await this.findTenantById(tenantId);
@@ -452,34 +182,8 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             carryOverBalance,
         };
     }
-    async listPlanCatalog() {
-        try {
-            const rows = await this.queryRows(`SELECT plan_key, price_monthly, price_yearly FROM plan_catalog`);
-            const mapped = rows.map((r) => ({
-                planKey: String(r.plan_key),
-                priceMonthly: Math.max(0, Number(r.price_monthly ?? 0)),
-                priceYearly: Math.max(0, Number(r.price_yearly ?? 0)),
-            }));
-            const order = ['Trial', 'Básico', 'Pro', 'Negocio'];
-            return mapped.sort((a, b) => order.indexOf(a.planKey) - order.indexOf(b.planKey));
-        }
-        catch {
-            return [...DEFAULT_PLAN_CATALOG_SEED];
-        }
-    }
-    async replacePlanCatalog(entries) {
-        await this.ensurePlanCatalog();
-        for (const e of entries) {
-            await this.exec(`INSERT INTO plan_catalog (plan_key, price_monthly, price_yearly) VALUES (?, ?, ?)
-         ON CONFLICT (plan_key) DO UPDATE SET
-           price_monthly = EXCLUDED.price_monthly,
-           price_yearly = EXCLUDED.price_yearly`, [e.planKey, e.priceMonthly, e.priceYearly]);
-        }
-        await this.syncTenantPlanPricesFromCatalog();
-        return this.listPlanCatalog();
-    }
     async listAppointmentsByTenantId(tenantId) {
-        const rows = await this.queryRows(`
+        const rows = await this.pg.queryRows(`
         SELECT id, tenant_id, customer, service, when_at, status, attendance,
                customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
         FROM appointments
@@ -494,7 +198,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         const attendance = data.attendance ?? 'PENDIENTE';
         const phone = data.customerPhoneE164?.trim() || null;
         const waConsent = Boolean(data.waReminderConsent);
-        await this.exec(`
+        await this.pg.exec(`
         INSERT INTO appointments (
           id, tenant_id, customer, service, when_at, status, attendance,
           customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
@@ -508,8 +212,8 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         return created;
     }
     async markAppointmentReminderSentForTenant(appointmentId, tenantId) {
-        await this.exec(`UPDATE appointments SET wa_reminder_sent_at = ? WHERE id = ? AND tenant_id = ?`, [new Date().toISOString(), appointmentId, tenantId]);
-        const row = await this.queryOne(`
+        await this.pg.exec(`UPDATE appointments SET wa_reminder_sent_at = ? WHERE id = ? AND tenant_id = ?`, [new Date().toISOString(), appointmentId, tenantId]);
+        const row = await this.pg.queryOne(`
         SELECT id, tenant_id, customer, service, when_at, status, attendance,
                customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
         FROM appointments
@@ -519,7 +223,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         return row ? this.mapAppointmentRow(row) : undefined;
     }
     async findAppointmentByTenantAndWhen(tenantId, when) {
-        const row = await this.queryOne(`
+        const row = await this.pg.queryOne(`
         SELECT id, tenant_id, customer, service, when_at, status, attendance,
                customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
         FROM appointments
@@ -529,7 +233,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         return row ? this.mapAppointmentRow(row) : undefined;
     }
     async findAppointmentById(appointmentId) {
-        const row = await this.queryOne(`
+        const row = await this.pg.queryOne(`
         SELECT id, tenant_id, customer, service, when_at, status, attendance,
                customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
         FROM appointments
@@ -542,7 +246,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         if (!current || current.tenantId !== tenantId) {
             return undefined;
         }
-        await this.exec(`UPDATE appointments SET when_at = ?, service = ? WHERE id = ? AND tenant_id = ?`, [when, service, appointmentId, tenantId]);
+        await this.pg.exec(`UPDATE appointments SET when_at = ?, service = ? WHERE id = ? AND tenant_id = ?`, [when, service, appointmentId, tenantId]);
         return this.findAppointmentById(appointmentId);
     }
     async updateAppointmentStatus(appointmentId, tenantId, status) {
@@ -550,7 +254,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         if (!current || current.tenantId !== tenantId) {
             return undefined;
         }
-        await this.exec(`UPDATE appointments SET status = ? WHERE id = ? AND tenant_id = ?`, [
+        await this.pg.exec(`UPDATE appointments SET status = ? WHERE id = ? AND tenant_id = ?`, [
             status,
             appointmentId,
             tenantId,
@@ -567,7 +271,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             : attendance === 'NO_ASISTIO'
                 ? 'cancelada'
                 : 'pendiente';
-        await this.exec(`UPDATE appointments SET attendance = ?, status = ? WHERE id = ? AND tenant_id = ?`, [attendance, status, appointmentId, tenantId]);
+        await this.pg.exec(`UPDATE appointments SET attendance = ?, status = ? WHERE id = ? AND tenant_id = ?`, [attendance, status, appointmentId, tenantId]);
         return { ...current, attendance, status };
     }
     async confirmPublicAppointmentAttendance(slug, appointmentId, customerName) {
@@ -585,7 +289,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         if (!(0, customer_name_match_util_1.publicCustomerNameMatches)(appt.customer, customerName)) {
             return undefined;
         }
-        await this.exec(`UPDATE appointments SET attendance = ?, status = ? WHERE id = ? AND tenant_id = ?`, ['ASISTIO', 'confirmada', appointmentId, tenant.id]);
+        await this.pg.exec(`UPDATE appointments SET attendance = ?, status = ? WHERE id = ? AND tenant_id = ?`, ['ASISTIO', 'confirmada', appointmentId, tenant.id]);
         return { ...appt, attendance: 'ASISTIO', status: 'confirmada' };
     }
     async lookupPublicAppointmentsForClient(slug, customerNameRaw, appointmentIdRaw, customerPhoneRaw) {
@@ -610,7 +314,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             }
         }
         else if (phoneDigits) {
-            const rows = await this.queryRows(`
+            const rows = await this.pg.queryRows(`
           SELECT id, tenant_id, customer, service, when_at, status, attendance,
                  customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
           FROM appointments
@@ -633,7 +337,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         });
     }
     async listStoreVisitsByTenantId(tenantId) {
-        const rows = await this.queryRows(`
+        const rows = await this.pg.queryRows(`
         SELECT id, tenant_id, customer, detail, created_at
         FROM store_visit_logs
         WHERE tenant_id = ?
@@ -644,7 +348,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     async createStoreVisitLog(data) {
         const id = `visit_${Date.now()}`;
         const createdAt = new Date().toISOString();
-        await this.exec(`
+        await this.pg.exec(`
         INSERT INTO store_visit_logs (id, tenant_id, customer, detail, created_at)
         VALUES (?, ?, ?, ?, ?)
       `, [id, data.tenantId, data.customer, data.detail, createdAt]);
@@ -657,7 +361,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         };
     }
     async listTenantSalesByTenantId(tenantId) {
-        const rows = await this.queryRows(`
+        const rows = await this.pg.queryRows(`
         SELECT id, tenant_id, sale_date, total, method, linked_appointment_id, stock_note, created_at
         FROM tenant_sales
         WHERE tenant_id = ?
@@ -668,7 +372,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     async insertTenantSale(data) {
         const id = `sale_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
         const createdAt = new Date().toISOString();
-        await this.exec(`
+        await this.pg.exec(`
         INSERT INTO tenant_sales (id, tenant_id, sale_date, total, method, linked_appointment_id, stock_note, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `, [
@@ -693,7 +397,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         };
     }
     async getTenantBranding(tenantId) {
-        const row = await this.queryOne(`
+        const row = await this.pg.queryOne(`
         SELECT tenant_id, display_name, logo_url, public_address, public_maps_url, cancellation_policy, reminder_notice,
                whatsapp_phone_e164, whatsapp_default_message, public_booking_hours_json,
                catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
@@ -702,10 +406,10 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         WHERE tenant_id = ?
       `, [tenantId]);
         if (row) {
-            return this.mapTenantBrandingRow(row);
+            return (0, tenant_branding_row_mapper_1.mapTenantBrandingRow)(row);
         }
         const tenant = await this.findTenantById(tenantId);
-        return await this.ensureTenantBranding(tenantId, tenant?.name ?? 'Tu negocio');
+        return this.tenants.ensureDefaultBranding(tenantId, tenant?.name ?? 'Tu negocio');
     }
     async updateTenantBranding(tenantId, patch) {
         const current = await this.getTenantBranding(tenantId);
@@ -752,7 +456,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
                 ? patch.catalogLayout
                 : current.catalogLayout,
         };
-        await this.exec(`
+        await this.pg.exec(`
         UPDATE tenant_branding
         SET display_name = ?, logo_url = ?, public_address = ?, public_maps_url = ?, cancellation_policy = ?, reminder_notice = ?,
             whatsapp_phone_e164 = ?, whatsapp_default_message = ?, public_booking_hours_json = ?,
@@ -785,7 +489,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         return next;
     }
     async listProductsByTenantId(tenantId) {
-        const rows = await this.queryRows(`
+        const rows = await this.pg.queryRows(`
         SELECT id, tenant_id, name, description, price, promo_price, sku, stock, catalog_order, image_url
         FROM tenant_products
         WHERE tenant_id = ?
@@ -795,9 +499,9 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     }
     async createTenantProduct(tenantId, data) {
         const id = `prd_${Date.now()}`;
-        const rowOrder = await this.queryOne(`SELECT COALESCE(MAX(catalog_order), -1) + 1 AS next_order FROM tenant_products WHERE tenant_id = ?`, [tenantId]);
+        const rowOrder = await this.pg.queryOne(`SELECT COALESCE(MAX(catalog_order), -1) + 1 AS next_order FROM tenant_products WHERE tenant_id = ?`, [tenantId]);
         const catalogOrder = Number(rowOrder?.next_order ?? 0);
-        await this.exec(`
+        await this.pg.exec(`
         INSERT INTO tenant_products (id, tenant_id, name, description, price, promo_price, sku, stock, catalog_order, image_url)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
@@ -842,7 +546,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
                     ? null
                     : patch.imageUrl,
         };
-        await this.exec(`
+        await this.pg.exec(`
         UPDATE tenant_products
         SET name = ?, description = ?, price = ?, promo_price = ?, sku = ?, stock = ?, image_url = ?
         WHERE id = ? AND tenant_id = ?
@@ -866,7 +570,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         if (!exists) {
             return false;
         }
-        await this.exec(`DELETE FROM tenant_products WHERE id = ? AND tenant_id = ?`, [
+        await this.pg.exec(`DELETE FROM tenant_products WHERE id = ? AND tenant_id = ?`, [
             productId,
             tenantId,
         ]);
@@ -881,17 +585,17 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         }
         const a = sorted[idx];
         const b = sorted[j];
-        await this.exec(`UPDATE tenant_products SET catalog_order = ? WHERE id = ?`, [
+        await this.pg.exec(`UPDATE tenant_products SET catalog_order = ? WHERE id = ?`, [
             b.catalogOrder,
             a.id,
         ]);
-        await this.exec(`UPDATE tenant_products SET catalog_order = ? WHERE id = ?`, [
+        await this.pg.exec(`UPDATE tenant_products SET catalog_order = ? WHERE id = ?`, [
             a.catalogOrder,
             b.id,
         ]);
     }
     async listServicesByTenantId(tenantId) {
-        const rows = await this.queryRows(`
+        const rows = await this.pg.queryRows(`
         SELECT id, tenant_id, name, description, price, promo_price, promo_label, catalog_order
         FROM tenant_services
         WHERE tenant_id = ?
@@ -901,9 +605,9 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     }
     async createTenantService(tenantId, data) {
         const id = `svc_${Date.now()}`;
-        const rowOrder = await this.queryOne(`SELECT COALESCE(MAX(catalog_order), -1) + 1 AS next_order FROM tenant_services WHERE tenant_id = ?`, [tenantId]);
+        const rowOrder = await this.pg.queryOne(`SELECT COALESCE(MAX(catalog_order), -1) + 1 AS next_order FROM tenant_services WHERE tenant_id = ?`, [tenantId]);
         const catalogOrder = Number(rowOrder?.next_order ?? 0);
-        await this.exec(`
+        await this.pg.exec(`
         INSERT INTO tenant_services (id, tenant_id, name, description, price, promo_price, promo_label, catalog_order)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `, [
@@ -938,7 +642,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
                     : Math.max(0, Number(patch.promoPrice) || 0),
             promoLabel: patch.promoLabel === undefined ? current.promoLabel : patch.promoLabel?.trim() || null,
         };
-        await this.exec(`
+        await this.pg.exec(`
         UPDATE tenant_services
         SET name = ?, description = ?, price = ?, promo_price = ?, promo_label = ?
         WHERE id = ? AND tenant_id = ?
@@ -952,7 +656,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         if (!exists) {
             return false;
         }
-        await this.exec(`DELETE FROM tenant_services WHERE id = ? AND tenant_id = ?`, [
+        await this.pg.exec(`DELETE FROM tenant_services WHERE id = ? AND tenant_id = ?`, [
             serviceId,
             tenantId,
         ]);
@@ -967,17 +671,17 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         }
         const a = sorted[idx];
         const b = sorted[j];
-        await this.exec(`UPDATE tenant_services SET catalog_order = ? WHERE id = ?`, [
+        await this.pg.exec(`UPDATE tenant_services SET catalog_order = ? WHERE id = ?`, [
             b.catalogOrder,
             a.id,
         ]);
-        await this.exec(`UPDATE tenant_services SET catalog_order = ? WHERE id = ?`, [
+        await this.pg.exec(`UPDATE tenant_services SET catalog_order = ? WHERE id = ?`, [
             a.catalogOrder,
             b.id,
         ]);
     }
     async columnExists(table, column) {
-        const row = await this.queryOne(`
+        const row = await this.pg.queryOne(`
         SELECT 1 AS ok
         FROM information_schema.columns
         WHERE table_schema = 'public'
@@ -988,71 +692,71 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     }
     async ensureSchemaMigrations() {
         if (!(await this.columnExists('appointments', 'attendance'))) {
-            await this.execScript(`ALTER TABLE appointments ADD COLUMN attendance TEXT NOT NULL DEFAULT 'PENDIENTE'`);
+            await this.pg.execScript(`ALTER TABLE appointments ADD COLUMN attendance TEXT NOT NULL DEFAULT 'PENDIENTE'`);
         }
         if (!(await this.columnExists('tenants', 'plan'))) {
-            await this.execScript(`ALTER TABLE tenants ADD COLUMN plan TEXT NOT NULL DEFAULT 'Trial'`);
+            await this.pg.execScript(`ALTER TABLE tenants ADD COLUMN plan TEXT NOT NULL DEFAULT 'Trial'`);
         }
         if (!(await this.columnExists('tenants', 'storefront_enabled'))) {
-            await this.execScript(`ALTER TABLE tenants ADD COLUMN storefront_enabled BOOLEAN NOT NULL DEFAULT false`);
+            await this.pg.execScript(`ALTER TABLE tenants ADD COLUMN storefront_enabled BOOLEAN NOT NULL DEFAULT false`);
         }
         if (!(await this.columnExists('tenants', 'manual_booking_enabled'))) {
-            await this.execScript(`ALTER TABLE tenants ADD COLUMN manual_booking_enabled BOOLEAN NOT NULL DEFAULT true`);
+            await this.pg.execScript(`ALTER TABLE tenants ADD COLUMN manual_booking_enabled BOOLEAN NOT NULL DEFAULT true`);
         }
         if (!(await this.columnExists('tenants', 'billing_cycle'))) {
-            await this.execScript(`ALTER TABLE tenants ADD COLUMN billing_cycle TEXT NOT NULL DEFAULT 'MONTHLY'`);
+            await this.pg.execScript(`ALTER TABLE tenants ADD COLUMN billing_cycle TEXT NOT NULL DEFAULT 'MONTHLY'`);
         }
         if (!(await this.columnExists('tenants', 'plan_price_monthly'))) {
-            await this.execScript(`ALTER TABLE tenants ADD COLUMN plan_price_monthly NUMERIC(12,2) NOT NULL DEFAULT 0`);
+            await this.pg.execScript(`ALTER TABLE tenants ADD COLUMN plan_price_monthly NUMERIC(12,2) NOT NULL DEFAULT 0`);
         }
         if (!(await this.columnExists('tenants', 'plan_price_yearly'))) {
-            await this.execScript(`ALTER TABLE tenants ADD COLUMN plan_price_yearly NUMERIC(12,2) NOT NULL DEFAULT 0`);
+            await this.pg.execScript(`ALTER TABLE tenants ADD COLUMN plan_price_yearly NUMERIC(12,2) NOT NULL DEFAULT 0`);
         }
         if (!(await this.columnExists('tenants', 'subscription_started_at'))) {
-            await this.execScript(`ALTER TABLE tenants ADD COLUMN subscription_started_at TEXT NOT NULL DEFAULT '2026-01-01T00:00:00.000Z'`);
+            await this.pg.execScript(`ALTER TABLE tenants ADD COLUMN subscription_started_at TEXT NOT NULL DEFAULT '2026-01-01T00:00:00.000Z'`);
         }
         if (!(await this.columnExists('tenants', 'current_period_start'))) {
-            await this.execScript(`ALTER TABLE tenants ADD COLUMN current_period_start TEXT NOT NULL DEFAULT '2026-01-01T00:00:00.000Z'`);
+            await this.pg.execScript(`ALTER TABLE tenants ADD COLUMN current_period_start TEXT NOT NULL DEFAULT '2026-01-01T00:00:00.000Z'`);
         }
         if (!(await this.columnExists('tenants', 'current_period_end'))) {
-            await this.execScript(`ALTER TABLE tenants ADD COLUMN current_period_end TEXT NOT NULL DEFAULT '2026-02-01T00:00:00.000Z'`);
+            await this.pg.execScript(`ALTER TABLE tenants ADD COLUMN current_period_end TEXT NOT NULL DEFAULT '2026-02-01T00:00:00.000Z'`);
         }
         if (!(await this.columnExists('tenants', 'next_renewal_at'))) {
-            await this.execScript(`ALTER TABLE tenants ADD COLUMN next_renewal_at TEXT NOT NULL DEFAULT '2026-02-01T00:00:00.000Z'`);
+            await this.pg.execScript(`ALTER TABLE tenants ADD COLUMN next_renewal_at TEXT NOT NULL DEFAULT '2026-02-01T00:00:00.000Z'`);
         }
         if (!(await this.columnExists('tenant_branding', 'public_address'))) {
-            await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN public_address TEXT NULL`);
+            await this.pg.execScript(`ALTER TABLE tenant_branding ADD COLUMN public_address TEXT NULL`);
         }
         if (!(await this.columnExists('tenant_branding', 'public_maps_url'))) {
-            await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN public_maps_url TEXT NULL`);
+            await this.pg.execScript(`ALTER TABLE tenant_branding ADD COLUMN public_maps_url TEXT NULL`);
         }
         if (!(await this.columnExists('tenant_branding', 'cancellation_policy'))) {
-            await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN cancellation_policy TEXT NULL`);
+            await this.pg.execScript(`ALTER TABLE tenant_branding ADD COLUMN cancellation_policy TEXT NULL`);
         }
         if (!(await this.columnExists('tenant_branding', 'reminder_notice'))) {
-            await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN reminder_notice TEXT NULL`);
+            await this.pg.execScript(`ALTER TABLE tenant_branding ADD COLUMN reminder_notice TEXT NULL`);
         }
         if (!(await this.columnExists('appointments', 'customer_phone_e164'))) {
-            await this.execScript(`ALTER TABLE appointments ADD COLUMN customer_phone_e164 TEXT NULL`);
+            await this.pg.execScript(`ALTER TABLE appointments ADD COLUMN customer_phone_e164 TEXT NULL`);
         }
         if (!(await this.columnExists('appointments', 'wa_reminder_consent'))) {
-            await this.execScript(`ALTER TABLE appointments ADD COLUMN wa_reminder_consent BOOLEAN NOT NULL DEFAULT false`);
+            await this.pg.execScript(`ALTER TABLE appointments ADD COLUMN wa_reminder_consent BOOLEAN NOT NULL DEFAULT false`);
         }
         if (!(await this.columnExists('appointments', 'wa_reminder_sent_at'))) {
-            await this.execScript(`ALTER TABLE appointments ADD COLUMN wa_reminder_sent_at TEXT NULL`);
+            await this.pg.execScript(`ALTER TABLE appointments ADD COLUMN wa_reminder_sent_at TEXT NULL`);
         }
-        const tenantRows = await this.queryRows(`SELECT id, name FROM tenants`);
+        const tenantRows = await this.pg.queryRows(`SELECT id, name FROM tenants`);
         for (const t of tenantRows) {
-            await this.ensureTenantBranding(String(t.id), String(t.name));
+            await this.tenants.ensureDefaultBranding(String(t.id), String(t.name));
         }
-        await this.ensurePlanCatalog();
+        await this.tenants.ensurePlanCatalogTable();
         await this.ensurePlatformSiteConfig();
         await this.ensureTenantSalesTable();
-        await this.syncTenantPlanPricesFromCatalog();
+        await this.tenants.syncTenantPlanPricesFromCatalog();
         await this.normalizeTenantBillingPeriods();
     }
     async createSchema() {
-        await this.execScript(`
+        await this.pg.execScript(`
       CREATE TABLE IF NOT EXISTS tenants (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -1073,7 +777,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         inventario_enabled BOOLEAN NOT NULL DEFAULT false
       )
     `);
-        await this.execScript(`
+        await this.pg.execScript(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         email TEXT NOT NULL UNIQUE,
@@ -1085,7 +789,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         CONSTRAINT fk_users_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id)
       )
     `);
-        await this.execScript(`
+        await this.pg.execScript(`
       CREATE TABLE IF NOT EXISTS appointments (
         id TEXT PRIMARY KEY,
         tenant_id TEXT NOT NULL,
@@ -1100,8 +804,8 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         CONSTRAINT fk_appt_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
       )
     `);
-        await this.ensureIndex(`CREATE INDEX idx_appointments_tenant_when ON appointments (tenant_id, when_at)`);
-        await this.execScript(`
+        await this.pg.ensureIndex(`CREATE INDEX idx_appointments_tenant_when ON appointments (tenant_id, when_at)`);
+        await this.pg.execScript(`
       CREATE TABLE IF NOT EXISTS store_visit_logs (
         id TEXT PRIMARY KEY,
         tenant_id TEXT NOT NULL,
@@ -1111,8 +815,8 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         CONSTRAINT fk_visit_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
       )
     `);
-        await this.ensureIndex(`CREATE INDEX idx_store_visits_tenant_created ON store_visit_logs (tenant_id, created_at)`);
-        await this.execScript(`
+        await this.pg.ensureIndex(`CREATE INDEX idx_store_visits_tenant_created ON store_visit_logs (tenant_id, created_at)`);
+        await this.pg.execScript(`
       CREATE TABLE IF NOT EXISTS tenant_branding (
         tenant_id TEXT PRIMARY KEY,
         display_name TEXT NOT NULL,
@@ -1139,15 +843,15 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
       )
     `);
         if (!(await this.columnExists('tenant_branding', 'whatsapp_phone_e164'))) {
-            await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN whatsapp_phone_e164 TEXT NULL`);
+            await this.pg.execScript(`ALTER TABLE tenant_branding ADD COLUMN whatsapp_phone_e164 TEXT NULL`);
         }
         if (!(await this.columnExists('tenant_branding', 'whatsapp_default_message'))) {
-            await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN whatsapp_default_message TEXT NULL`);
+            await this.pg.execScript(`ALTER TABLE tenant_branding ADD COLUMN whatsapp_default_message TEXT NULL`);
         }
         if (!(await this.columnExists('tenant_branding', 'public_booking_hours_json'))) {
-            await this.execScript(`ALTER TABLE tenant_branding ADD COLUMN public_booking_hours_json TEXT NULL`);
+            await this.pg.execScript(`ALTER TABLE tenant_branding ADD COLUMN public_booking_hours_json TEXT NULL`);
         }
-        await this.execScript(`
+        await this.pg.execScript(`
       CREATE TABLE IF NOT EXISTS tenant_products (
         id TEXT PRIMARY KEY,
         tenant_id TEXT NOT NULL,
@@ -1162,8 +866,8 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         CONSTRAINT fk_product_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
       )
     `);
-        await this.ensureIndex(`CREATE INDEX idx_tenant_products_tenant_order ON tenant_products (tenant_id, catalog_order)`);
-        await this.execScript(`
+        await this.pg.ensureIndex(`CREATE INDEX idx_tenant_products_tenant_order ON tenant_products (tenant_id, catalog_order)`);
+        await this.pg.execScript(`
       CREATE TABLE IF NOT EXISTS tenant_services (
         id TEXT PRIMARY KEY,
         tenant_id TEXT NOT NULL,
@@ -1176,8 +880,8 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         CONSTRAINT fk_service_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
       )
     `);
-        await this.ensureIndex(`CREATE INDEX idx_tenant_services_tenant_order ON tenant_services (tenant_id, catalog_order)`);
-        await this.execScript(`
+        await this.pg.ensureIndex(`CREATE INDEX idx_tenant_services_tenant_order ON tenant_services (tenant_id, catalog_order)`);
+        await this.pg.execScript(`
       CREATE TABLE IF NOT EXISTS tenant_sales (
         id TEXT PRIMARY KEY,
         tenant_id TEXT NOT NULL,
@@ -1190,8 +894,8 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         CONSTRAINT fk_sale_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
       )
     `);
-        await this.ensureIndex(`CREATE INDEX idx_tenant_sales_tenant_created ON tenant_sales (tenant_id, created_at DESC)`);
-        await this.execScript(`
+        await this.pg.ensureIndex(`CREATE INDEX idx_tenant_sales_tenant_created ON tenant_sales (tenant_id, created_at DESC)`);
+        await this.pg.execScript(`
       CREATE TABLE IF NOT EXISTS platform_site_config (
         id TEXT PRIMARY KEY,
         payload_json TEXT NOT NULL
@@ -1207,11 +911,11 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             const invalidRange = Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start;
             if (invalidRange) {
                 start = now;
-                end = new Date(this.computeCycleEnd(start.toISOString(), tenant.billingCycle));
+                end = new Date(this.tenants.computeBillingCycleEnd(start.toISOString(), tenant.billingCycle));
             }
             while (end < now) {
                 start = end;
-                end = new Date(this.computeCycleEnd(start.toISOString(), tenant.billingCycle));
+                end = new Date(this.tenants.computeBillingCycleEnd(start.toISOString(), tenant.billingCycle));
             }
             const nextRenewalAt = end.toISOString();
             const changed = tenant.currentPeriodStart !== start.toISOString() ||
@@ -1220,21 +924,11 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             if (!changed) {
                 continue;
             }
-            await this.exec(`UPDATE tenants SET current_period_start = ?, current_period_end = ?, next_renewal_at = ? WHERE id = ?`, [start.toISOString(), end.toISOString(), nextRenewalAt, tenant.id]);
-        }
-    }
-    async migrateLegacyPlaintextPasswords() {
-        const rows = await this.queryRows(`SELECT id, password FROM users WHERE password IS NOT NULL AND password NOT LIKE '$2%'`);
-        for (const r of rows) {
-            const id = String(r.id);
-            const plain = String(r.password);
-            const hash = await this.passwordService.hash(plain);
-            await this.exec(`UPDATE users SET password = ? WHERE id = ?`, [hash, id]);
-            this.logger.log(`Clave de usuario ${id} migrada a hash (login compatible).`);
+            await this.pg.exec(`UPDATE tenants SET current_period_start = ?, current_period_end = ?, next_renewal_at = ? WHERE id = ?`, [start.toISOString(), end.toISOString(), nextRenewalAt, tenant.id]);
         }
     }
     async seedIfEmpty() {
-        const countRow = await this.queryOne(`SELECT COUNT(*) AS cnt FROM users`);
+        const countRow = await this.pg.queryOne(`SELECT COUNT(*) AS cnt FROM users`);
         const count = Number(countRow?.cnt ?? 0);
         if (count > 0) {
             return;
@@ -1326,120 +1020,17 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         }
         await this.createUser(row);
     }
-    async ensureTenantBranding(tenantId, tenantName) {
-        const existing = await this.queryOne(`
-        SELECT tenant_id, display_name, logo_url, public_address, public_maps_url, cancellation_policy, reminder_notice,
-               whatsapp_phone_e164, whatsapp_default_message, public_booking_hours_json,
-               catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
-               border_radius_px, use_gradient, gradient_from, gradient_to, gradient_angle_deg
-        FROM tenant_branding
-        WHERE tenant_id = ?
-      `, [tenantId]);
-        if (existing) {
-            return this.mapTenantBrandingRow(existing);
-        }
-        await this.exec(`
-        INSERT INTO tenant_branding (
-          tenant_id, display_name, logo_url, public_address, public_maps_url, cancellation_policy, reminder_notice,
-          whatsapp_phone_e164, whatsapp_default_message, public_booking_hours_json,
-          catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
-          border_radius_px, use_gradient, gradient_from, gradient_to, gradient_angle_deg
-        ) VALUES (?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'horizontal', '#4f46e5', '#06b6d4', '#f8fafc', '#ffffff', '#0f172a', 12, false, '#4f46e5', '#06b6d4', 135)
-      `, [tenantId, tenantName, null]);
-        return await this.getTenantBranding(tenantId);
-    }
-    computeCycleEnd(startIso, cycle) {
-        const d = new Date(startIso);
-        if (cycle === 'YEARLY') {
-            d.setFullYear(d.getFullYear() + 1);
-        }
-        else {
-            d.setMonth(d.getMonth() + 1);
-        }
-        return d.toISOString();
-    }
     round2(value) {
         return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
     }
-    mergeTenantWithCatalog(t, catalog) {
-        const p = catalog.get(t.plan);
-        return {
-            ...t,
-            planPriceMonthly: p?.monthly ?? 0,
-            planPriceYearly: p?.yearly ?? 0,
-        };
-    }
-    async fetchPlanCatalogMap() {
-        try {
-            const rows = await this.queryRows(`SELECT plan_key, price_monthly, price_yearly FROM plan_catalog`);
-            const m = new Map();
-            for (const r of rows) {
-                m.set(String(r.plan_key), {
-                    monthly: Math.max(0, Number(r.price_monthly ?? 0)),
-                    yearly: Math.max(0, Number(r.price_yearly ?? 0)),
-                });
-            }
-            return m;
-        }
-        catch {
-            return new Map(DEFAULT_PLAN_CATALOG_SEED.map((e) => [
-                e.planKey,
-                { monthly: e.priceMonthly, yearly: e.priceYearly },
-            ]));
-        }
-    }
     async getPlanCatalogPrices(planKey) {
-        try {
-            const row = await this.queryOne(`SELECT price_monthly, price_yearly FROM plan_catalog WHERE plan_key = ?`, [planKey]);
-            if (!row) {
-                const fallback = DEFAULT_PLAN_CATALOG_SEED.find((e) => e.planKey === planKey);
-                return {
-                    monthly: fallback?.priceMonthly ?? 0,
-                    yearly: fallback?.priceYearly ?? 0,
-                };
-            }
-            return {
-                monthly: Math.max(0, Number(row.price_monthly ?? 0)),
-                yearly: Math.max(0, Number(row.price_yearly ?? 0)),
-            };
-        }
-        catch {
-            const fallback = DEFAULT_PLAN_CATALOG_SEED.find((e) => e.planKey === planKey);
-            return {
-                monthly: fallback?.priceMonthly ?? 0,
-                yearly: fallback?.priceYearly ?? 0,
-            };
-        }
+        return this.tenants.getPlanCatalogPrices(planKey);
     }
-    async syncTenantPlanPricesFromCatalog() {
-        await this.exec(`
-      UPDATE tenants
-      SET plan_price_monthly = COALESCE(
-            (SELECT price_monthly FROM plan_catalog c WHERE c.plan_key = tenants.plan),
-            0
-          ),
-          plan_price_yearly = COALESCE(
-            (SELECT price_yearly FROM plan_catalog c WHERE c.plan_key = tenants.plan),
-            0
-          )
-    `);
+    async listPlanCatalog() {
+        return this.tenants.listPlanCatalog();
     }
-    async ensurePlanCatalog() {
-        await this.execScript(`
-      CREATE TABLE IF NOT EXISTS plan_catalog (
-        plan_key TEXT PRIMARY KEY,
-        price_monthly NUMERIC(12,2) NOT NULL DEFAULT 0,
-        price_yearly NUMERIC(12,2) NOT NULL DEFAULT 0
-      )
-    `);
-        await this.execScript(`
-      INSERT INTO plan_catalog (plan_key, price_monthly, price_yearly) VALUES
-        ('Trial', 0, 0),
-        ('Básico', 29, 290),
-        ('Pro', 59, 590),
-        ('Negocio', 99, 990)
-      ON CONFLICT (plan_key) DO NOTHING
-    `);
+    async replacePlanCatalog(entries) {
+        return this.tenants.replacePlanCatalog(entries);
     }
     mergePlatformSiteConfig(base, patch) {
         const landing = { ...base.landing };
@@ -1478,16 +1069,16 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     }
     async ensurePlatformSiteConfig() {
         const payload = JSON.stringify(sql_db_types_1.DEFAULT_PLATFORM_SITE_CONFIG);
-        await this.execScript(`
+        await this.pg.execScript(`
       CREATE TABLE IF NOT EXISTS platform_site_config (
         id TEXT PRIMARY KEY,
         payload_json TEXT NOT NULL
       )
     `);
-        await this.exec(`INSERT INTO platform_site_config (id, payload_json) VALUES ('default', ?) ON CONFLICT (id) DO NOTHING`, [payload]);
+        await this.pg.exec(`INSERT INTO platform_site_config (id, payload_json) VALUES ('default', ?) ON CONFLICT (id) DO NOTHING`, [payload]);
     }
     async ensureTenantSalesTable() {
-        await this.execScript(`
+        await this.pg.execScript(`
       CREATE TABLE IF NOT EXISTS tenant_sales (
         id TEXT PRIMARY KEY,
         tenant_id TEXT NOT NULL,
@@ -1500,11 +1091,11 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         CONSTRAINT fk_sale_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
       )
     `);
-        await this.ensureIndex(`CREATE INDEX IF NOT EXISTS idx_tenant_sales_tenant_created ON tenant_sales (tenant_id, created_at DESC)`);
+        await this.pg.ensureIndex(`CREATE INDEX IF NOT EXISTS idx_tenant_sales_tenant_created ON tenant_sales (tenant_id, created_at DESC)`);
     }
     async getPlatformSiteConfig() {
         await this.ensurePlatformSiteConfig();
-        const row = await this.queryOne(`SELECT payload_json FROM platform_site_config WHERE id = 'default'`);
+        const row = await this.pg.queryOne(`SELECT payload_json FROM platform_site_config WHERE id = 'default'`);
         if (!row?.payload_json) {
             return structuredClone(sql_db_types_1.DEFAULT_PLATFORM_SITE_CONFIG);
         }
@@ -1520,49 +1111,8 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         const current = await this.getPlatformSiteConfig();
         const next = this.mergePlatformSiteConfig(current, patch);
         const json = JSON.stringify(next);
-        await this.exec(`UPDATE platform_site_config SET payload_json = ? WHERE id = 'default'`, [json]);
+        await this.pg.exec(`UPDATE platform_site_config SET payload_json = ? WHERE id = 'default'`, [json]);
         return next;
-    }
-    mapUserRow(row) {
-        return {
-            id: String(row.id),
-            email: String(row.email),
-            password: String(row.password),
-            role: row.role,
-            tenantId: row.tenant_id ? String(row.tenant_id) : null,
-            systems: JSON.parse(String(row.systems)),
-            status: row.status,
-        };
-    }
-    mapTenantRow(row) {
-        const planRaw = row.plan;
-        const plan = typeof planRaw === 'string' && planRaw.length ? planRaw : 'Trial';
-        const billingCycleRaw = String(row.billing_cycle ?? 'MONTHLY');
-        const billingCycle = billingCycleRaw === 'YEARLY' ? 'YEARLY' : 'MONTHLY';
-        const currentPeriodStart = String(row.current_period_start ?? '2026-01-01T00:00:00.000Z');
-        const currentPeriodEnd = String(row.current_period_end ?? '2026-02-01T00:00:00.000Z');
-        const nextRenewalAt = String(row.next_renewal_at ?? currentPeriodEnd);
-        return {
-            id: String(row.id),
-            name: String(row.name),
-            slug: String(row.slug),
-            status: row.status,
-            plan,
-            storefrontEnabled: Boolean(row.storefront_enabled),
-            manualBookingEnabled: Boolean(row.manual_booking_enabled),
-            billingCycle,
-            planPriceMonthly: Math.max(0, Number(row.plan_price_monthly ?? 0)),
-            planPriceYearly: Math.max(0, Number(row.plan_price_yearly ?? 0)),
-            subscriptionStartedAt: String(row.subscription_started_at ?? currentPeriodStart),
-            currentPeriodStart,
-            currentPeriodEnd,
-            nextRenewalAt,
-            modules: {
-                citas: Boolean(row.citas_enabled),
-                ventas: Boolean(row.ventas_enabled),
-                inventario: Boolean(row.inventario_enabled),
-            },
-        };
     }
     mapAppointmentRow(row) {
         const attendanceRaw = row.attendance;
@@ -1608,35 +1158,6 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             createdAt: String(row.created_at),
         };
     }
-    mapTenantBrandingRow(row) {
-        return {
-            tenantId: String(row.tenant_id),
-            displayName: String(row.display_name ?? ''),
-            logoUrl: row.logo_url == null ? null : String(row.logo_url),
-            publicAddress: row.public_address == null ? null : String(row.public_address),
-            publicMapsUrl: row.public_maps_url == null ? null : String(row.public_maps_url),
-            cancellationPolicy: row.cancellation_policy == null ? null : String(row.cancellation_policy),
-            reminderNotice: row.reminder_notice == null ? null : String(row.reminder_notice),
-            whatsappPhoneE164: row.whatsapp_phone_e164 == null || String(row.whatsapp_phone_e164).trim() === ''
-                ? null
-                : String(row.whatsapp_phone_e164).replace(/\D/g, '') || null,
-            whatsappDefaultMessage: row.whatsapp_default_message == null ? null : String(row.whatsapp_default_message),
-            publicBookingHoursJson: row.public_booking_hours_json == null || String(row.public_booking_hours_json).trim() === ''
-                ? null
-                : String(row.public_booking_hours_json),
-            catalogLayout: row.catalog_layout === 'grid' ? 'grid' : 'horizontal',
-            primaryColor: String(row.primary_color),
-            accentColor: String(row.accent_color),
-            bgColor: String(row.bg_color),
-            surfaceColor: String(row.surface_color),
-            textColor: String(row.text_color),
-            borderRadiusPx: Math.max(4, Math.min(28, Number(row.border_radius_px) || 12)),
-            useGradient: Boolean(row.use_gradient),
-            gradientFrom: String(row.gradient_from),
-            gradientTo: String(row.gradient_to),
-            gradientAngleDeg: Math.max(0, Math.min(360, Number(row.gradient_angle_deg) || 135)),
-        };
-    }
     mapTenantProductRow(row) {
         return {
             id: String(row.id),
@@ -1667,6 +1188,8 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
 exports.SqlDbService = SqlDbService;
 exports.SqlDbService = SqlDbService = SqlDbService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [password_service_1.PasswordService])
+    __metadata("design:paramtypes", [pg_client_service_1.PgClientService,
+        user_repository_1.UserRepository,
+        tenant_repository_1.TenantRepository])
 ], SqlDbService);
 //# sourceMappingURL=sql-db.service.js.map

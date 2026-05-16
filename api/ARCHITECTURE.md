@@ -16,7 +16,7 @@ Nada del backend depende de `../src` (Angular).
 - `auth/`: login JWT y endpoint `auth/me`
 - `admin/`: endpoints de super admin
 - `tenant/`: endpoints de contexto para usuarios tenant
-- `infrastructure/sql-db/`: acceso a SQLite (`data/azenda.db`) con esquema y seed inicial
+- `infrastructure/sql-db/`: PostgreSQL (Neon) vía `DATABASE_URL`; `PgClientService` (pool y consultas), `UserRepository`, `TenantRepository` (CRUD tenants, branding por defecto, `plan_catalog`), `SqlDbService` (fachada + resto de dominios)
 
 ## Endpoints implementados (CRUD SQL)
 
