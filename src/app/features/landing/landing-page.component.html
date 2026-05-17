@@ -1,10 +1,26 @@
 @let cfg = siteConfig();
 
 <div class="landing-root">
-<header class="nav">
+<header class="nav" [class.nav-open]="menuOpen()">
+  <div class="nav-mobile-backdrop" (click)="closeMenu()" aria-hidden="true"></div>
   <div class="az-container nav-inner">
-    <a class="logo" routerLink="/" fragment="top">{{ cfg.landing.navBrand }}</a>
-    <nav class="nav-links">
+    <a class="logo" routerLink="/" fragment="top" (click)="closeMenu()">{{ cfg.landing.navBrand }}</a>
+    <button
+      type="button"
+      class="nav-menu-toggle"
+      (click)="toggleMenu()"
+      [attr.aria-expanded]="menuOpen()"
+      aria-controls="landing-nav-drawer"
+      [attr.aria-label]="menuOpen() ? 'Cerrar menú' : 'Abrir menú'"
+    >
+      <span class="nav-menu-bars" aria-hidden="true"></span>
+    </button>
+    <nav
+      id="landing-nav-drawer"
+      class="nav-links"
+      aria-label="Navegación principal"
+      (click)="onNavClick($event)"
+    >
       <a href="#funciones">Funciones</a>
       <a href="#reservas">Reservas</a>
       <a href="#como-funciona">Cómo funciona</a>
