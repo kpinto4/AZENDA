@@ -33,7 +33,9 @@ let AuthService = class AuthService {
         let authUser = user;
         if (!this.passwordService.isBcryptHash(user.password)) {
             const hash = await this.passwordService.hash(dto.password);
-            const updated = await this.sqlDbService.updateUser(user.id, { password: hash });
+            const updated = await this.sqlDbService.updateUser(user.id, {
+                password: hash,
+            });
             if (updated) {
                 authUser = updated;
             }

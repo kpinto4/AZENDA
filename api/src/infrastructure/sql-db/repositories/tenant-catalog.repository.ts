@@ -6,14 +6,19 @@ import { TenantProductEntity, TenantServiceEntity } from '../sql-db.types';
 export class TenantCatalogRepository {
   constructor(private readonly pg: PgClientService) {}
 
-  private mapTenantProductRow(row: Record<string, unknown>): TenantProductEntity {
+  private mapTenantProductRow(
+    row: Record<string, unknown>,
+  ): TenantProductEntity {
     return {
       id: String(row.id),
       tenantId: String(row.tenant_id),
       name: String(row.name),
       description: row.description == null ? null : String(row.description),
       price: Math.max(0, Number(row.price) || 0),
-      promoPrice: row.promo_price == null ? null : Math.max(0, Number(row.promo_price) || 0),
+      promoPrice:
+        row.promo_price == null
+          ? null
+          : Math.max(0, Number(row.promo_price) || 0),
       sku: String(row.sku),
       stock: Math.max(0, Math.floor(Number(row.stock) || 0)),
       catalogOrder: Number(row.catalog_order) || 0,
@@ -21,20 +26,27 @@ export class TenantCatalogRepository {
     };
   }
 
-  private mapTenantServiceRow(row: Record<string, unknown>): TenantServiceEntity {
+  private mapTenantServiceRow(
+    row: Record<string, unknown>,
+  ): TenantServiceEntity {
     return {
       id: String(row.id),
       tenantId: String(row.tenant_id),
       name: String(row.name),
       description: row.description == null ? null : String(row.description),
       price: Math.max(0, Number(row.price) || 0),
-      promoPrice: row.promo_price == null ? null : Math.max(0, Number(row.promo_price) || 0),
+      promoPrice:
+        row.promo_price == null
+          ? null
+          : Math.max(0, Number(row.promo_price) || 0),
       promoLabel: row.promo_label == null ? null : String(row.promo_label),
       catalogOrder: Number(row.catalog_order) || 0,
     };
   }
 
-  async listProductsByTenantId(tenantId: string): Promise<TenantProductEntity[]> {
+  async listProductsByTenantId(
+    tenantId: string,
+  ): Promise<TenantProductEntity[]> {
     const rows = await this.pg.queryRows(
       `
         SELECT id, tenant_id, name, description, price, promo_price, sku, stock, catalog_order, image_url
@@ -44,7 +56,9 @@ export class TenantCatalogRepository {
       `,
       [tenantId],
     );
-    return rows.map((row) => this.mapTenantProductRow(row as Record<string, unknown>));
+    return rows.map((row) =>
+      this.mapTenantProductRow(row as Record<string, unknown>),
+    );
   }
 
   async createTenantProduct(
@@ -68,7 +82,9 @@ export class TenantCatalogRepository {
         data.name.trim(),
         data.description?.trim() || null,
         Math.max(0, Number(data.price) || 0),
-        data.promoPrice == null ? null : Math.max(0, Number(data.promoPrice) || 0),
+        data.promoPrice == null
+          ? null
+          : Math.max(0, Number(data.promoPrice) || 0),
         data.sku.trim(),
         Math.max(0, Math.floor(Number(data.stock) || 0)),
         catalogOrder,
@@ -82,7 +98,10 @@ export class TenantCatalogRepository {
   async updateTenantProduct(
     tenantId: string,
     productId: string,
-    patch: Omit<Partial<TenantProductEntity>, 'id' | 'tenantId' | 'catalogOrder'>,
+    patch: Omit<
+      Partial<TenantProductEntity>,
+      'id' | 'tenantId' | 'catalogOrder'
+    >,
   ): Promise<TenantProductEntity | undefined> {
     const list = await this.listProductsByTenantId(tenantId);
     const current = list.find((p) => p.id === productId);
@@ -94,9 +113,14 @@ export class TenantCatalogRepository {
       ...patch,
       name: patch.name?.trim() ?? current.name,
       description:
-        patch.description === undefined ? current.description : patch.description?.trim() || null,
+        patch.description === undefined
+          ? current.description
+          : patch.description?.trim() || null,
       sku: patch.sku?.trim() ?? current.sku,
-      price: patch.price === undefined ? current.price : Math.max(0, Number(patch.price) || 0),
+      price:
+        patch.price === undefined
+          ? current.price
+          : Math.max(0, Number(patch.price) || 0),
       promoPrice:
         patch.promoPrice === undefined
           ? current.promoPrice
@@ -136,20 +160,27 @@ export class TenantCatalogRepository {
     return after.find((p) => p.id === productId);
   }
 
-  async deleteTenantProduct(tenantId: string, productId: string): Promise<boolean> {
+  async deleteTenantProduct(
+    tenantId: string,
+    productId: string,
+  ): Promise<boolean> {
     const list = await this.listProductsByTenantId(tenantId);
     const exists = list.some((p) => p.id === productId);
     if (!exists) {
       return false;
     }
-    await this.pg.exec(`DELETE FROM tenant_products WHERE id = ? AND tenant_id = ?`, [
-      productId,
-      tenantId,
-    ]);
+    await this.pg.exec(
+      `DELETE FROM tenant_products WHERE id = ? AND tenant_id = ?`,
+      [productId, tenantId],
+    );
     return true;
   }
 
-  async moveTenantProduct(tenantId: string, productId: string, direction: -1 | 1): Promise<void> {
+  async moveTenantProduct(
+    tenantId: string,
+    productId: string,
+    direction: -1 | 1,
+  ): Promise<void> {
     const sorted = await this.listProductsByTenantId(tenantId);
     const idx = sorted.findIndex((p) => p.id === productId);
     const j = idx + direction;
@@ -158,17 +189,19 @@ export class TenantCatalogRepository {
     }
     const a = sorted[idx];
     const b = sorted[j];
-    await this.pg.exec(`UPDATE tenant_products SET catalog_order = ? WHERE id = ?`, [
-      b.catalogOrder,
-      a.id,
-    ]);
-    await this.pg.exec(`UPDATE tenant_products SET catalog_order = ? WHERE id = ?`, [
-      a.catalogOrder,
-      b.id,
-    ]);
+    await this.pg.exec(
+      `UPDATE tenant_products SET catalog_order = ? WHERE id = ?`,
+      [b.catalogOrder, a.id],
+    );
+    await this.pg.exec(
+      `UPDATE tenant_products SET catalog_order = ? WHERE id = ?`,
+      [a.catalogOrder, b.id],
+    );
   }
 
-  async listServicesByTenantId(tenantId: string): Promise<TenantServiceEntity[]> {
+  async listServicesByTenantId(
+    tenantId: string,
+  ): Promise<TenantServiceEntity[]> {
     const rows = await this.pg.queryRows(
       `
         SELECT id, tenant_id, name, description, price, promo_price, promo_label, catalog_order
@@ -178,7 +211,9 @@ export class TenantCatalogRepository {
       `,
       [tenantId],
     );
-    return rows.map((row) => this.mapTenantServiceRow(row as Record<string, unknown>));
+    return rows.map((row) =>
+      this.mapTenantServiceRow(row as Record<string, unknown>),
+    );
   }
 
   async createTenantService(
@@ -202,7 +237,9 @@ export class TenantCatalogRepository {
         data.name.trim(),
         data.description?.trim() || null,
         Math.max(0, Number(data.price) || 0),
-        data.promoPrice == null ? null : Math.max(0, Number(data.promoPrice) || 0),
+        data.promoPrice == null
+          ? null
+          : Math.max(0, Number(data.promoPrice) || 0),
         data.promoLabel?.trim() || null,
         catalogOrder,
       ],
@@ -214,7 +251,10 @@ export class TenantCatalogRepository {
   async updateTenantService(
     tenantId: string,
     serviceId: string,
-    patch: Omit<Partial<TenantServiceEntity>, 'id' | 'tenantId' | 'catalogOrder'>,
+    patch: Omit<
+      Partial<TenantServiceEntity>,
+      'id' | 'tenantId' | 'catalogOrder'
+    >,
   ): Promise<TenantServiceEntity | undefined> {
     const list = await this.listServicesByTenantId(tenantId);
     const current = list.find((s) => s.id === serviceId);
@@ -226,8 +266,13 @@ export class TenantCatalogRepository {
       ...patch,
       name: patch.name?.trim() ?? current.name,
       description:
-        patch.description === undefined ? current.description : patch.description?.trim() || null,
-      price: patch.price === undefined ? current.price : Math.max(0, Number(patch.price) || 0),
+        patch.description === undefined
+          ? current.description
+          : patch.description?.trim() || null,
+      price:
+        patch.price === undefined
+          ? current.price
+          : Math.max(0, Number(patch.price) || 0),
       promoPrice:
         patch.promoPrice === undefined
           ? current.promoPrice
@@ -235,7 +280,9 @@ export class TenantCatalogRepository {
             ? null
             : Math.max(0, Number(patch.promoPrice) || 0),
       promoLabel:
-        patch.promoLabel === undefined ? current.promoLabel : patch.promoLabel?.trim() || null,
+        patch.promoLabel === undefined
+          ? current.promoLabel
+          : patch.promoLabel?.trim() || null,
     };
     await this.pg.exec(
       `
@@ -243,26 +290,41 @@ export class TenantCatalogRepository {
         SET name = ?, description = ?, price = ?, promo_price = ?, promo_label = ?
         WHERE id = ? AND tenant_id = ?
       `,
-      [next.name, next.description, next.price, next.promoPrice, next.promoLabel, serviceId, tenantId],
+      [
+        next.name,
+        next.description,
+        next.price,
+        next.promoPrice,
+        next.promoLabel,
+        serviceId,
+        tenantId,
+      ],
     );
     const after = await this.listServicesByTenantId(tenantId);
     return after.find((s) => s.id === serviceId);
   }
 
-  async deleteTenantService(tenantId: string, serviceId: string): Promise<boolean> {
+  async deleteTenantService(
+    tenantId: string,
+    serviceId: string,
+  ): Promise<boolean> {
     const list = await this.listServicesByTenantId(tenantId);
     const exists = list.some((s) => s.id === serviceId);
     if (!exists) {
       return false;
     }
-    await this.pg.exec(`DELETE FROM tenant_services WHERE id = ? AND tenant_id = ?`, [
-      serviceId,
-      tenantId,
-    ]);
+    await this.pg.exec(
+      `DELETE FROM tenant_services WHERE id = ? AND tenant_id = ?`,
+      [serviceId, tenantId],
+    );
     return true;
   }
 
-  async moveTenantService(tenantId: string, serviceId: string, direction: -1 | 1): Promise<void> {
+  async moveTenantService(
+    tenantId: string,
+    serviceId: string,
+    direction: -1 | 1,
+  ): Promise<void> {
     const sorted = await this.listServicesByTenantId(tenantId);
     const idx = sorted.findIndex((s) => s.id === serviceId);
     const j = idx + direction;
@@ -271,13 +333,13 @@ export class TenantCatalogRepository {
     }
     const a = sorted[idx];
     const b = sorted[j];
-    await this.pg.exec(`UPDATE tenant_services SET catalog_order = ? WHERE id = ?`, [
-      b.catalogOrder,
-      a.id,
-    ]);
-    await this.pg.exec(`UPDATE tenant_services SET catalog_order = ? WHERE id = ?`, [
-      a.catalogOrder,
-      b.id,
-    ]);
+    await this.pg.exec(
+      `UPDATE tenant_services SET catalog_order = ? WHERE id = ?`,
+      [b.catalogOrder, a.id],
+    );
+    await this.pg.exec(
+      `UPDATE tenant_services SET catalog_order = ? WHERE id = ?`,
+      [a.catalogOrder, b.id],
+    );
   }
 }

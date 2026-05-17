@@ -7,4 +7,3 @@ export class SimulateUpgradeDto {
   @IsIn(['MONTHLY', 'YEARLY'])
   targetCycle!: 'MONTHLY' | 'YEARLY';
 }
-

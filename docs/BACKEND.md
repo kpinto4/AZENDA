@@ -23,6 +23,7 @@ Este documento resume **qué es** el backend del monorepo AZENDA, **con qué hab
 | `api/.env` → `JWT_SECRET` | Firma de tokens JWT. En **`NODE_ENV=production`** es **obligatorio** (el API no arranca sin un valor fuerte; no uses el secreto de desarrollo). |
 | `api/.env` → `CORS_ORIGINS` | Lista separada por comas de orígenes permitidos (p. ej. `https://app.tudominio.com`). En **`NODE_ENV=production`** es **obligatorio** (sin comodín `*` con credenciales). En local, `localhost` / `127.0.0.1` siguen permitidos sin esta variable. |
 | (Opcional) `PORT` | Puerto HTTP del API si el proyecto lo define en `main.ts` / env. |
+| (Opcional) `BOOKING_NOTIFY_EMAIL` | Tras una reserva pública, el API registra la cita y **loguea** la confirmación; si esta variable tiene un correo, también deja constancia de destino operativo (SMTP al cliente final: integración futura). |
 
 Inicializar esquema y datos demo (primera vez o tras base vacía):
 

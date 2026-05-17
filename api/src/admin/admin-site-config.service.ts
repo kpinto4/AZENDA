@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PlatformSiteConfigRepository } from '../infrastructure/sql-db/repositories/platform-site-config.repository';
-import { PlatformSiteConfig, PlatformSiteLandingCopy } from '../infrastructure/sql-db/sql-db.types';
+import {
+  PlatformSiteConfig,
+  PlatformSiteLandingCopy,
+} from '../infrastructure/sql-db/sql-db.types';
 
 @Injectable()
 export class AdminSiteConfigService {
@@ -11,7 +14,9 @@ export class AdminSiteConfigService {
   }
 
   patch(
-    dto: Partial<PlatformSiteConfig> & { landing?: Partial<PlatformSiteLandingCopy> },
+    dto: Partial<PlatformSiteConfig> & {
+      landing?: Partial<PlatformSiteLandingCopy>;
+    },
   ): Promise<PlatformSiteConfig> {
     return this.site.patch(dto);
   }

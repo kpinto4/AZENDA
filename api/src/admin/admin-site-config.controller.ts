@@ -5,7 +5,10 @@ import { Systems } from '../auth/decorators/systems.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AdminSiteConfigService } from './admin-site-config.service';
-import type { PlatformSiteConfig, PlatformSiteLandingCopy } from '../infrastructure/sql-db/sql-db.types';
+import type {
+  PlatformSiteConfig,
+  PlatformSiteLandingCopy,
+} from '../infrastructure/sql-db/sql-db.types';
 import { PatchSiteConfigDto } from './dto/patch-site-config.dto';
 
 @Controller('admin/site-config')
@@ -22,7 +25,9 @@ export class AdminSiteConfigController {
 
   @Patch()
   patch(@Body() dto: PatchSiteConfigDto) {
-    const patch = dto as Partial<PlatformSiteConfig> & { landing?: Partial<PlatformSiteLandingCopy> };
+    const patch = dto as Partial<PlatformSiteConfig> & {
+      landing?: Partial<PlatformSiteLandingCopy>;
+    };
     return this.adminSiteConfig.patch(patch);
   }
 }

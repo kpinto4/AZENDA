@@ -19,7 +19,11 @@ export class PgClientService implements OnModuleDestroy {
     const sslMode = (process.env.PGSSLMODE ?? '').trim().toLowerCase();
     const requireSsl =
       sslMode === 'require' ||
-      ['1', 'true', 'yes', 'on'].includes(String(process.env.PGSSL ?? '').trim().toLowerCase()) ||
+      ['1', 'true', 'yes', 'on'].includes(
+        String(process.env.PGSSL ?? '')
+          .trim()
+          .toLowerCase(),
+      ) ||
       (connectionString?.toLowerCase().includes('sslmode=require') ?? false);
     const ssl = requireSsl ? { rejectUnauthorized: false } : undefined;
     this.pool = new Pool({
@@ -48,12 +52,18 @@ export class PgClientService implements OnModuleDestroy {
     return sql.replace(/\?/g, () => `$${++n}`);
   }
 
-  async queryRows(sql: string, params: unknown[] = []): Promise<Record<string, unknown>[]> {
+  async queryRows(
+    sql: string,
+    params: unknown[] = [],
+  ): Promise<Record<string, unknown>[]> {
     const res = await this.pool.query(this.toPgSql(sql), params);
     return res.rows as Record<string, unknown>[];
   }
 
-  async queryOne(sql: string, params: unknown[] = []): Promise<Record<string, unknown> | undefined> {
+  async queryOne(
+    sql: string,
+    params: unknown[] = [],
+  ): Promise<Record<string, unknown> | undefined> {
     const rows = await this.queryRows(sql, params);
     return rows[0] as Record<string, unknown> | undefined;
   }

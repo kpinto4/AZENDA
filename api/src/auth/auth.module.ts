@@ -12,14 +12,19 @@ import { PasswordModule } from './password.module';
     PassportModule,
     JwtModule.registerAsync({
       useFactory: () => {
-        const isProd = (process.env.NODE_ENV ?? '').trim().toLowerCase() === 'production';
+        const isProd =
+          (process.env.NODE_ENV ?? '').trim().toLowerCase() === 'production';
         const secret = (process.env.JWT_SECRET ?? '').trim();
         if (isProd) {
           if (!secret) {
-            throw new Error('JWT_SECRET es obligatorio cuando NODE_ENV es production');
+            throw new Error(
+              'JWT_SECRET es obligatorio cuando NODE_ENV es production',
+            );
           }
           if (secret === 'dev-only-secret-change-me') {
-            throw new Error('JWT_SECRET no puede ser el valor de desarrollo en production');
+            throw new Error(
+              'JWT_SECRET no puede ser el valor de desarrollo en production',
+            );
           }
         }
         return {

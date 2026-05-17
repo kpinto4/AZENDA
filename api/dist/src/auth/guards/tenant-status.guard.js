@@ -25,7 +25,8 @@ let TenantStatusGuard = class TenantStatusGuard {
         }
         const isAllowedInRestrictedTenant = (req.method === 'GET' && req.path.endsWith('/tenant/context')) ||
             (req.method === 'GET' && req.path.endsWith('/tenant/billing/status')) ||
-            (req.method === 'POST' && req.path.endsWith('/tenant/billing/upgrade-quote'));
+            (req.method === 'POST' &&
+                req.path.endsWith('/tenant/billing/upgrade-quote'));
         if (isAllowedInRestrictedTenant) {
             return true;
         }

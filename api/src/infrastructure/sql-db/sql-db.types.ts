@@ -195,7 +195,8 @@ export const DEFAULT_PLATFORM_SITE_CONFIG: PlatformSiteConfig = {
     heroLead:
       'Reservas por web, panel de operación y todo en pesos colombianos. No cobramos con tarjeta en la app: tú cobras como siempre (efectivo, transferencia, etc.).',
     sectionTitle: 'Lo esencial para el día a día',
-    sectionSub: 'Peluquerías, spas, talleres y negocios con cita: reservas claras para el cliente y control para ti.',
+    sectionSub:
+      'Peluquerías, spas, talleres y negocios con cita: reservas claras para el cliente y control para ti.',
     demoTitle: 'Tu página de reservas',
     demoSub:
       'El cliente elige servicio, día y hora en tu enlace. Tú confirmas y cobras por el canal que ya uses.',

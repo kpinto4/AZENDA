@@ -44,27 +44,39 @@ export class TenantAppointmentsService {
         continue;
       }
       if (nowMs - at.getTime() > thresholdMs) {
-        await this.sqlDb.updateAppointmentAttendance(row.id, tenantId, 'NO_ASISTIO');
+        await this.sqlDb.updateAppointmentAttendance(
+          row.id,
+          tenantId,
+          'NO_ASISTIO',
+        );
       }
     }
     return this.sqlDb.listAppointmentsByTenantId(tenantId);
   }
 
-  async createForUser(user: AuthUser, dto: CreateAppointmentDto): Promise<AppointmentEntity> {
+  async createForUser(
+    user: AuthUser,
+    dto: CreateAppointmentDto,
+  ): Promise<AppointmentEntity> {
     this.requireTenantUser(user);
     const tenant = await this.sqlDb.findTenantById(user.tenantId!);
     if (!tenant) {
       throw new NotFoundException('Tenant no encontrado');
     }
     if (!tenant.modules.citas) {
-      throw new ForbiddenException('El modulo de citas no esta activo para este tenant');
+      throw new ForbiddenException(
+        'El modulo de citas no esta activo para este tenant',
+      );
     }
     if (!tenant.manualBookingEnabled) {
       throw new ForbiddenException(
         'La creacion manual de citas esta desactivada en configuracion del negocio',
       );
     }
-    const conflict = await this.sqlDb.findAppointmentByTenantAndWhen(user.tenantId!, dto.when);
+    const conflict = await this.sqlDb.findAppointmentByTenantAndWhen(
+      user.tenantId!,
+      dto.when,
+    );
     if (conflict) {
       throw new ConflictException(
         'Ya existe una cita en ese mismo dia y hora. Elige otro horario.',
@@ -109,9 +121,15 @@ export class TenantAppointmentsService {
     return updated;
   }
 
-  async markManualReminderSent(user: AuthUser, appointmentId: string): Promise<AppointmentEntity> {
+  async markManualReminderSent(
+    user: AuthUser,
+    appointmentId: string,
+  ): Promise<AppointmentEntity> {
     this.requireTenantUser(user);
-    const updated = await this.sqlDb.markAppointmentReminderSentForTenant(appointmentId, user.tenantId!);
+    const updated = await this.sqlDb.markAppointmentReminderSentForTenant(
+      appointmentId,
+      user.tenantId!,
+    );
     if (!updated) {
       throw new NotFoundException('Cita no encontrada');
     }
@@ -120,7 +138,9 @@ export class TenantAppointmentsService {
 
   private requireTenantUser(user: AuthUser): void {
     if (user.role === UserRole.SUPER_ADMIN) {
-      throw new ForbiddenException('Usa el panel tenant con un usuario de negocio');
+      throw new ForbiddenException(
+        'Usa el panel tenant con un usuario de negocio',
+      );
     }
     if (!user.tenantId) {
       throw new ForbiddenException('Usuario sin tenant');

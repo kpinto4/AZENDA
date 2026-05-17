@@ -34,10 +34,7 @@ exports.AppModule = AppModule = __decorate([
             public_module_1.PublicModule,
         ],
         controllers: [app_controller_1.AppController, access_controller_1.AccessController],
-        providers: [
-            app_service_1.AppService,
-            { provide: core_1.APP_GUARD, useClass: throttler_1.ThrottlerGuard },
-        ],
+        providers: [app_service_1.AppService, { provide: core_1.APP_GUARD, useClass: throttler_1.ThrottlerGuard }],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

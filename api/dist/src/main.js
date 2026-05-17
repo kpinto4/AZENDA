@@ -36,10 +36,7 @@ function isLocalDevOrigin(origin) {
     }
     try {
         const h = new URL(origin).hostname.toLowerCase();
-        return (h === 'localhost' ||
-            h === '127.0.0.1' ||
-            h === '[::1]' ||
-            h === '::1');
+        return (h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h === '::1');
     }
     catch {
         return false;

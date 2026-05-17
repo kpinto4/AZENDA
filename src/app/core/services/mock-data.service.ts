@@ -1,6 +1,7 @@
 import { DestroyRef, Injectable, NgZone, inject, signal } from '@angular/core';
 import { formatCop } from '../format-currency';
 import { publicCustomerNameMatches } from '../customer-name-match';
+import { tenantBrandingCssVars as brandingCssVarsFromUtil } from '../tenant-branding-css';
 import type { ApiTenantDto } from './api-tenants-admin.service';
 
 const PRODUCTS_LS_KEY = 'azenda.mock.products.v1';
@@ -714,35 +715,7 @@ export class MockDataService {
   }
 
   brandingCssVars(branding: TenantBranding, darkMode = false): Record<string, string> {
-    const effective = darkMode
-      ? {
-          ...branding,
-          primaryColor: lighten(branding.primaryColor, 0.12),
-          accentColor: lighten(branding.accentColor, 0.08),
-          bgColor: mixWithBlack(branding.bgColor, 0.78),
-          surfaceColor: mixWithBlack(branding.surfaceColor, 0.68),
-          textColor: '#e8eef8',
-          gradientFrom: mixWithBlack(branding.gradientFrom, 0.45),
-          gradientTo: mixWithBlack(branding.gradientTo, 0.45),
-        }
-      : branding;
-    const pageGradient = branding.useGradient
-      ? `linear-gradient(${branding.gradientAngleDeg}deg, ${effective.gradientFrom}, ${effective.gradientTo})`
-      : effective.bgColor;
-    return {
-      '--az-primary': effective.primaryColor,
-      '--az-primary-hover': effective.primaryColor,
-      '--az-accent': effective.accentColor,
-      '--az-bg': effective.bgColor,
-      '--az-surface': effective.surfaceColor,
-      '--az-text': effective.textColor,
-      '--az-muted': `color-mix(in srgb, ${effective.textColor} 58%, ${effective.bgColor})`,
-      '--az-border': `color-mix(in srgb, ${effective.textColor} 22%, ${effective.bgColor})`,
-      '--az-page-gradient': pageGradient,
-      '--az-sidebar-bg': `color-mix(in srgb, ${effective.surfaceColor} 92%, ${effective.bgColor})`,
-      '--az-radius': `${branding.borderRadiusPx}px`,
-      '--az-radius-sm': `${Math.max(6, branding.borderRadiusPx - 4)}px`,
-    };
+    return brandingCssVarsFromUtil(branding, darkMode);
   }
 
   updateTenantBranding(tenantId: string, patch: TenantBrandingPatch): void {

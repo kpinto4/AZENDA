@@ -25,7 +25,10 @@ describe('AuthService', () => {
     hash: jest.Mock;
   };
   let sqlDbService: {
-    findUserByEmailNormalized: jest.Mock<Promise<AuthUser | undefined>, [string]>;
+    findUserByEmailNormalized: jest.Mock<
+      Promise<AuthUser | undefined>,
+      [string]
+    >;
     findUserById: jest.Mock<Promise<AuthUser | undefined>, [string]>;
     updateUser: jest.Mock;
   };
@@ -61,10 +64,18 @@ describe('AuthService', () => {
     sqlDbService.findUserByEmailNormalized.mockResolvedValue(activeUser);
     passwordService.verify.mockResolvedValue(true);
 
-    const res = await service.login({ email: activeUser.email, password: 'secret' });
+    const res = await service.login({
+      email: activeUser.email,
+      password: 'secret',
+    });
 
-    expect(sqlDbService.findUserByEmailNormalized).toHaveBeenCalledWith(activeUser.email.trim().toLowerCase());
-    expect(passwordService.verify).toHaveBeenCalledWith('secret', activeUser.password);
+    expect(sqlDbService.findUserByEmailNormalized).toHaveBeenCalledWith(
+      activeUser.email.trim().toLowerCase(),
+    );
+    expect(passwordService.verify).toHaveBeenCalledWith(
+      'secret',
+      activeUser.password,
+    );
     expect(jwtService.sign).toHaveBeenCalledWith({
       sub: activeUser.id,
       email: activeUser.email,
@@ -97,9 +108,9 @@ describe('AuthService', () => {
     sqlDbService.findUserByEmailNormalized.mockResolvedValue(activeUser);
     passwordService.verify.mockResolvedValue(false);
 
-    await expect(service.login({ email: activeUser.email, password: 'wrong' })).rejects.toThrow(
-      new UnauthorizedException('Credenciales invalidas'),
-    );
+    await expect(
+      service.login({ email: activeUser.email, password: 'wrong' }),
+    ).rejects.toThrow(new UnauthorizedException('Credenciales invalidas'));
     expect(jwtService.sign).not.toHaveBeenCalled();
   });
 
@@ -110,9 +121,9 @@ describe('AuthService', () => {
     });
     passwordService.verify.mockResolvedValue(true);
 
-    await expect(service.login({ email: activeUser.email, password: 'secret' })).rejects.toThrow(
-      new UnauthorizedException('Usuario no activo'),
-    );
+    await expect(
+      service.login({ email: activeUser.email, password: 'secret' }),
+    ).rejects.toThrow(new UnauthorizedException('Usuario no activo'));
     expect(jwtService.sign).not.toHaveBeenCalled();
   });
 

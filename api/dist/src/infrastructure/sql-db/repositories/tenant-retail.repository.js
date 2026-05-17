@@ -35,7 +35,9 @@ let TenantRetailRepository = class TenantRetailRepository {
             saleDate: String(row.sale_date),
             total: Math.max(0, Number(row.total) || 0),
             method: String(row.method),
-            linkedAppointmentId: row.linked_appointment_id == null ? null : String(row.linked_appointment_id),
+            linkedAppointmentId: row.linked_appointment_id == null
+                ? null
+                : String(row.linked_appointment_id),
             stockNote: row.stock_note == null ? null : String(row.stock_note),
             createdAt: String(row.created_at),
         };

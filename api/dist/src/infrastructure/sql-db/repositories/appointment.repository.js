@@ -38,9 +38,13 @@ let AppointmentRepository = class AppointmentRepository {
             when: String(row.when_at),
             status: row.status,
             attendance,
-            customerPhoneE164: phoneRaw == null || String(phoneRaw).trim() === '' ? null : String(phoneRaw).trim(),
+            customerPhoneE164: phoneRaw == null || String(phoneRaw).trim() === ''
+                ? null
+                : String(phoneRaw).trim(),
             waReminderConsent: Boolean(consentRaw),
-            waReminderSentAt: sentRaw == null || String(sentRaw).trim() === '' ? null : String(sentRaw),
+            waReminderSentAt: sentRaw == null || String(sentRaw).trim() === ''
+                ? null
+                : String(sentRaw),
         };
     }
     async listByTenantId(tenantId) {
@@ -65,7 +69,17 @@ let AppointmentRepository = class AppointmentRepository {
           customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
-      `, [id, data.tenantId, data.customer, data.service, data.when, status, attendance, phone, waConsent]);
+      `, [
+            id,
+            data.tenantId,
+            data.customer,
+            data.service,
+            data.when,
+            status,
+            attendance,
+            phone,
+            waConsent,
+        ]);
         const created = await this.findById(id);
         if (!created) {
             throw new Error('No se pudo leer la cita recien creada');
@@ -81,7 +95,9 @@ let AppointmentRepository = class AppointmentRepository {
         WHERE id = ? AND tenant_id = ?
         LIMIT 1
       `, [appointmentId, tenantId]);
-        return row ? this.mapAppointmentRow(row) : undefined;
+        return row
+            ? this.mapAppointmentRow(row)
+            : undefined;
     }
     async findByTenantAndWhen(tenantId, when) {
         const row = await this.pg.queryOne(`
@@ -91,7 +107,9 @@ let AppointmentRepository = class AppointmentRepository {
         WHERE tenant_id = ? AND when_at = ?
         LIMIT 1
       `, [tenantId, when]);
-        return row ? this.mapAppointmentRow(row) : undefined;
+        return row
+            ? this.mapAppointmentRow(row)
+            : undefined;
     }
     async findById(appointmentId) {
         const row = await this.pg.queryOne(`
@@ -100,7 +118,9 @@ let AppointmentRepository = class AppointmentRepository {
         FROM appointments
         WHERE id = ?
       `, [appointmentId]);
-        return row ? this.mapAppointmentRow(row) : undefined;
+        return row
+            ? this.mapAppointmentRow(row)
+            : undefined;
     }
     async updateWhenAndService(tenantId, appointmentId, when, service) {
         const current = await this.findById(appointmentId);
@@ -115,11 +135,7 @@ let AppointmentRepository = class AppointmentRepository {
         if (!current || current.tenantId !== tenantId) {
             return undefined;
         }
-        await this.pg.exec(`UPDATE appointments SET status = ? WHERE id = ? AND tenant_id = ?`, [
-            status,
-            appointmentId,
-            tenantId,
-        ]);
+        await this.pg.exec(`UPDATE appointments SET status = ? WHERE id = ? AND tenant_id = ?`, [status, appointmentId, tenantId]);
         return { ...current, status };
     }
     async updateAttendance(appointmentId, tenantId, attendance) {

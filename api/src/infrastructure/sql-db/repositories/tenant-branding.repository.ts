@@ -27,7 +27,10 @@ export class TenantBrandingRepository {
       return mapTenantBrandingRow(row);
     }
     const tenant = await this.tenants.findById(tenantId);
-    return this.tenants.ensureDefaultBranding(tenantId, tenant?.name ?? 'Tu negocio');
+    return this.tenants.ensureDefaultBranding(
+      tenantId,
+      tenant?.name ?? 'Tu negocio',
+    );
   }
 
   async update(
@@ -35,7 +38,10 @@ export class TenantBrandingRepository {
     patch: Partial<Omit<TenantBrandingEntity, 'tenantId'>>,
   ): Promise<TenantBrandingEntity> {
     const current = await this.get(tenantId);
-    const strOrNull = (v: string | null | undefined, cur: string | null): string | null => {
+    const strOrNull = (
+      v: string | null | undefined,
+      cur: string | null,
+    ): string | null => {
       if (v === undefined) {
         return cur;
       }
@@ -57,7 +63,10 @@ export class TenantBrandingRepository {
             : patch.logoUrl,
       publicAddress: strOrNull(patch.publicAddress, current.publicAddress),
       publicMapsUrl: strOrNull(patch.publicMapsUrl, current.publicMapsUrl),
-      cancellationPolicy: strOrNull(patch.cancellationPolicy, current.cancellationPolicy),
+      cancellationPolicy: strOrNull(
+        patch.cancellationPolicy,
+        current.cancellationPolicy,
+      ),
       reminderNotice: strOrNull(patch.reminderNotice, current.reminderNotice),
       whatsappPhoneE164:
         patch.whatsappPhoneE164 === undefined
@@ -70,11 +79,15 @@ export class TenantBrandingRepository {
               const digits = String(raw).replace(/\D/g, '');
               return digits.length ? digits : null;
             })(),
-      whatsappDefaultMessage: strOrNull(patch.whatsappDefaultMessage, current.whatsappDefaultMessage),
+      whatsappDefaultMessage: strOrNull(
+        patch.whatsappDefaultMessage,
+        current.whatsappDefaultMessage,
+      ),
       publicBookingHoursJson:
         patch.publicBookingHoursJson === undefined
           ? current.publicBookingHoursJson
-          : patch.publicBookingHoursJson === null || String(patch.publicBookingHoursJson).trim() === ''
+          : patch.publicBookingHoursJson === null ||
+              String(patch.publicBookingHoursJson).trim() === ''
             ? null
             : String(patch.publicBookingHoursJson).trim(),
       catalogLayout:

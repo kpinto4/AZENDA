@@ -21,13 +21,17 @@ describe('TenantBillingService', () => {
   };
 
   it('getTenantBillingSnapshot devuelve undefined si no hay tenant', async () => {
-    const tenants = { findById: jest.fn().mockResolvedValue(undefined) } as unknown as TenantRepository;
+    const tenants = {
+      findById: jest.fn().mockResolvedValue(undefined),
+    } as unknown as TenantRepository;
     const svc = new TenantBillingService(tenants);
     await expect(svc.getTenantBillingSnapshot('x')).resolves.toBeUndefined();
   });
 
   it('getTenantBillingSnapshot incluye progreso de periodo', async () => {
-    const tenants = { findById: jest.fn().mockResolvedValue(tenant) } as unknown as TenantRepository;
+    const tenants = {
+      findById: jest.fn().mockResolvedValue(tenant),
+    } as unknown as TenantRepository;
     const svc = new TenantBillingService(tenants);
     const snap = await svc.getTenantBillingSnapshot('t1');
     expect(snap).toBeDefined();
@@ -44,7 +48,11 @@ describe('TenantBillingService', () => {
     } as unknown as TenantRepository;
     const svc = new TenantBillingService(tenants);
     await expect(
-      svc.getUpgradeQuote({ tenantId: 'x', targetPlan: 'Pro', targetCycle: 'MONTHLY' }),
+      svc.getUpgradeQuote({
+        tenantId: 'x',
+        targetPlan: 'Pro',
+        targetCycle: 'MONTHLY',
+      }),
     ).resolves.toBeUndefined();
   });
 });

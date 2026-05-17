@@ -35,9 +35,15 @@ export class AppointmentRepository {
       when: String(row.when_at),
       status: row.status as AppointmentStatus,
       attendance,
-      customerPhoneE164: phoneRaw == null || String(phoneRaw).trim() === '' ? null : String(phoneRaw).trim(),
+      customerPhoneE164:
+        phoneRaw == null || String(phoneRaw).trim() === ''
+          ? null
+          : String(phoneRaw).trim(),
       waReminderConsent: Boolean(consentRaw),
-      waReminderSentAt: sentRaw == null || String(sentRaw).trim() === '' ? null : String(sentRaw),
+      waReminderSentAt:
+        sentRaw == null || String(sentRaw).trim() === ''
+          ? null
+          : String(sentRaw),
     };
   }
 
@@ -52,7 +58,9 @@ export class AppointmentRepository {
       `,
       [tenantId],
     );
-    return rows.map((row) => this.mapAppointmentRow(row as Record<string, unknown>));
+    return rows.map((row) =>
+      this.mapAppointmentRow(row as Record<string, unknown>),
+    );
   }
 
   async create(data: {
@@ -78,7 +86,17 @@ export class AppointmentRepository {
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
       `,
-      [id, data.tenantId, data.customer, data.service, data.when, status, attendance, phone, waConsent],
+      [
+        id,
+        data.tenantId,
+        data.customer,
+        data.service,
+        data.when,
+        status,
+        attendance,
+        phone,
+        waConsent,
+      ],
     );
 
     const created = await this.findById(id);
@@ -106,10 +124,15 @@ export class AppointmentRepository {
       `,
       [appointmentId, tenantId],
     );
-    return row ? this.mapAppointmentRow(row as Record<string, unknown>) : undefined;
+    return row
+      ? this.mapAppointmentRow(row as Record<string, unknown>)
+      : undefined;
   }
 
-  async findByTenantAndWhen(tenantId: string, when: string): Promise<AppointmentEntity | undefined> {
+  async findByTenantAndWhen(
+    tenantId: string,
+    when: string,
+  ): Promise<AppointmentEntity | undefined> {
     const row = await this.pg.queryOne(
       `
         SELECT id, tenant_id, customer, service, when_at, status, attendance,
@@ -120,10 +143,14 @@ export class AppointmentRepository {
       `,
       [tenantId, when],
     );
-    return row ? this.mapAppointmentRow(row as Record<string, unknown>) : undefined;
+    return row
+      ? this.mapAppointmentRow(row as Record<string, unknown>)
+      : undefined;
   }
 
-  async findById(appointmentId: string): Promise<AppointmentEntity | undefined> {
+  async findById(
+    appointmentId: string,
+  ): Promise<AppointmentEntity | undefined> {
     const row = await this.pg.queryOne(
       `
         SELECT id, tenant_id, customer, service, when_at, status, attendance,
@@ -133,7 +160,9 @@ export class AppointmentRepository {
       `,
       [appointmentId],
     );
-    return row ? this.mapAppointmentRow(row as Record<string, unknown>) : undefined;
+    return row
+      ? this.mapAppointmentRow(row as Record<string, unknown>)
+      : undefined;
   }
 
   async updateWhenAndService(
@@ -162,11 +191,10 @@ export class AppointmentRepository {
     if (!current || current.tenantId !== tenantId) {
       return undefined;
     }
-    await this.pg.exec(`UPDATE appointments SET status = ? WHERE id = ? AND tenant_id = ?`, [
-      status,
-      appointmentId,
-      tenantId,
-    ]);
+    await this.pg.exec(
+      `UPDATE appointments SET status = ? WHERE id = ? AND tenant_id = ?`,
+      [status, appointmentId, tenantId],
+    );
     return { ...current, status };
   }
 
@@ -230,7 +258,8 @@ export class AppointmentRepository {
     }
     const customerName = (customerNameRaw ?? '').trim();
     const ref = appointmentIdRaw?.trim() ?? '';
-    const defaultCc = (process.env.PUBLIC_BOOKING_DEFAULT_COUNTRY_CODE ?? '34').trim() || '34';
+    const defaultCc =
+      (process.env.PUBLIC_BOOKING_DEFAULT_COUNTRY_CODE ?? '34').trim() || '34';
     const phoneDigits = customerPhoneRaw?.trim()
       ? normalizePhoneToWaDigits(customerPhoneRaw, defaultCc)
       : null;
@@ -259,7 +288,9 @@ export class AppointmentRepository {
         `,
         [tenant.id, phoneDigits],
       );
-      candidates = rows.map((row) => this.mapAppointmentRow(row as Record<string, unknown>));
+      candidates = rows.map((row) =>
+        this.mapAppointmentRow(row as Record<string, unknown>),
+      );
     }
 
     return candidates.filter((a) => {

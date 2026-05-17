@@ -37,10 +37,7 @@ export class TenantAppointmentsController {
   }
 
   @Post()
-  create(
-    @Req() req: AuthenticatedRequest,
-    @Body() dto: CreateAppointmentDto,
-  ) {
+  create(@Req() req: AuthenticatedRequest, @Body() dto: CreateAppointmentDto) {
     return this.appointments.createForUser(req.user, dto);
   }
 

@@ -1,0 +1,29 @@
+<h1 class="panel-lead">1. Servicio</h1>
+<p class="muted lead-caption">Elige el servicio. Al seleccionarlo pasas a configurar profesional, fecha y hora.</p>
+@if (serviceRows().length === 0) {
+  <p class="muted">Este negocio aún no tiene servicios en el catálogo para reservar.</p>
+} @else {
+  <ul class="service-row-list">
+    @for (row of serviceRows(); track row.id) {
+      <li class="service-row" [class.service-row--pick]="selectedService() === row.fullValue">
+        <div class="service-row-main">
+          <span class="service-card-name">{{ row.name }}</span>
+          @if (row.description) {
+            <span class="service-card-desc">{{ row.description }}</span>
+          }
+        </div>
+        <div class="service-row-price">
+          @if (row.priceLabel) {
+            <span class="service-card-price">{{ row.priceLabel }}</span>
+          }
+          @if (row.promoLabel) {
+            <span class="service-card-promo">{{ row.promoLabel }}</span>
+          }
+        </div>
+        <button type="button" class="az-btn az-btn-primary service-book-btn" (click)="pickService.emit(row.fullValue)">
+          Reservar
+        </button>
+      </li>
+    }
+  </ul>
+}

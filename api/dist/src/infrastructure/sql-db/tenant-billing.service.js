@@ -26,7 +26,8 @@ let TenantBillingService = class TenantBillingService {
         }
         const currentPeriodStart = tenant.currentPeriodStart;
         const currentPeriodEnd = tenant.currentPeriodEnd;
-        const msTotal = Math.max(0, new Date(currentPeriodEnd).getTime() - new Date(currentPeriodStart).getTime());
+        const msTotal = Math.max(0, new Date(currentPeriodEnd).getTime() -
+            new Date(currentPeriodStart).getTime());
         const nowMs = Date.now();
         const elapsedMs = Math.max(0, Math.min(msTotal, nowMs - new Date(currentPeriodStart).getTime()));
         const daysTotal = Math.max(1, Math.ceil(msTotal / (1000 * 60 * 60 * 24)));
@@ -57,8 +58,12 @@ let TenantBillingService = class TenantBillingService {
         }
         const currentPrices = await this.tenants.getPlanCatalogPrices(tenant.plan);
         const targetPrices = await this.tenants.getPlanCatalogPrices(params.targetPlan);
-        const currentCyclePrice = tenant.billingCycle === 'YEARLY' ? currentPrices.yearly : currentPrices.monthly;
-        const targetCyclePrice = params.targetCycle === 'YEARLY' ? targetPrices.yearly : targetPrices.monthly;
+        const currentCyclePrice = tenant.billingCycle === 'YEARLY'
+            ? currentPrices.yearly
+            : currentPrices.monthly;
+        const targetCyclePrice = params.targetCycle === 'YEARLY'
+            ? targetPrices.yearly
+            : targetPrices.monthly;
         const ratioRemaining = snapshot.daysTotal > 0 ? snapshot.daysRemaining / snapshot.daysTotal : 0;
         const creditAmount = this.round2(currentCyclePrice * ratioRemaining);
         const targetCostForRemaining = this.round2(targetCyclePrice * ratioRemaining);

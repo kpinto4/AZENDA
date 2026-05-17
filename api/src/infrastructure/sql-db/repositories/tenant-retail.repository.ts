@@ -27,7 +27,10 @@ export class TenantRetailRepository {
       saleDate: String(row.sale_date),
       total: Math.max(0, Number(row.total) || 0),
       method: String(row.method),
-      linkedAppointmentId: row.linked_appointment_id == null ? null : String(row.linked_appointment_id),
+      linkedAppointmentId:
+        row.linked_appointment_id == null
+          ? null
+          : String(row.linked_appointment_id),
       stockNote: row.stock_note == null ? null : String(row.stock_note),
       createdAt: String(row.created_at),
     };
@@ -53,7 +56,9 @@ export class TenantRetailRepository {
     );
   }
 
-  async listStoreVisitsByTenantId(tenantId: string): Promise<StoreVisitLogEntity[]> {
+  async listStoreVisitsByTenantId(
+    tenantId: string,
+  ): Promise<StoreVisitLogEntity[]> {
     const rows = await this.pg.queryRows(
       `
         SELECT id, tenant_id, customer, detail, created_at
@@ -63,7 +68,9 @@ export class TenantRetailRepository {
       `,
       [tenantId],
     );
-    return rows.map((row) => this.mapStoreVisitRow(row as Record<string, unknown>));
+    return rows.map((row) =>
+      this.mapStoreVisitRow(row as Record<string, unknown>),
+    );
   }
 
   async createStoreVisitLog(data: {
@@ -90,7 +97,9 @@ export class TenantRetailRepository {
     };
   }
 
-  async listTenantSalesByTenantId(tenantId: string): Promise<TenantSaleEntity[]> {
+  async listTenantSalesByTenantId(
+    tenantId: string,
+  ): Promise<TenantSaleEntity[]> {
     const rows = await this.pg.queryRows(
       `
         SELECT id, tenant_id, sale_date, total, method, linked_appointment_id, stock_note, created_at
@@ -100,7 +109,9 @@ export class TenantRetailRepository {
       `,
       [tenantId],
     );
-    return rows.map((row) => this.mapTenantSaleRow(row as Record<string, unknown>));
+    return rows.map((row) =>
+      this.mapTenantSaleRow(row as Record<string, unknown>),
+    );
   }
 
   async insertTenantSale(data: {

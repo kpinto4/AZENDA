@@ -45,7 +45,9 @@ export class SqlDbService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     const runOnStart = ['1', 'true', 'yes', 'on'].includes(
-      String(process.env.DB_BOOTSTRAP_ON_START ?? '').trim().toLowerCase(),
+      String(process.env.DB_BOOTSTRAP_ON_START ?? '')
+        .trim()
+        .toLowerCase(),
     );
     if (runOnStart) {
       await this.runBootstrapInternal('arranque (DB_BOOTSTRAP_ON_START)');
@@ -76,7 +78,10 @@ export class SqlDbService implements OnModuleInit {
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       const isConn =
-        code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT' || code === 'EAI_AGAIN';
+        code === 'ECONNREFUSED' ||
+        code === 'ENOTFOUND' ||
+        code === 'ETIMEDOUT' ||
+        code === 'EAI_AGAIN';
       if (isConn) {
         this.logger.error(
           `No hay conexion a PostgreSQL via DATABASE_URL. ` +
@@ -94,11 +99,16 @@ export class SqlDbService implements OnModuleInit {
       await this.ensureSchemaMigrations();
       await this.users.migrateLegacyPlaintextPasswords();
       await this.seedIfEmpty();
-      this.logger.log(`PostgreSQL listo (${context}): esquema y semilla verificados`);
+      this.logger.log(
+        `PostgreSQL listo (${context}): esquema y semilla verificados`,
+      );
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       const isConn =
-        code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT' || code === 'EAI_AGAIN';
+        code === 'ECONNREFUSED' ||
+        code === 'ENOTFOUND' ||
+        code === 'ETIMEDOUT' ||
+        code === 'EAI_AGAIN';
       if (isConn) {
         this.logger.error(
           'No hay conexion a PostgreSQL via DATABASE_URL. Verifica Neon y ejecuta npm run db:bootstrap.',
@@ -108,7 +118,9 @@ export class SqlDbService implements OnModuleInit {
     }
   }
 
-  async findUserByEmailNormalized(normalizedEmail: string): Promise<UserEntity | undefined> {
+  async findUserByEmailNormalized(
+    normalizedEmail: string,
+  ): Promise<UserEntity | undefined> {
     return this.users.findByEmailNormalized(normalizedEmail);
   }
 
@@ -193,7 +205,9 @@ export class SqlDbService implements OnModuleInit {
     return this.tenants.deleteTenant(tenantId);
   }
 
-  async getTenantBillingSnapshot(tenantId: string): Promise<TenantBillingSnapshot | undefined> {
+  async getTenantBillingSnapshot(
+    tenantId: string,
+  ): Promise<TenantBillingSnapshot | undefined> {
     return this.tenantBilling.getTenantBillingSnapshot(tenantId);
   }
 
@@ -201,22 +215,32 @@ export class SqlDbService implements OnModuleInit {
     tenantId: string;
     targetPlan: string;
     targetCycle: BillingCycle;
-  }): Promise<{
-    tenantId: string;
-    currentPlan: string;
-    targetPlan: string;
-    currentCycle: BillingCycle;
-    targetCycle: BillingCycle;
-    period: { start: string; end: string; totalDays: number; remainingDays: number };
-    creditAmount: number;
-    targetCostForRemaining: number;
-    amountDueNow: number;
-    carryOverBalance: number;
-  } | undefined> {
+  }): Promise<
+    | {
+        tenantId: string;
+        currentPlan: string;
+        targetPlan: string;
+        currentCycle: BillingCycle;
+        targetCycle: BillingCycle;
+        period: {
+          start: string;
+          end: string;
+          totalDays: number;
+          remainingDays: number;
+        };
+        creditAmount: number;
+        targetCostForRemaining: number;
+        amountDueNow: number;
+        carryOverBalance: number;
+      }
+    | undefined
+  > {
     return this.tenantBilling.getUpgradeQuote(params);
   }
 
-  async listAppointmentsByTenantId(tenantId: string): Promise<AppointmentEntity[]> {
+  async listAppointmentsByTenantId(
+    tenantId: string,
+  ): Promise<AppointmentEntity[]> {
     return this.appointments.listByTenantId(tenantId);
   }
 
@@ -247,7 +271,9 @@ export class SqlDbService implements OnModuleInit {
     return this.appointments.findByTenantAndWhen(tenantId, when);
   }
 
-  async findAppointmentById(appointmentId: string): Promise<AppointmentEntity | undefined> {
+  async findAppointmentById(
+    appointmentId: string,
+  ): Promise<AppointmentEntity | undefined> {
     return this.appointments.findById(appointmentId);
   }
 
@@ -257,7 +283,12 @@ export class SqlDbService implements OnModuleInit {
     when: string,
     service: string,
   ): Promise<AppointmentEntity | undefined> {
-    return this.appointments.updateWhenAndService(tenantId, appointmentId, when, service);
+    return this.appointments.updateWhenAndService(
+      tenantId,
+      appointmentId,
+      when,
+      service,
+    );
   }
 
   async updateAppointmentStatus(
@@ -273,7 +304,11 @@ export class SqlDbService implements OnModuleInit {
     tenantId: string,
     attendance: AppointmentAttendance,
   ): Promise<AppointmentEntity | undefined> {
-    return this.appointments.updateAttendance(appointmentId, tenantId, attendance);
+    return this.appointments.updateAttendance(
+      appointmentId,
+      tenantId,
+      attendance,
+    );
   }
 
   async confirmPublicAppointmentAttendance(
@@ -281,7 +316,11 @@ export class SqlDbService implements OnModuleInit {
     appointmentId: string,
     customerName: string,
   ): Promise<AppointmentEntity | undefined> {
-    return this.appointments.confirmPublicAttendance(slug, appointmentId, customerName);
+    return this.appointments.confirmPublicAttendance(
+      slug,
+      appointmentId,
+      customerName,
+    );
   }
 
   async lookupPublicAppointmentsForClient(
@@ -290,10 +329,17 @@ export class SqlDbService implements OnModuleInit {
     appointmentIdRaw?: string | null,
     customerPhoneRaw?: string | null,
   ): Promise<AppointmentEntity[]> {
-    return this.appointments.lookupPublicForClient(slug, customerNameRaw, appointmentIdRaw, customerPhoneRaw);
+    return this.appointments.lookupPublicForClient(
+      slug,
+      customerNameRaw,
+      appointmentIdRaw,
+      customerPhoneRaw,
+    );
   }
 
-  async listStoreVisitsByTenantId(tenantId: string): Promise<StoreVisitLogEntity[]> {
+  async listStoreVisitsByTenantId(
+    tenantId: string,
+  ): Promise<StoreVisitLogEntity[]> {
     return this.retail.listStoreVisitsByTenantId(tenantId);
   }
 
@@ -305,7 +351,9 @@ export class SqlDbService implements OnModuleInit {
     return this.retail.createStoreVisitLog(data);
   }
 
-  async listTenantSalesByTenantId(tenantId: string): Promise<TenantSaleEntity[]> {
+  async listTenantSalesByTenantId(
+    tenantId: string,
+  ): Promise<TenantSaleEntity[]> {
     return this.retail.listTenantSalesByTenantId(tenantId);
   }
 
@@ -331,7 +379,9 @@ export class SqlDbService implements OnModuleInit {
     return this.tenantBranding.update(tenantId, patch);
   }
 
-  async listProductsByTenantId(tenantId: string): Promise<TenantProductEntity[]> {
+  async listProductsByTenantId(
+    tenantId: string,
+  ): Promise<TenantProductEntity[]> {
     return this.catalog.listProductsByTenantId(tenantId);
   }
 
@@ -345,20 +395,32 @@ export class SqlDbService implements OnModuleInit {
   async updateTenantProduct(
     tenantId: string,
     productId: string,
-    patch: Omit<Partial<TenantProductEntity>, 'id' | 'tenantId' | 'catalogOrder'>,
+    patch: Omit<
+      Partial<TenantProductEntity>,
+      'id' | 'tenantId' | 'catalogOrder'
+    >,
   ): Promise<TenantProductEntity | undefined> {
     return this.catalog.updateTenantProduct(tenantId, productId, patch);
   }
 
-  async deleteTenantProduct(tenantId: string, productId: string): Promise<boolean> {
+  async deleteTenantProduct(
+    tenantId: string,
+    productId: string,
+  ): Promise<boolean> {
     return this.catalog.deleteTenantProduct(tenantId, productId);
   }
 
-  async moveTenantProduct(tenantId: string, productId: string, direction: -1 | 1): Promise<void> {
+  async moveTenantProduct(
+    tenantId: string,
+    productId: string,
+    direction: -1 | 1,
+  ): Promise<void> {
     return this.catalog.moveTenantProduct(tenantId, productId, direction);
   }
 
-  async listServicesByTenantId(tenantId: string): Promise<TenantServiceEntity[]> {
+  async listServicesByTenantId(
+    tenantId: string,
+  ): Promise<TenantServiceEntity[]> {
     return this.catalog.listServicesByTenantId(tenantId);
   }
 
@@ -372,16 +434,26 @@ export class SqlDbService implements OnModuleInit {
   async updateTenantService(
     tenantId: string,
     serviceId: string,
-    patch: Omit<Partial<TenantServiceEntity>, 'id' | 'tenantId' | 'catalogOrder'>,
+    patch: Omit<
+      Partial<TenantServiceEntity>,
+      'id' | 'tenantId' | 'catalogOrder'
+    >,
   ): Promise<TenantServiceEntity | undefined> {
     return this.catalog.updateTenantService(tenantId, serviceId, patch);
   }
 
-  async deleteTenantService(tenantId: string, serviceId: string): Promise<boolean> {
+  async deleteTenantService(
+    tenantId: string,
+    serviceId: string,
+  ): Promise<boolean> {
     return this.catalog.deleteTenantService(tenantId, serviceId);
   }
 
-  async moveTenantService(tenantId: string, serviceId: string, direction: -1 | 1): Promise<void> {
+  async moveTenantService(
+    tenantId: string,
+    serviceId: string,
+    direction: -1 | 1,
+  ): Promise<void> {
     return this.catalog.moveTenantService(tenantId, serviceId, direction);
   }
 
@@ -407,7 +479,9 @@ export class SqlDbService implements OnModuleInit {
     }
 
     if (!(await this.columnExists('tenants', 'plan'))) {
-      await this.pg.execScript(`ALTER TABLE tenants ADD COLUMN plan TEXT NOT NULL DEFAULT 'Trial'`);
+      await this.pg.execScript(
+        `ALTER TABLE tenants ADD COLUMN plan TEXT NOT NULL DEFAULT 'Trial'`,
+      );
     }
     if (!(await this.columnExists('tenants', 'storefront_enabled'))) {
       await this.pg.execScript(
@@ -456,20 +530,30 @@ export class SqlDbService implements OnModuleInit {
     }
 
     if (!(await this.columnExists('tenant_branding', 'public_address'))) {
-      await this.pg.execScript(`ALTER TABLE tenant_branding ADD COLUMN public_address TEXT NULL`);
+      await this.pg.execScript(
+        `ALTER TABLE tenant_branding ADD COLUMN public_address TEXT NULL`,
+      );
     }
     if (!(await this.columnExists('tenant_branding', 'public_maps_url'))) {
-      await this.pg.execScript(`ALTER TABLE tenant_branding ADD COLUMN public_maps_url TEXT NULL`);
+      await this.pg.execScript(
+        `ALTER TABLE tenant_branding ADD COLUMN public_maps_url TEXT NULL`,
+      );
     }
     if (!(await this.columnExists('tenant_branding', 'cancellation_policy'))) {
-      await this.pg.execScript(`ALTER TABLE tenant_branding ADD COLUMN cancellation_policy TEXT NULL`);
+      await this.pg.execScript(
+        `ALTER TABLE tenant_branding ADD COLUMN cancellation_policy TEXT NULL`,
+      );
     }
     if (!(await this.columnExists('tenant_branding', 'reminder_notice'))) {
-      await this.pg.execScript(`ALTER TABLE tenant_branding ADD COLUMN reminder_notice TEXT NULL`);
+      await this.pg.execScript(
+        `ALTER TABLE tenant_branding ADD COLUMN reminder_notice TEXT NULL`,
+      );
     }
 
     if (!(await this.columnExists('appointments', 'customer_phone_e164'))) {
-      await this.pg.execScript(`ALTER TABLE appointments ADD COLUMN customer_phone_e164 TEXT NULL`);
+      await this.pg.execScript(
+        `ALTER TABLE appointments ADD COLUMN customer_phone_e164 TEXT NULL`,
+      );
     }
     if (!(await this.columnExists('appointments', 'wa_reminder_consent'))) {
       await this.pg.execScript(
@@ -477,7 +561,9 @@ export class SqlDbService implements OnModuleInit {
       );
     }
     if (!(await this.columnExists('appointments', 'wa_reminder_sent_at'))) {
-      await this.pg.execScript(`ALTER TABLE appointments ADD COLUMN wa_reminder_sent_at TEXT NULL`);
+      await this.pg.execScript(
+        `ALTER TABLE appointments ADD COLUMN wa_reminder_sent_at TEXT NULL`,
+      );
     }
 
     const tenantRows = await this.pg.queryRows(`SELECT id, name FROM tenants`);
@@ -543,7 +629,9 @@ export class SqlDbService implements OnModuleInit {
       )
     `);
 
-    await this.pg.ensureIndex(`CREATE INDEX idx_appointments_tenant_when ON appointments (tenant_id, when_at)`);
+    await this.pg.ensureIndex(
+      `CREATE INDEX idx_appointments_tenant_when ON appointments (tenant_id, when_at)`,
+    );
 
     await this.pg.execScript(`
       CREATE TABLE IF NOT EXISTS store_visit_logs (
@@ -588,13 +676,23 @@ export class SqlDbService implements OnModuleInit {
     `);
 
     if (!(await this.columnExists('tenant_branding', 'whatsapp_phone_e164'))) {
-      await this.pg.execScript(`ALTER TABLE tenant_branding ADD COLUMN whatsapp_phone_e164 TEXT NULL`);
+      await this.pg.execScript(
+        `ALTER TABLE tenant_branding ADD COLUMN whatsapp_phone_e164 TEXT NULL`,
+      );
     }
-    if (!(await this.columnExists('tenant_branding', 'whatsapp_default_message'))) {
-      await this.pg.execScript(`ALTER TABLE tenant_branding ADD COLUMN whatsapp_default_message TEXT NULL`);
+    if (
+      !(await this.columnExists('tenant_branding', 'whatsapp_default_message'))
+    ) {
+      await this.pg.execScript(
+        `ALTER TABLE tenant_branding ADD COLUMN whatsapp_default_message TEXT NULL`,
+      );
     }
-    if (!(await this.columnExists('tenant_branding', 'public_booking_hours_json'))) {
-      await this.pg.execScript(`ALTER TABLE tenant_branding ADD COLUMN public_booking_hours_json TEXT NULL`);
+    if (
+      !(await this.columnExists('tenant_branding', 'public_booking_hours_json'))
+    ) {
+      await this.pg.execScript(
+        `ALTER TABLE tenant_branding ADD COLUMN public_booking_hours_json TEXT NULL`,
+      );
     }
 
     await this.pg.execScript(`
@@ -646,14 +744,27 @@ export class SqlDbService implements OnModuleInit {
     for (const tenant of tenants) {
       let start = new Date(tenant.currentPeriodStart);
       let end = new Date(tenant.currentPeriodEnd);
-      const invalidRange = Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start;
+      const invalidRange =
+        Number.isNaN(start.getTime()) ||
+        Number.isNaN(end.getTime()) ||
+        end <= start;
       if (invalidRange) {
         start = now;
-        end = new Date(this.tenants.computeBillingCycleEnd(start.toISOString(), tenant.billingCycle));
+        end = new Date(
+          this.tenants.computeBillingCycleEnd(
+            start.toISOString(),
+            tenant.billingCycle,
+          ),
+        );
       }
       while (end < now) {
         start = end;
-        end = new Date(this.tenants.computeBillingCycleEnd(start.toISOString(), tenant.billingCycle));
+        end = new Date(
+          this.tenants.computeBillingCycleEnd(
+            start.toISOString(),
+            tenant.billingCycle,
+          ),
+        );
       }
       const nextRenewalAt = end.toISOString();
       const changed =
@@ -671,7 +782,9 @@ export class SqlDbService implements OnModuleInit {
   }
 
   private async seedIfEmpty(): Promise<void> {
-    const countRow = await this.pg.queryOne(`SELECT COUNT(*) AS cnt FROM users`);
+    const countRow = await this.pg.queryOne(
+      `SELECT COUNT(*) AS cnt FROM users`,
+    );
     const count = Number(countRow?.cnt ?? 0);
     if (count > 0) {
       return;
@@ -720,7 +833,11 @@ export class SqlDbService implements OnModuleInit {
       password: 'azenda123',
       role: UserRole.SUPER_ADMIN,
       tenantId: null,
-      systems: [AppSystem.SUPER_ADMIN, AppSystem.TENANT, AppSystem.PUBLIC_BOOKING],
+      systems: [
+        AppSystem.SUPER_ADMIN,
+        AppSystem.TENANT,
+        AppSystem.PUBLIC_BOOKING,
+      ],
       status: 'ACTIVE',
     });
     await this.ensureSeedUser({
@@ -789,7 +906,9 @@ export class SqlDbService implements OnModuleInit {
     await this.createUser(row);
   }
 
-  async getPlanCatalogPrices(planKey: string): Promise<{ monthly: number; yearly: number }> {
+  async getPlanCatalogPrices(
+    planKey: string,
+  ): Promise<{ monthly: number; yearly: number }> {
     return this.tenants.getPlanCatalogPrices(planKey);
   }
 
@@ -797,7 +916,9 @@ export class SqlDbService implements OnModuleInit {
     return this.tenants.listPlanCatalog();
   }
 
-  async replacePlanCatalog(entries: PlanCatalogEntry[]): Promise<PlanCatalogEntry[]> {
+  async replacePlanCatalog(
+    entries: PlanCatalogEntry[],
+  ): Promise<PlanCatalogEntry[]> {
     return this.tenants.replacePlanCatalog(entries);
   }
 
@@ -806,9 +927,10 @@ export class SqlDbService implements OnModuleInit {
   }
 
   async patchPlatformSiteConfig(
-    patch: Partial<PlatformSiteConfig> & { landing?: Partial<PlatformSiteLandingCopy> },
+    patch: Partial<PlatformSiteConfig> & {
+      landing?: Partial<PlatformSiteLandingCopy>;
+    },
   ): Promise<PlatformSiteConfig> {
     return this.platformSite.patch(patch);
   }
-
 }

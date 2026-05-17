@@ -24,16 +24,11 @@ import { SqlDbService } from './sql-db.service';
 
 import { TenantBillingService } from './tenant-billing.service';
 
-
-
 @Global()
-
 @Module({
-
   imports: [PasswordModule],
 
   providers: [
-
     PgClientService,
 
     UserRepository,
@@ -55,11 +50,9 @@ import { TenantBillingService } from './tenant-billing.service';
     TenantRetailRepository,
 
     SqlDbService,
-
   ],
 
   exports: [
-
     SqlDbService,
 
     UserRepository,
@@ -73,10 +66,6 @@ import { TenantBillingService } from './tenant-billing.service';
     PlatformSiteConfigRepository,
 
     PlatformStatsRepository,
-
   ],
-
 })
-
 export class SqlDbModule {}
-

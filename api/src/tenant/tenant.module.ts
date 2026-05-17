@@ -15,6 +15,11 @@ import { TenantStatusGuard } from '../auth/guards/tenant-status.guard';
     TenantStoreVisitsController,
     TenantSalesController,
   ],
-  providers: [TenantService, TenantAppointmentsService, TenantSalesService, TenantStatusGuard],
+  providers: [
+    TenantService,
+    TenantAppointmentsService,
+    TenantSalesService,
+    TenantStatusGuard,
+  ],
 })
 export class TenantModule {}

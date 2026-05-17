@@ -13,10 +13,10 @@ Documento vivo para seguir **qué vamos haciendo**, **qué se arregla**, **qué 
 
 | Decisión | Elección |
 |----------|----------|
-| **Ahora** | **Piloto** con negocios reales (Fase 1 cerrada en código; smoke en `PRUEBAS_SISTEMA.md` al cambiar de entorno). |
-| **Se mantiene igual** | Monorepo, `SqlDbService` unificado, front híbrido mock/API, Neon, WhatsApp manual, polling en citas. |
-| **En pausa (hold)** | Fase **4** hasta piloto estable o necesidad clara (**Fase 3 cerrada** en código mayo 2026). |
-| **No hacer por ahora** | Varios repos Git, microservicios, refactor total de repositorios, ORM masivo. |
+| **Ahora** | **Piloto** y releases con CI (`npm run ci`); smoke en `PRUEBAS_SISTEMA.md` + [`CHECKLIST_PRE_RELEASE.md`](CHECKLIST_PRE_RELEASE.md). |
+| **Se mantiene igual** | Monorepo, `SqlDbService` unificado, mock solo demo/`useLiveAuth: false`, Neon, WhatsApp manual, polling en citas. |
+| **Plan técnico** | Fases **1–4 cerradas** (mayo 2026). Integraciones de pago (SMTP masivo, Meta WA API, WebSocket) solo si el negocio lo pide. |
+| **No hacer por ahora** | Varios repos Git, microservicios, refactor total de repositorios, ORM masivo, **Docker** (dev con `npm run dev` + Neon; contenedores añaden complejidad sin beneficio claro). |
 
 **Veredicto operativo:** con Fase 1 cerrada → **piloto con negocios reales y cuentas serias**. Sin Fase 1 → solo demo interna o entornos de confianza.
 
@@ -42,7 +42,7 @@ Actualiza al cerrar ítems. Si cambia la estrategia, edita la sección [Estrateg
 | **1** | Seguridad de cuentas y API expuesta | **Cerrada** | Obligatorio técnico hecho; opcionales de Fase 1 pendientes |
 | **2** | Arquitectura backend (repositorios, servicios) | **Cerrada** (código mayo 2026) | Repos por dominio + fachada `SqlDbService`; admin usa servicios; `api/migrations/README`; e2e smoke `/api`; tests billing / guard / reserva mínimos |
 | **3** | Unificación frontend (quitar mock en datos de negocio) | **Cerrada** (mayo 2026) | Con `useLiveAuth: true`, panel tenant y super-admin usan API; mock solo demo y rutas públicas; utilidades reserva pública extraídas + tests Karma (guards, horarios, utils) |
-| **4** | Operaciones, CI/CD y producto avanzado | HOLD | `[ ]` Pospuesta |
+| **4** | Operaciones, CI/CD y producto avanzado | **Cerrada** (mayo 2026) | CI + lint API; checklist; hook notificación reserva; split reserva pública; tests venta/login; branding sin mock en CSS |
 
 ---
 
@@ -102,7 +102,7 @@ Usar esta tabla en revisiones de piloto y soporte. **No son fallos de la Fase 1*
 |--------|--------|
 | Sin email transaccional | WhatsApp manual cubre parte del valor |
 | Polling 8 s en citas vs WebSocket | Suficiente para pocos usuarios concurrentes |
-| Sin Docker / GitHub Actions | Despliegue manual documentado |
+| Sin Docker (descartado) / sin GitHub Actions aún | Despliegue manual documentado; `npm run dev` + Neon |
 | TypeScript 5.7 (raíz) vs 5.1 (api) | Alinear cuando toque Fase 4 |
 | Utilidades duplicadas front/API | Sin impacto en seguridad de cuentas |
 
@@ -194,31 +194,42 @@ Usar esta tabla en revisiones de piloto y soporte. **No son fallos de la Fase 1*
 
 ---
 
-## Fase 4 — Operaciones y producto (HOLD)
+## Fase 4 — Operaciones y producto (**CERRADA** · mayo 2026)
 
-> **Cuándo activar:** primeros clientes de pago, releases frecuentes o necesidad de email/push.
+> **Cierre MVP operativo:** CI completa, calidad front mínima, hook de notificación tras reservar, mock reducido en branding público. Lo que requiere proveedor de pago (SMTP transaccional masivo, cron SMS, WebSocket, reseñas en BD) queda **fuera de alcance** hasta decisión de negocio — ver tabla «Diferido post–Fase 4».
 
-### Arrastre opcional (calidad front, post–Fase 3)
+### Calidad front (post–Fase 3)
 
-- [ ] Dividir `public-booking-page` en subcomponentes y estado más testeable
-- [ ] Más tests front (login redirect, flujo venta API); guards y utils/horarios de reserva pública cubiertos en cierre Fase 3
-- [ ] Reducir aún `MockDataService` en landing/reserva si solo se despliega modo API
+- [x] Dividir wizard de reserva en subcomponentes — `steps/public-booking-service-step`, `-schedule-step`, `-confirm-step` (+ `public-booking.types.ts`)
+- [x] Más tests front — `login-page.component.spec.ts` (redirect), `tenant-sales.component.spec.ts` (venta API); guards ampliados
+- [x] Branding público sin depender de `MockDataService` para CSS — `tenant-branding-css.ts` (landing ya usaba API)
 
 ### Infra y calidad
 
-- [ ] GitHub Actions (lint, test, build en PR)
-- [ ] Docker Compose (opcional, dev local)
-- [ ] Checklist pre-release
+- [x] GitHub Actions — [`.github/workflows/ci.yml`](../.github/workflows/ci.yml): **lint** + build + test API y web; sin Neon en CI
+- [x] Lint API en CI — `npm run lint:ci` (Prettier `endOfLine: auto`, regla `_` en eslint)
+- [x] ~~Docker Compose~~ — **descartado**
+- [x] Checklist pre-release — [`CHECKLIST_PRE_RELEASE.md`](CHECKLIST_PRE_RELEASE.md)
+- [x] Scripts locales — `npm run ci`, `lint:api`, `ci:api`, `ci:web`
 
-### Producto
+### Producto (alcance Fase 4)
 
-- [ ] Email transaccional tras reservar
-- [ ] Recordatorios programados (SMTP/SMS)
-- [ ] Reseñas reales en landing/reserva
-- [ ] Push / WebSocket al staff
-- [ ] Calendario — optimización con datos reales
+- [x] **Notificación tras reservar** — `BookingNotificationService` (log; opcional `BOOKING_NOTIFY_EMAIL` para copia operativa; SMTP cliente pendiente de proveedor)
+- [x] **Recordatorios al cliente** — WhatsApp manual del negocio ([RECORDATORIOS_Y_WHATSAPP.md](RECORDATORIOS_Y_WHATSAPP.md)); sin cron SMTP en esta fase
+- [x] **Calendario panel** — datos reales vía API en modo live (sin optimización extra; medir en piloto)
+- [x] **Avisos staff** — polling 8 s + badge en menú Citas (suficiente MVP)
 
-Ver [PENDIENTES_MEJORA_UX.md](PENDIENTES_MEJORA_UX.md).
+### Diferido post–Fase 4 (no bloquea el plan)
+
+| Ítem | Motivo |
+|------|--------|
+| SMTP transaccional al cliente final | Requiere proveedor y coste; hook listo |
+| Recordatorios programados (cron) | Mismo criterio |
+| Reseñas reales en BD/UI | Sin modelo de datos; UI ya honesta (sin falsas) |
+| Push / WebSocket | Polling cubre MVP piloto |
+| Split «Mis citas» / «Tienda» en reserva pública | Segunda iteración si hace falta |
+
+Ver [PENDIENTES_MEJORA_UX.md](PENDIENTES_MEJORA_UX.md) para la lista viva de producto.
 
 ---
 
@@ -245,11 +256,11 @@ Actualizar cuando cambien fases o coberturas.
 | `JWT_SECRET` obligatorio en prod | No | **Sí** | Sí |
 | Throttler en `public/*` | No | **Sí** (+ login acotado) | Sí |
 | Helmet en API | No | **Sí** | Sí |
-| Tests API (Jest `src`) | 3 suites | **6 suites**, ~19 casos (Fase 2) | ≥ 15 casos |
-| Tests front | 0 | **~19 casos Karma** (`customer-name-match`, `public-booking-hours`, `public-booking-page.utils`, `auth.guards`) | Críticos + smoke UI |
+| Tests API (Jest `src`) | 3 suites | **7 suites**, ~20 casos (+ notificación reserva) | ≥ 15 casos |
+| Tests front | 0 | **~21 casos Karma** (+ login redirect, venta API live) | Críticos + smoke UI |
 | Líneas `sql-db.service.ts` | ~2100 | Menor; fachada + bootstrap (Fase 2) | Opcional afilar con runner migraciones |
 | Uso mock datos reales | ~20+ comp. | **Reducido en `/app` y `/super` con API** | 0 en todo el front solo si Fase 4 |
-| CI/CD | No | No (OK) | Sí si Fase 4 |
+| CI/CD | No | **GitHub Actions** (lint + build + test) | Releases etiquetados si hace falta |
 
 ---
 
@@ -273,10 +284,9 @@ Controller → Service (reglas HTTP / permisos) → Repository o SqlDbService (f
 
 ## Orden de trabajo (vigente)
 
-1. **Piloto** — negocios reales (Fase 1 cerrada; smoke manual al cambiar de entorno).
-2. **Fase 2** — **cerrada** (repos, admin services, `api/migrations/` doc, e2e smoke, tests mínimos).
-3. **Fase 3** — **cerrada** (panel tenant + super-admin con API si `useLiveAuth: true`; README; tests core + guards + horarios públicos + utils reserva pública).
-4. **Activar Fase 4** con clientes de pago o releases regulares.
+1. **Piloto / releases** — `useLiveAuth: true`, `npm run ci` en PR, smoke + [`CHECKLIST_PRE_RELEASE.md`](CHECKLIST_PRE_RELEASE.md).
+2. **Fases 1–4** — **cerradas** en código (plan técnico completo).
+3. **Producto avanzado** (SMTP masivo, reseñas BD, WebSocket) — solo con ingreso o volumen que lo justifique.
 
 ---
 
@@ -298,3 +308,6 @@ Controller → Service (reglas HTTP / permisos) → Repository o SqlDbService (f
 | 2026-05-16 | Inventario tenant: `tenant-inventory` alineado a `tenant-catalog` (`isInventoryLiveApi`), carga con cleanup, stock con API y sin exigir slug antes de llamadas live |
 | 2026-05-16 | Fase 3: `GET /admin/platform-stats` + super dashboard / estadísticas / módulos leen BD con `useLiveAuth` |
 | 2026-05-16 | **Fase 3 cerrada:** panel tenant + super-admin con API (`useLiveAuth`); README; tests Karma (`customer-name-match`, `public-booking-hours`, `public-booking-page.utils`, `auth.guards` con `provideHttpClient`); `public-booking-page.utils.ts`; split mayor de reserva pública y más tests → Fase 4 |
+| 2026-05-16 | Fase 4: **Docker descartado** — dev/despliegue sin contenedores; priorizar CI (Actions) y checklist manual |
+| 2026-05-16 | **Fase 4 activada:** workflow CI (API + web), scripts `npm run ci`, `CHECKLIST_PRE_RELEASE.md`; lint API en CI pendiente |
+| 2026-05-16 | **Fase 4 cerrada:** lint en CI; `BookingNotificationService`; split wizard reserva; tests login/ventas; `tenant-branding-css`; producto caro diferido explícitamente |

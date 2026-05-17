@@ -71,7 +71,10 @@ export class TenantController {
 
   @Post('catalog/products')
   @Roles(UserRole.ADMIN)
-  createProduct(@Req() req: AuthenticatedRequest, @Body() dto: UpsertTenantProductDto) {
+  createProduct(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: UpsertTenantProductDto,
+  ) {
     return this.tenantService.createProduct(req.user, dto);
   }
 
@@ -87,7 +90,10 @@ export class TenantController {
 
   @Delete('catalog/products/:productId')
   @Roles(UserRole.ADMIN)
-  deleteProduct(@Req() req: AuthenticatedRequest, @Param('productId') productId: string) {
+  deleteProduct(
+    @Req() req: AuthenticatedRequest,
+    @Param('productId') productId: string,
+  ) {
     return this.tenantService.deleteProduct(req.user, productId);
   }
 
@@ -103,7 +109,10 @@ export class TenantController {
 
   @Post('catalog/services')
   @Roles(UserRole.ADMIN)
-  createService(@Req() req: AuthenticatedRequest, @Body() dto: UpsertTenantServiceDto) {
+  createService(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: UpsertTenantServiceDto,
+  ) {
     return this.tenantService.createService(req.user, dto);
   }
 
@@ -119,7 +128,10 @@ export class TenantController {
 
   @Delete('catalog/services/:serviceId')
   @Roles(UserRole.ADMIN)
-  deleteService(@Req() req: AuthenticatedRequest, @Param('serviceId') serviceId: string) {
+  deleteService(
+    @Req() req: AuthenticatedRequest,
+    @Param('serviceId') serviceId: string,
+  ) {
     return this.tenantService.deleteService(req.user, serviceId);
   }
 
@@ -135,7 +147,10 @@ export class TenantController {
 
   @Patch('branding')
   @Roles(UserRole.ADMIN)
-  updateBranding(@Req() req: AuthenticatedRequest, @Body() dto: UpdateTenantBrandingDto) {
+  updateBranding(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: UpdateTenantBrandingDto,
+  ) {
     return this.tenantService.updateBranding(req.user, dto);
   }
 
@@ -147,7 +162,10 @@ export class TenantController {
 
   @Post('employees')
   @Roles(UserRole.ADMIN)
-  createEmployee(@Req() req: AuthenticatedRequest, @Body() dto: CreateTenantEmployeeDto) {
+  createEmployee(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: CreateTenantEmployeeDto,
+  ) {
     return this.tenantService.createEmployee(req.user, dto);
   }
 
@@ -163,7 +181,10 @@ export class TenantController {
 
   @Delete('employees/:userId')
   @Roles(UserRole.ADMIN)
-  deleteEmployee(@Req() req: AuthenticatedRequest, @Param('userId') userId: string) {
+  deleteEmployee(
+    @Req() req: AuthenticatedRequest,
+    @Param('userId') userId: string,
+  ) {
     return this.tenantService.deleteEmployee(req.user, userId);
   }
 }

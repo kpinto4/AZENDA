@@ -4,7 +4,11 @@ import { TenantStatusGuard } from './tenant-status.guard';
 import { UserRole } from '../auth.types';
 import { TenantRepository } from '../../infrastructure/sql-db/repositories/tenant.repository';
 
-function mockContext(path: string, method: string, user: unknown): ExecutionContext {
+function mockContext(
+  path: string,
+  method: string,
+  user: unknown,
+): ExecutionContext {
   return {
     switchToHttp: () => ({
       getRequest: () => ({ path, method, user }),
@@ -17,7 +21,10 @@ describe('TenantStatusGuard', () => {
     const tenants = { findById: jest.fn() } as unknown as TenantRepository;
     const guard = new TenantStatusGuard(tenants);
     const ok = await guard.canActivate(
-      mockContext('/api/tenant/sales', 'GET', { role: UserRole.SUPER_ADMIN, tenantId: null }),
+      mockContext('/api/tenant/sales', 'GET', {
+        role: UserRole.SUPER_ADMIN,
+        tenantId: null,
+      }),
     );
     expect(ok).toBe(true);
     expect(tenants.findById).not.toHaveBeenCalled();
@@ -34,19 +41,28 @@ describe('TenantStatusGuard', () => {
 
     await expect(
       guard.canActivate(
-        mockContext('/api/tenant/sales', 'GET', { role: UserRole.ADMIN, tenantId: 't1' }),
+        mockContext('/api/tenant/sales', 'GET', {
+          role: UserRole.ADMIN,
+          tenantId: 't1',
+        }),
       ),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
       guard.canActivate(
-        mockContext('/api/tenant/context', 'GET', { role: UserRole.ADMIN, tenantId: 't1' }),
+        mockContext('/api/tenant/context', 'GET', {
+          role: UserRole.ADMIN,
+          tenantId: 't1',
+        }),
       ),
     ).resolves.toBe(true);
 
     await expect(
       guard.canActivate(
-        mockContext('/api/tenant/billing/status', 'GET', { role: UserRole.ADMIN, tenantId: 't1' }),
+        mockContext('/api/tenant/billing/status', 'GET', {
+          role: UserRole.ADMIN,
+          tenantId: 't1',
+        }),
       ),
     ).resolves.toBe(true);
   });
@@ -58,7 +74,10 @@ describe('TenantStatusGuard', () => {
     const guard = new TenantStatusGuard(tenants);
     await expect(
       guard.canActivate(
-        mockContext('/api/tenant/sales', 'GET', { role: UserRole.ADMIN, tenantId: 't1' }),
+        mockContext('/api/tenant/sales', 'GET', {
+          role: UserRole.ADMIN,
+          tenantId: 't1',
+        }),
       ),
     ).resolves.toBe(true);
   });

@@ -44,7 +44,10 @@ export class PlatformStatsRepository {
       mrrRow,
     ] = await Promise.all([
       this.pg.queryOne(`SELECT COUNT(*)::bigint AS c FROM tenants`, []),
-      this.pg.queryOne(`SELECT COUNT(*)::bigint AS c FROM tenants WHERE UPPER(status) = ?`, ['ACTIVE']),
+      this.pg.queryOne(
+        `SELECT COUNT(*)::bigint AS c FROM tenants WHERE UPPER(status) = ?`,
+        ['ACTIVE'],
+      ),
       this.pg.queryOne(`SELECT COUNT(*)::bigint AS c FROM appointments`, []),
       this.pg.queryOne(
         `
@@ -54,7 +57,10 @@ export class PlatformStatsRepository {
         `,
         [],
       ),
-      this.pg.queryOne(`SELECT COUNT(*)::bigint AS c FROM users WHERE tenant_id IS NOT NULL`, []),
+      this.pg.queryOne(
+        `SELECT COUNT(*)::bigint AS c FROM users WHERE tenant_id IS NOT NULL`,
+        [],
+      ),
       this.pg.queryOne(
         `
           SELECT

@@ -22,7 +22,9 @@ let PgClientService = PgClientService_1 = class PgClientService {
         }
         const sslMode = (process.env.PGSSLMODE ?? '').trim().toLowerCase();
         const requireSsl = sslMode === 'require' ||
-            ['1', 'true', 'yes', 'on'].includes(String(process.env.PGSSL ?? '').trim().toLowerCase()) ||
+            ['1', 'true', 'yes', 'on'].includes(String(process.env.PGSSL ?? '')
+                .trim()
+                .toLowerCase()) ||
             (connectionString?.toLowerCase().includes('sslmode=require') ?? false);
         const ssl = requireSsl ? { rejectUnauthorized: false } : undefined;
         this.pool = new pg_1.Pool({

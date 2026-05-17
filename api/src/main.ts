@@ -4,7 +4,14 @@ import { resolve } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
-import { json, type Application, NextFunction, Request, Response, urlencoded } from 'express';
+import {
+  json,
+  type Application,
+  NextFunction,
+  Request,
+  Response,
+  urlencoded,
+} from 'express';
 import helmet from 'helmet';
 
 /** .env en la raiz del monorepo y en api/ (Neon DATABASE_URL); api/.env pisa claves de la raiz. */
@@ -16,7 +23,8 @@ if (existsSync(resolve(monoRoot, '.env'))) {
 loadEnv({ path: resolve(cwd, '.env'), override: true });
 
 function assertProductionEnvOrThrow(): void {
-  const isProd = (process.env.NODE_ENV ?? '').trim().toLowerCase() === 'production';
+  const isProd =
+    (process.env.NODE_ENV ?? '').trim().toLowerCase() === 'production';
   if (!isProd) {
     return;
   }
@@ -25,7 +33,9 @@ function assertProductionEnvOrThrow(): void {
     throw new Error('JWT_SECRET es obligatorio cuando NODE_ENV=production');
   }
   if (jwt === 'dev-only-secret-change-me') {
-    throw new Error('JWT_SECRET no puede ser el valor de desarrollo en production');
+    throw new Error(
+      'JWT_SECRET no puede ser el valor de desarrollo en production',
+    );
   }
   if (!(process.env.CORS_ORIGINS ?? '').trim()) {
     throw new Error(
@@ -41,10 +51,7 @@ function isLocalDevOrigin(origin: string | undefined): boolean {
   try {
     const h = new URL(origin).hostname.toLowerCase();
     return (
-      h === 'localhost' ||
-      h === '127.0.0.1' ||
-      h === '[::1]' ||
-      h === '::1'
+      h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h === '::1'
     );
   } catch {
     return false;
@@ -91,7 +98,10 @@ async function bootstrap() {
   /** Evita 304/caché en XHR (login, contexto JWT, etc.) que dejan el cuerpo vacío en el cliente. */
   const expressApp = app.getHttpAdapter().getInstance() as Application;
   expressApp.use((_req: Request, res: Response, next: NextFunction) => {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader(
+      'Cache-Control',
+      'no-store, no-cache, must-revalidate, private',
+    );
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     next();

@@ -16,11 +16,15 @@ export class PlatformSiteConfigRepository {
 
   merge(
     base: PlatformSiteConfig,
-    patch: Partial<PlatformSiteConfig> & { landing?: Partial<PlatformSiteLandingCopy> },
+    patch: Partial<PlatformSiteConfig> & {
+      landing?: Partial<PlatformSiteLandingCopy>;
+    },
   ): PlatformSiteConfig {
     const landing: PlatformSiteLandingCopy = { ...base.landing };
     if (patch.landing) {
-      const keys = Object.keys(DEFAULT_PLATFORM_SITE_CONFIG.landing) as (keyof PlatformSiteLandingCopy)[];
+      const keys = Object.keys(
+        DEFAULT_PLATFORM_SITE_CONFIG.landing,
+      ) as (keyof PlatformSiteLandingCopy)[];
       for (const key of keys) {
         const v = patch.landing[key];
         if (v !== undefined) {
@@ -42,13 +46,22 @@ export class PlatformSiteConfigRepository {
       }
     }
     if (patch.planPriceBasic !== undefined) {
-      out.planPriceBasic = Math.min(1_000_000, Math.max(0, this.round2(Number(patch.planPriceBasic))));
+      out.planPriceBasic = Math.min(
+        1_000_000,
+        Math.max(0, this.round2(Number(patch.planPriceBasic))),
+      );
     }
     if (patch.planPricePro !== undefined) {
-      out.planPricePro = Math.min(1_000_000, Math.max(0, this.round2(Number(patch.planPricePro))));
+      out.planPricePro = Math.min(
+        1_000_000,
+        Math.max(0, this.round2(Number(patch.planPricePro))),
+      );
     }
     if (patch.planPriceBusiness !== undefined) {
-      out.planPriceBusiness = Math.min(1_000_000, Math.max(0, this.round2(Number(patch.planPriceBusiness))));
+      out.planPriceBusiness = Math.min(
+        1_000_000,
+        Math.max(0, this.round2(Number(patch.planPriceBusiness))),
+      );
     }
     return out;
   }
@@ -69,12 +82,16 @@ export class PlatformSiteConfigRepository {
 
   async get(): Promise<PlatformSiteConfig> {
     await this.ensureTableAndDefaultRow();
-    const row = await this.pg.queryOne(`SELECT payload_json FROM platform_site_config WHERE id = 'default'`);
+    const row = await this.pg.queryOne(
+      `SELECT payload_json FROM platform_site_config WHERE id = 'default'`,
+    );
     if (!row?.payload_json) {
       return structuredClone(DEFAULT_PLATFORM_SITE_CONFIG);
     }
     try {
-      const parsed = JSON.parse(String(row.payload_json)) as Partial<PlatformSiteConfig>;
+      const parsed = JSON.parse(
+        String(row.payload_json),
+      ) as Partial<PlatformSiteConfig>;
       return this.merge(structuredClone(DEFAULT_PLATFORM_SITE_CONFIG), parsed);
     } catch {
       return structuredClone(DEFAULT_PLATFORM_SITE_CONFIG);
@@ -82,13 +99,18 @@ export class PlatformSiteConfigRepository {
   }
 
   async patch(
-    patch: Partial<PlatformSiteConfig> & { landing?: Partial<PlatformSiteLandingCopy> },
+    patch: Partial<PlatformSiteConfig> & {
+      landing?: Partial<PlatformSiteLandingCopy>;
+    },
   ): Promise<PlatformSiteConfig> {
     const current = await this.get();
     const next = this.merge(current, patch);
     await this.ensureTableAndDefaultRow();
     const json = JSON.stringify(next);
-    await this.pg.exec(`UPDATE platform_site_config SET payload_json = ? WHERE id = 'default'`, [json]);
+    await this.pg.exec(
+      `UPDATE platform_site_config SET payload_json = ? WHERE id = 'default'`,
+      [json],
+    );
     return next;
   }
 }

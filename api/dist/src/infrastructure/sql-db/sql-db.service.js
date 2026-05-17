@@ -36,7 +36,9 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         this.logger = new common_1.Logger(SqlDbService_1.name);
     }
     async onModuleInit() {
-        const runOnStart = ['1', 'true', 'yes', 'on'].includes(String(process.env.DB_BOOTSTRAP_ON_START ?? '').trim().toLowerCase());
+        const runOnStart = ['1', 'true', 'yes', 'on'].includes(String(process.env.DB_BOOTSTRAP_ON_START ?? '')
+            .trim()
+            .toLowerCase());
         if (runOnStart) {
             await this.runBootstrapInternal('arranque (DB_BOOTSTRAP_ON_START)');
             return;
@@ -58,7 +60,10 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         }
         catch (err) {
             const code = err.code;
-            const isConn = code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT' || code === 'EAI_AGAIN';
+            const isConn = code === 'ECONNREFUSED' ||
+                code === 'ENOTFOUND' ||
+                code === 'ETIMEDOUT' ||
+                code === 'EAI_AGAIN';
             if (isConn) {
                 this.logger.error(`No hay conexion a PostgreSQL via DATABASE_URL. ` +
                     `Verifica credenciales/red de Neon y vuelve a intentar. ` +
@@ -77,7 +82,10 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         }
         catch (err) {
             const code = err.code;
-            const isConn = code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT' || code === 'EAI_AGAIN';
+            const isConn = code === 'ECONNREFUSED' ||
+                code === 'ENOTFOUND' ||
+                code === 'ETIMEDOUT' ||
+                code === 'EAI_AGAIN';
             if (isConn) {
                 this.logger.error('No hay conexion a PostgreSQL via DATABASE_URL. Verifica Neon y ejecuta npm run db:bootstrap.');
             }
@@ -420,7 +428,9 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         for (const tenant of tenants) {
             let start = new Date(tenant.currentPeriodStart);
             let end = new Date(tenant.currentPeriodEnd);
-            const invalidRange = Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start;
+            const invalidRange = Number.isNaN(start.getTime()) ||
+                Number.isNaN(end.getTime()) ||
+                end <= start;
             if (invalidRange) {
                 start = now;
                 end = new Date(this.tenants.computeBillingCycleEnd(start.toISOString(), tenant.billingCycle));
@@ -487,7 +497,11 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             password: 'azenda123',
             role: auth_types_1.UserRole.SUPER_ADMIN,
             tenantId: null,
-            systems: [auth_types_1.AppSystem.SUPER_ADMIN, auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING],
+            systems: [
+                auth_types_1.AppSystem.SUPER_ADMIN,
+                auth_types_1.AppSystem.TENANT,
+                auth_types_1.AppSystem.PUBLIC_BOOKING,
+            ],
             status: 'ACTIVE',
         });
         await this.ensureSeedUser({

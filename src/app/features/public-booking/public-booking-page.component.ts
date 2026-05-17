@@ -26,33 +26,28 @@ import {
   canClientRescheduleLookupAppointment,
   splitLookupYmdHhmm,
 } from './public-booking-page.utils';
-
-interface PublicBookingServiceRow {
-  id: string;
-  name: string;
-  description: string | null;
-  priceLabel: string | null;
-  promoLabel: string | null;
-  fullValue: string;
-}
-
-interface PublicBookingDayChip {
-  isoDate: string;
-  dayShort: string;
-  dayNum: string;
-}
-
-interface PublicBookingEmployeeOption {
-  id: string;
-  name: string;
-  subtitle: string;
-}
-
-type PublicBookingPeriod = 'manana' | 'tarde' | 'noche';
+import type {
+  PublicBookingDayChip,
+  PublicBookingEmployeeOption,
+  PublicBookingPeriod,
+  PublicBookingServiceRow,
+} from './public-booking.types';
+import { PublicBookingConfirmStepComponent } from './steps/public-booking-confirm-step.component';
+import { PublicBookingScheduleStepComponent } from './steps/public-booking-schedule-step.component';
+import { PublicBookingServiceStepComponent } from './steps/public-booking-service-step.component';
+import { tenantBrandingCssVars } from '../../core/tenant-branding-css';
 
 @Component({
   selector: 'app-public-booking-page',
-  imports: [RouterLink, ReactiveFormsModule, NgStyle, FormatCopPipe],
+  imports: [
+    RouterLink,
+    ReactiveFormsModule,
+    NgStyle,
+    FormatCopPipe,
+    PublicBookingServiceStepComponent,
+    PublicBookingScheduleStepComponent,
+    PublicBookingConfirmStepComponent,
+  ],
   templateUrl: './public-booking-page.component.html',
   styleUrl: './public-booking-page.component.scss',
 })
@@ -296,7 +291,7 @@ export class PublicBookingPageComponent {
 
   readonly catalogLayout = computed(() => this.branding().catalogLayout ?? 'horizontal');
   readonly styleVars = computed(() =>
-    this.data.brandingCssVars(this.branding(), this.session.darkMode()),
+    tenantBrandingCssVars(this.branding(), this.session.darkMode()),
   );
 
   /** Información legal/operativa antes de confirmar (negocio + textos por defecto claros). */

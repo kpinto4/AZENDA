@@ -148,8 +148,7 @@ let TenantRepository = class TenantRepository {
         const now = new Date();
         const defaultCycle = data.billingCycle ?? 'MONTHLY';
         const periodStart = data.currentPeriodStart ?? now.toISOString();
-        const periodEnd = data.currentPeriodEnd ??
-            this.computeCycleEnd(periodStart, defaultCycle);
+        const periodEnd = data.currentPeriodEnd ?? this.computeCycleEnd(periodStart, defaultCycle);
         const plan = data.plan ?? 'Trial';
         const catalogPrices = await this.getPlanCatalogPrices(plan);
         const row = {
@@ -204,7 +203,9 @@ let TenantRepository = class TenantRepository {
             slug: patch.slug ?? current.slug,
             status: patch.status ?? current.status,
             plan: patch.plan ?? current.plan,
-            storefrontEnabled: patch.storefrontEnabled !== undefined ? patch.storefrontEnabled : current.storefrontEnabled,
+            storefrontEnabled: patch.storefrontEnabled !== undefined
+                ? patch.storefrontEnabled
+                : current.storefrontEnabled,
             manualBookingEnabled: patch.manualBookingEnabled !== undefined
                 ? patch.manualBookingEnabled
                 : current.manualBookingEnabled,

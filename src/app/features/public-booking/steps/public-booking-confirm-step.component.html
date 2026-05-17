@@ -1,0 +1,89 @@
+<h1 class="panel-lead">3. Resumen y datos</h1>
+<p class="muted lead-caption">Revisa tu selección y confirma con tus datos.</p>
+@if (bookingError()) {
+  <p class="muted field-error">{{ bookingError() }}</p>
+}
+<form [formGroup]="confirmForm()" (ngSubmit)="submitConfirm.emit()">
+  <div class="summary summary--pro">
+    <div><span>Servicio</span><strong>{{ selectedService() || '—' }}</strong></div>
+    <div>
+      <span>Fecha</span>
+      <strong>{{ selectedDate() || '—' }} {{ selectedSlot() || '—' }}</strong>
+    </div>
+    <div>
+      <span>Empleado</span>
+      <strong>{{ selectedEmployeeLabel() || '—' }}</strong>
+    </div>
+  </div>
+  @let bic = bookingClientTexts();
+  <div class="booking-info-card">
+    <h2 class="booking-info-title">Antes de confirmar</h2>
+    @if (bic.address || bic.mapsUrl) {
+      <div class="booking-info-block">
+        <span class="booking-info-label">Ubicación / cómo llegar</span>
+        @if (bic.address) {
+          <p class="booking-info-p">{{ bic.address }}</p>
+        }
+        @if (bic.mapsUrl) {
+          <a class="booking-info-link" [href]="bic.mapsUrl!" target="_blank" rel="noopener noreferrer"
+            >Ver en mapa o enlace del negocio</a
+          >
+        }
+      </div>
+    }
+    <div class="booking-info-block">
+      <span class="booking-info-label">Cancelaciones y cambios</span>
+      <p class="booking-info-p">{{ bic.cancellation }}</p>
+    </div>
+    <div class="booking-info-block">
+      <span class="booking-info-label">Contacto y recordatorios</span>
+      <p class="booking-info-p">{{ bic.reminder }}</p>
+    </div>
+  </div>
+  <label class="az-label" for="name">Nombre</label>
+  <input
+    id="name"
+    class="az-input wide"
+    formControlName="name"
+    autocomplete="name"
+    enterkeyhint="next"
+  />
+  <label class="az-label" for="phone">Teléfono (móvil recomendado)</label>
+  <input
+    id="phone"
+    class="az-input wide"
+    formControlName="phone"
+    type="tel"
+    inputmode="tel"
+    autocomplete="tel"
+    enterkeyhint="done"
+    placeholder="Ej.: 600123456 o +34600123456"
+  />
+  <div class="wa-opt-in">
+    <label class="wa-opt-in-label" for="wa-rem">
+      <input id="wa-rem" type="checkbox" formControlName="waReminderConsent" />
+      <span class="wa-opt-in-text">
+        <strong>Comparto móvil para WhatsApp con el negocio</strong>
+        <span class="muted wa-opt-in-note">
+          El negocio podrá escribirte desde su WhatsApp (recordatorios manuales). Requiere un número válido.
+        </span>
+      </span>
+    </label>
+  </div>
+  <div class="booking-bottom-bar" id="booking-confirm-anchor">
+    <div class="booking-total">
+      <span>Total</span>
+      <strong>{{ selectedServicePriceLabel() || '—' }}</strong>
+    </div>
+    <div class="row-btns">
+      <button type="button" class="az-btn az-btn-ghost" (click)="back.emit()">Atrás</button>
+      <button
+        type="submit"
+        class="az-btn az-btn-primary booking-confirm-btn"
+        [disabled]="bookingSubmitting() || !selectedService() || !selectedDate() || !selectedSlot() || !selectedEmployeeId()"
+      >
+        {{ bookingSubmitting() ? 'Enviando…' : 'Confirmar reserva' }}
+      </button>
+    </div>
+  </div>
+</form>

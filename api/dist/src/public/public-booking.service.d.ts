@@ -6,9 +6,11 @@ import { CreatePublicAppointmentDto } from './dto/create-public-appointment.dto'
 import { CreatePublicStoreVisitDto } from './dto/create-public-store-visit.dto';
 import { LookupPublicAppointmentsDto } from './dto/lookup-public-appointments.dto';
 import { ReschedulePublicAppointmentDto } from './dto/reschedule-public-appointment.dto';
+import { BookingNotificationService } from './booking-notification.service';
 export declare class PublicBookingService {
     private readonly sqlDb;
-    constructor(sqlDb: SqlDbService);
+    private readonly bookingNotifications;
+    constructor(sqlDb: SqlDbService, bookingNotifications: BookingNotificationService);
     private listActivePublicEmployees;
     private computeOpenSlotsForDate;
     getSiteConfig(): Promise<import("../infrastructure/sql-db/sql-db.types").PlatformSiteConfig>;

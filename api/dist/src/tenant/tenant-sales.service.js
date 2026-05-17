@@ -54,7 +54,9 @@ let TenantSalesService = class TenantSalesService {
                 throw new common_1.BadRequestException(`Stock insuficiente para ${product.name} (disponible: ${product.stock})`);
             }
             const nextStock = product.stock - qty;
-            await this.sqlDb.updateTenantProduct(tenantId, product.id, { stock: nextStock });
+            await this.sqlDb.updateTenantProduct(tenantId, product.id, {
+                stock: nextStock,
+            });
             stockNote = `Stock: −${qty} · ${product.name}`;
         }
         return this.sqlDb.insertTenantSale({

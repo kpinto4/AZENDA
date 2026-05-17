@@ -10,11 +10,15 @@ function mapTenantBrandingRow(row) {
         publicMapsUrl: row.public_maps_url == null ? null : String(row.public_maps_url),
         cancellationPolicy: row.cancellation_policy == null ? null : String(row.cancellation_policy),
         reminderNotice: row.reminder_notice == null ? null : String(row.reminder_notice),
-        whatsappPhoneE164: row.whatsapp_phone_e164 == null || String(row.whatsapp_phone_e164).trim() === ''
+        whatsappPhoneE164: row.whatsapp_phone_e164 == null ||
+            String(row.whatsapp_phone_e164).trim() === ''
             ? null
             : String(row.whatsapp_phone_e164).replace(/\D/g, '') || null,
-        whatsappDefaultMessage: row.whatsapp_default_message == null ? null : String(row.whatsapp_default_message),
-        publicBookingHoursJson: row.public_booking_hours_json == null || String(row.public_booking_hours_json).trim() === ''
+        whatsappDefaultMessage: row.whatsapp_default_message == null
+            ? null
+            : String(row.whatsapp_default_message),
+        publicBookingHoursJson: row.public_booking_hours_json == null ||
+            String(row.public_booking_hours_json).trim() === ''
             ? null
             : String(row.public_booking_hours_json),
         catalogLayout: row.catalog_layout === 'grid' ? 'grid' : 'horizontal',

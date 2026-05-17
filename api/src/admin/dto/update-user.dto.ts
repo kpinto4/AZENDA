@@ -1,4 +1,11 @@
-import { IsArray, IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsArray,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 import { AppSystem, UserRole } from '../../auth/auth.types';
 
 export class UpdateUserDto {
@@ -12,7 +19,12 @@ export class UpdateUserDto {
   password?: string;
 
   @IsOptional()
-  @IsIn([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLEADO, UserRole.CLIENTE_FINAL])
+  @IsIn([
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.EMPLEADO,
+    UserRole.CLIENTE_FINAL,
+  ])
   role?: UserRole;
 
   @IsOptional()

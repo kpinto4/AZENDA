@@ -1,4 +1,10 @@
-import { Controller, ForbiddenException, Get, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  ForbiddenException,
+  Get,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Request } from 'express';
 import { AuthUser, AppSystem, UserRole } from '../auth/auth.types';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -25,7 +31,9 @@ export class TenantStoreVisitsController {
     }
     const tenant = await this.sqlDb.findTenantById(user.tenantId);
     if (!tenant?.modules.ventas) {
-      throw new ForbiddenException('El modulo de ventas no esta activo para este tenant');
+      throw new ForbiddenException(
+        'El modulo de ventas no esta activo para este tenant',
+      );
     }
     return this.sqlDb.listStoreVisitsByTenantId(user.tenantId);
   }

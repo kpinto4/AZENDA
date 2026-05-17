@@ -27,7 +27,12 @@ exports.TenantModule = TenantModule = __decorate([
             tenant_store_visits_controller_1.TenantStoreVisitsController,
             tenant_sales_controller_1.TenantSalesController,
         ],
-        providers: [tenant_service_1.TenantService, tenant_appointments_service_1.TenantAppointmentsService, tenant_sales_service_1.TenantSalesService, tenant_status_guard_1.TenantStatusGuard],
+        providers: [
+            tenant_service_1.TenantService,
+            tenant_appointments_service_1.TenantAppointmentsService,
+            tenant_sales_service_1.TenantSalesService,
+            tenant_status_guard_1.TenantStatusGuard,
+        ],
     })
 ], TenantModule);
 //# sourceMappingURL=tenant.module.js.map

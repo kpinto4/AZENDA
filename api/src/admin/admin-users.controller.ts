@@ -63,7 +63,10 @@ export class AdminUsersController {
   }
 
   @Patch(':userId')
-  async updateUser(@Param('userId') userId: string, @Body() body: UpdateUserDto) {
+  async updateUser(
+    @Param('userId') userId: string,
+    @Body() body: UpdateUserDto,
+  ) {
     const updated = await this.adminUsers.update(userId, {
       email: body.email,
       password: body.password,

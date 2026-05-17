@@ -89,9 +89,12 @@ let UserRepository = UserRepository_1 = class UserRepository {
             return undefined;
         }
         let nextPassword = current.password;
-        if (patch.password !== undefined && String(patch.password).trim().length > 0) {
+        if (patch.password !== undefined &&
+            String(patch.password).trim().length > 0) {
             const p = String(patch.password);
-            nextPassword = this.passwordService.isBcryptHash(p) ? p : await this.passwordService.hash(p);
+            nextPassword = this.passwordService.isBcryptHash(p)
+                ? p
+                : await this.passwordService.hash(p);
         }
         const next = {
             id: current.id,
@@ -130,7 +133,10 @@ let UserRepository = UserRepository_1 = class UserRepository {
         if (!existing || existing.tenantId !== tenantId) {
             return false;
         }
-        await this.pg.exec(`DELETE FROM users WHERE id = ? AND tenant_id = ?`, [userId, tenantId]);
+        await this.pg.exec(`DELETE FROM users WHERE id = ? AND tenant_id = ?`, [
+            userId,
+            tenantId,
+        ]);
         return true;
     }
     async migrateLegacyPlaintextPasswords() {
@@ -139,7 +145,10 @@ let UserRepository = UserRepository_1 = class UserRepository {
             const id = String(r.id);
             const plain = String(r.password);
             const hash = await this.passwordService.hash(plain);
-            await this.pg.exec(`UPDATE users SET password = ? WHERE id = ?`, [hash, id]);
+            await this.pg.exec(`UPDATE users SET password = ? WHERE id = ?`, [
+                hash,
+                id,
+            ]);
             this.logger.log(`Clave de usuario ${id} migrada a hash (login compatible).`);
         }
     }

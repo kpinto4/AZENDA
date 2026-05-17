@@ -72,7 +72,8 @@ let TenantBrandingRepository = class TenantBrandingRepository {
             whatsappDefaultMessage: strOrNull(patch.whatsappDefaultMessage, current.whatsappDefaultMessage),
             publicBookingHoursJson: patch.publicBookingHoursJson === undefined
                 ? current.publicBookingHoursJson
-                : patch.publicBookingHoursJson === null || String(patch.publicBookingHoursJson).trim() === ''
+                : patch.publicBookingHoursJson === null ||
+                    String(patch.publicBookingHoursJson).trim() === ''
                     ? null
                     : String(patch.publicBookingHoursJson).trim(),
             catalogLayout: patch.catalogLayout === 'grid' || patch.catalogLayout === 'horizontal'

@@ -26,7 +26,9 @@ export function weeklyHoursToJson(h: WeeklyBusinessHours): string {
   return JSON.stringify(h);
 }
 
-export function parseWeeklyHoursJson(raw: string | null | undefined): WeeklyBusinessHours | null {
+export function parseWeeklyHoursJson(
+  raw: string | null | undefined,
+): WeeklyBusinessHours | null {
   if (raw == null || String(raw).trim() === '') {
     return null;
   }
@@ -49,7 +51,10 @@ export function parseWeeklyHoursJson(raw: string | null | undefined): WeeklyBusi
         const o = item as Record<string, unknown>;
         const open = String(o.open ?? '').trim();
         const close = String(o.close ?? '').trim();
-        if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(open) || !/^([01]?\d|2[0-3]):[0-5]\d$/.test(close)) {
+        if (
+          !/^([01]?\d|2[0-3]):[0-5]\d$/.test(open) ||
+          !/^([01]?\d|2[0-3]):[0-5]\d$/.test(close)
+        ) {
           continue;
         }
         const oMin = timeToMinutes(open);
@@ -92,7 +97,11 @@ function dayCodeForYmd(dateYmd: string): DayCode | null {
   const mo = Number(p[2]);
   const d = Number(p[3]);
   const dt = new Date(y, mo - 1, d, 12, 0, 0, 0);
-  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) {
+  if (
+    dt.getFullYear() !== y ||
+    dt.getMonth() !== mo - 1 ||
+    dt.getDate() !== d
+  ) {
     return null;
   }
   return JS_TO_DAY[dt.getDay()];
@@ -108,7 +117,10 @@ export function slotsForPublicBookingDate(
   now: Date,
   stepMinutes = 30,
 ): string[] {
-  const effective = weekly && Object.keys(weekly).length ? weekly : defaultWeeklyBusinessHours();
+  const effective =
+    weekly && Object.keys(weekly).length
+      ? weekly
+      : defaultWeeklyBusinessHours();
   const day = dayCodeForYmd(dateYmd);
   if (!day) {
     return [];

@@ -1,4 +1,8 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { AuthUser } from '../auth/auth.types';
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
 import { CreateTenantSaleDto } from './dto/create-tenant-sale.dto';
@@ -13,7 +17,9 @@ export class TenantSalesService {
     }
     const tenant = await this.sqlDb.findTenantById(user.tenantId);
     if (!tenant?.modules.ventas) {
-      throw new ForbiddenException('El modulo de ventas no esta activo para este tenant');
+      throw new ForbiddenException(
+        'El modulo de ventas no esta activo para este tenant',
+      );
     }
     return user.tenantId;
   }
@@ -30,9 +36,13 @@ export class TenantSalesService {
 
     let linkedAppointmentId: string | null = null;
     if (dto.linkedAppointmentId?.trim()) {
-      const appt = await this.sqlDb.findAppointmentById(dto.linkedAppointmentId.trim());
+      const appt = await this.sqlDb.findAppointmentById(
+        dto.linkedAppointmentId.trim(),
+      );
       if (!appt || appt.tenantId !== tenantId) {
-        throw new BadRequestException('La cita vinculada no existe o no pertenece a este negocio');
+        throw new BadRequestException(
+          'La cita vinculada no existe o no pertenece a este negocio',
+        );
       }
       linkedAppointmentId = appt.id;
     }
@@ -46,10 +56,14 @@ export class TenantSalesService {
         throw new BadRequestException('Producto no encontrado en el catalogo');
       }
       if (product.stock < qty) {
-        throw new BadRequestException(`Stock insuficiente para ${product.name} (disponible: ${product.stock})`);
+        throw new BadRequestException(
+          `Stock insuficiente para ${product.name} (disponible: ${product.stock})`,
+        );
       }
       const nextStock = product.stock - qty;
-      await this.sqlDb.updateTenantProduct(tenantId, product.id, { stock: nextStock });
+      await this.sqlDb.updateTenantProduct(tenantId, product.id, {
+        stock: nextStock,
+      });
       stockNote = `Stock: −${qty} · ${product.name}`;
     }
 

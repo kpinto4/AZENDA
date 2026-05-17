@@ -41,7 +41,9 @@ describe('auth.guards', () => {
       TestBed.inject(MockSessionService).logout();
       const router = TestBed.inject(Router);
       const out = TestBed.runInInjectionContext(() => tenantGuard({} as never, {} as never));
-      expect(router.serializeUrl(out as never)).toContain('redirect=%2Fapp');
+      const url = router.serializeUrl(out as never);
+      expect(url).toContain('/auth/iniciar-sesion');
+      expect(url).toContain('redirect=%2Fapp');
     });
   });
 

@@ -16,6 +16,7 @@ const customer_name_match_util_1 = require("../common/customer-name-match.util")
 const phone_e164_util_1 = require("../common/phone-e164.util");
 const public_booking_hours_util_1 = require("../common/public-booking-hours.util");
 const sql_db_service_1 = require("../infrastructure/sql-db/sql-db.service");
+const booking_notification_service_1 = require("./booking-notification.service");
 function catalogoPublicoActivo(t) {
     const planOk = t.plan === 'Pro' || t.plan === 'Negocio';
     return (planOk &&
@@ -48,7 +49,9 @@ function parseYmd(value) {
         return null;
     }
     const dt = new Date(y, mo - 1, d);
-    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) {
+    if (dt.getFullYear() !== y ||
+        dt.getMonth() !== mo - 1 ||
+        dt.getDate() !== d) {
         return null;
     }
     return dt;
@@ -101,12 +104,14 @@ function applyUnknownOccupancy(employeeIds, knownTaken, unknownCount) {
     return out;
 }
 let PublicBookingService = class PublicBookingService {
-    constructor(sqlDb) {
+    constructor(sqlDb, bookingNotifications) {
         this.sqlDb = sqlDb;
+        this.bookingNotifications = bookingNotifications;
     }
     listActivePublicEmployees(users) {
         return users
-            .filter((u) => u.status === 'ACTIVE' && (u.role === auth_types_1.UserRole.ADMIN || u.role === auth_types_1.UserRole.EMPLEADO))
+            .filter((u) => u.status === 'ACTIVE' &&
+            (u.role === auth_types_1.UserRole.ADMIN || u.role === auth_types_1.UserRole.EMPLEADO))
             .map((u) => ({
             id: u.id,
             name: displayNameFromEmail(u.email),
@@ -185,7 +190,8 @@ let PublicBookingService = class PublicBookingService {
         const openSlots = this.computeOpenSlotsForDate(normalizedDate, branding.publicBookingHoursJson);
         const appointmentsBySlot = new Map();
         for (const appt of appointments) {
-            if (!appt.when.startsWith(`${normalizedDate} `) || appt.status === 'cancelada') {
+            if (!appt.when.startsWith(`${normalizedDate} `) ||
+                appt.status === 'cancelada') {
                 continue;
             }
             const slot = appt.when.slice(11, 16);
@@ -241,7 +247,8 @@ let PublicBookingService = class PublicBookingService {
         ]);
         const employees = this.listActivePublicEmployees(users);
         const requestedEmployeeId = dto.employeeId?.trim() || '';
-        if (requestedEmployeeId && !employees.some((e) => e.id === requestedEmployeeId)) {
+        if (requestedEmployeeId &&
+            !employees.some((e) => e.id === requestedEmployeeId)) {
             throw new common_1.ForbiddenException('Empleado invalido o no disponible para este negocio');
         }
         const datePart = dto.when.slice(0, 10);
@@ -260,7 +267,9 @@ let PublicBookingService = class PublicBookingService {
             }
         }
         else {
-            const knownOccupied = new Set(sameMoment.map((a) => readEmployeeIdFromService(a.service)).filter(Boolean));
+            const knownOccupied = new Set(sameMoment
+                .map((a) => readEmployeeIdFromService(a.service))
+                .filter(Boolean));
             const unknownCount = sameMoment.filter((a) => !readEmployeeIdFromService(a.service)).length;
             const occupied = applyUnknownOccupancy(employees.map((e) => e.id), knownOccupied, unknownCount);
             const freeEmployee = employees.find((e) => !occupied.has(e.id));
@@ -275,7 +284,7 @@ let PublicBookingService = class PublicBookingService {
         if (consent && !phoneDigits) {
             throw new common_1.BadRequestException('Para facilitar el contacto por WhatsApp indica un telefono valido (prefijo internacional o 9 cifras en España).');
         }
-        return this.sqlDb.createAppointment({
+        const appointment = await this.sqlDb.createAppointment({
             tenantId: tenant.id,
             customer: dto.customer.trim(),
             service: `${dto.service} · EmpleadoId:${employeeId || 'any'}`,
@@ -284,6 +293,18 @@ let PublicBookingService = class PublicBookingService {
             customerPhoneE164: consent ? phoneDigits : null,
             waReminderConsent: consent,
         });
+        void this.bookingNotifications
+            .onBookingCreated({
+            tenantSlug: slug,
+            tenantName: tenant.name,
+            appointmentId: appointment.id,
+            customer: appointment.customer,
+            service: dto.service,
+            when: appointment.when,
+            customerPhoneE164: appointment.customerPhoneE164 ?? null,
+        })
+            .catch(() => undefined);
+        return appointment;
     }
     async reprogramarCita(slug, dto) {
         const tenant = await this.sqlDb.findTenantBySlug(slug);
@@ -320,7 +341,8 @@ let PublicBookingService = class PublicBookingService {
         const employees = this.listActivePublicEmployees(users);
         const rawEmp = (dto.employeeId ?? '').trim();
         const requestedEmployeeId = rawEmp === 'any' ? '' : rawEmp;
-        if (requestedEmployeeId && !employees.some((e) => e.id === requestedEmployeeId)) {
+        if (requestedEmployeeId &&
+            !employees.some((e) => e.id === requestedEmployeeId)) {
             throw new common_1.ForbiddenException('Empleado invalido o no disponible para este negocio');
         }
         const datePart = dto.when.slice(0, 10);
@@ -349,7 +371,9 @@ let PublicBookingService = class PublicBookingService {
                 }
             }
             else {
-                const knownOccupied = new Set(sameMoment.map((a) => readEmployeeIdFromService(a.service)).filter(Boolean));
+                const knownOccupied = new Set(sameMoment
+                    .map((a) => readEmployeeIdFromService(a.service))
+                    .filter(Boolean));
                 const unknownCount = sameMoment.filter((a) => !readEmployeeIdFromService(a.service)).length;
                 const occupied = applyUnknownOccupancy(employees.map((e) => e.id), knownOccupied, unknownCount);
                 const freeEmployee = employees.find((e) => !occupied.has(e.id));
@@ -420,6 +444,7 @@ let PublicBookingService = class PublicBookingService {
 exports.PublicBookingService = PublicBookingService;
 exports.PublicBookingService = PublicBookingService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [sql_db_service_1.SqlDbService])
+    __metadata("design:paramtypes", [sql_db_service_1.SqlDbService,
+        booking_notification_service_1.BookingNotificationService])
 ], PublicBookingService);
 //# sourceMappingURL=public-booking.service.js.map

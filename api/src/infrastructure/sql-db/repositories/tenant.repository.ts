@@ -25,11 +25,17 @@ export class TenantRepository {
 
   private mapTenantRow(row: Record<string, unknown>): TenantEntity {
     const planRaw = row.plan;
-    const plan = typeof planRaw === 'string' && planRaw.length ? planRaw : 'Trial';
+    const plan =
+      typeof planRaw === 'string' && planRaw.length ? planRaw : 'Trial';
     const billingCycleRaw = String(row.billing_cycle ?? 'MONTHLY');
-    const billingCycle: BillingCycle = billingCycleRaw === 'YEARLY' ? 'YEARLY' : 'MONTHLY';
-    const currentPeriodStart = String(row.current_period_start ?? '2026-01-01T00:00:00.000Z');
-    const currentPeriodEnd = String(row.current_period_end ?? '2026-02-01T00:00:00.000Z');
+    const billingCycle: BillingCycle =
+      billingCycleRaw === 'YEARLY' ? 'YEARLY' : 'MONTHLY';
+    const currentPeriodStart = String(
+      row.current_period_start ?? '2026-01-01T00:00:00.000Z',
+    );
+    const currentPeriodEnd = String(
+      row.current_period_end ?? '2026-02-01T00:00:00.000Z',
+    );
     const nextRenewalAt = String(row.next_renewal_at ?? currentPeriodEnd);
     return {
       id: String(row.id),
@@ -42,7 +48,9 @@ export class TenantRepository {
       billingCycle,
       planPriceMonthly: Math.max(0, Number(row.plan_price_monthly ?? 0)),
       planPriceYearly: Math.max(0, Number(row.plan_price_yearly ?? 0)),
-      subscriptionStartedAt: String(row.subscription_started_at ?? currentPeriodStart),
+      subscriptionStartedAt: String(
+        row.subscription_started_at ?? currentPeriodStart,
+      ),
       currentPeriodStart,
       currentPeriodEnd,
       nextRenewalAt,
@@ -66,7 +74,9 @@ export class TenantRepository {
     };
   }
 
-  async fetchPlanCatalogMap(): Promise<Map<string, { monthly: number; yearly: number }>> {
+  async fetchPlanCatalogMap(): Promise<
+    Map<string, { monthly: number; yearly: number }>
+  > {
     try {
       const rows = await this.pg.queryRows(
         `SELECT plan_key, price_monthly, price_yearly FROM plan_catalog`,
@@ -89,14 +99,18 @@ export class TenantRepository {
     }
   }
 
-  async getPlanCatalogPrices(planKey: string): Promise<{ monthly: number; yearly: number }> {
+  async getPlanCatalogPrices(
+    planKey: string,
+  ): Promise<{ monthly: number; yearly: number }> {
     try {
       const row = await this.pg.queryOne(
         `SELECT price_monthly, price_yearly FROM plan_catalog WHERE plan_key = ?`,
         [planKey],
       );
       if (!row) {
-        const fallback = DEFAULT_PLAN_CATALOG_SEED.find((e) => e.planKey === planKey);
+        const fallback = DEFAULT_PLAN_CATALOG_SEED.find(
+          (e) => e.planKey === planKey,
+        );
         return {
           monthly: fallback?.priceMonthly ?? 0,
           yearly: fallback?.priceYearly ?? 0,
@@ -107,7 +121,9 @@ export class TenantRepository {
         yearly: Math.max(0, Number(row.price_yearly ?? 0)),
       };
     } catch {
-      const fallback = DEFAULT_PLAN_CATALOG_SEED.find((e) => e.planKey === planKey);
+      const fallback = DEFAULT_PLAN_CATALOG_SEED.find(
+        (e) => e.planKey === planKey,
+      );
       return {
         monthly: fallback?.priceMonthly ?? 0,
         yearly: fallback?.priceYearly ?? 0,
@@ -126,7 +142,10 @@ export class TenantRepository {
       `,
     );
     return rows.map((row) =>
-      this.mergeTenantWithCatalog(this.mapTenantRow(row as Record<string, unknown>), catalog),
+      this.mergeTenantWithCatalog(
+        this.mapTenantRow(row as Record<string, unknown>),
+        catalog,
+      ),
     );
   }
 
@@ -190,8 +209,7 @@ export class TenantRepository {
     const defaultCycle: BillingCycle = data.billingCycle ?? 'MONTHLY';
     const periodStart = data.currentPeriodStart ?? now.toISOString();
     const periodEnd =
-      data.currentPeriodEnd ??
-      this.computeCycleEnd(periodStart, defaultCycle);
+      data.currentPeriodEnd ?? this.computeCycleEnd(periodStart, defaultCycle);
     const plan = data.plan ?? 'Trial';
     const catalogPrices = await this.getPlanCatalogPrices(plan);
     const row: TenantEntity = {
@@ -258,7 +276,9 @@ export class TenantRepository {
       status: patch.status ?? current.status,
       plan: patch.plan ?? current.plan,
       storefrontEnabled:
-        patch.storefrontEnabled !== undefined ? patch.storefrontEnabled : current.storefrontEnabled,
+        patch.storefrontEnabled !== undefined
+          ? patch.storefrontEnabled
+          : current.storefrontEnabled,
       manualBookingEnabled:
         patch.manualBookingEnabled !== undefined
           ? patch.manualBookingEnabled
@@ -266,8 +286,10 @@ export class TenantRepository {
       billingCycle: patch.billingCycle ?? current.billingCycle,
       planPriceMonthly: current.planPriceMonthly,
       planPriceYearly: current.planPriceYearly,
-      subscriptionStartedAt: patch.subscriptionStartedAt ?? current.subscriptionStartedAt,
-      currentPeriodStart: patch.currentPeriodStart ?? current.currentPeriodStart,
+      subscriptionStartedAt:
+        patch.subscriptionStartedAt ?? current.subscriptionStartedAt,
+      currentPeriodStart:
+        patch.currentPeriodStart ?? current.currentPeriodStart,
       currentPeriodEnd: patch.currentPeriodEnd ?? current.currentPeriodEnd,
       nextRenewalAt: patch.nextRenewalAt ?? current.nextRenewalAt,
       modules: {
@@ -325,7 +347,10 @@ export class TenantRepository {
   /**
    * Inserta fila por defecto en `tenant_branding` si no existe (tras crear tenant).
    */
-  async ensureDefaultBranding(tenantId: string, tenantName: string): Promise<TenantBrandingEntity> {
+  async ensureDefaultBranding(
+    tenantId: string,
+    tenantName: string,
+  ): Promise<TenantBrandingEntity> {
     const existing = await this.pg.queryOne(
       `
         SELECT tenant_id, display_name, logo_url, public_address, public_maps_url, cancellation_policy, reminder_notice,
@@ -363,7 +388,9 @@ export class TenantRepository {
       [tenantId],
     );
     if (!loaded) {
-      throw new Error(`No se pudo cargar tenant_branding tras insert (${tenantId}).`);
+      throw new Error(
+        `No se pudo cargar tenant_branding tras insert (${tenantId}).`,
+      );
     }
     return mapTenantBrandingRow(loaded as Record<string, unknown>);
   }
@@ -384,13 +411,17 @@ export class TenantRepository {
         priceYearly: Math.max(0, Number(r.price_yearly ?? 0)),
       }));
       const order = ['Trial', 'Básico', 'Pro', 'Negocio'];
-      return mapped.sort((a, b) => order.indexOf(a.planKey) - order.indexOf(b.planKey));
+      return mapped.sort(
+        (a, b) => order.indexOf(a.planKey) - order.indexOf(b.planKey),
+      );
     } catch {
       return [...DEFAULT_PLAN_CATALOG_SEED];
     }
   }
 
-  async replacePlanCatalog(entries: PlanCatalogEntry[]): Promise<PlanCatalogEntry[]> {
+  async replacePlanCatalog(
+    entries: PlanCatalogEntry[],
+  ): Promise<PlanCatalogEntry[]> {
     await this.ensurePlanCatalogTable();
     for (const e of entries) {
       await this.pg.exec(

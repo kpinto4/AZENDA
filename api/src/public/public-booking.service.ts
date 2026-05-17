@@ -8,14 +8,22 @@ import {
 import { UserRole } from '../auth/auth.types';
 import { publicCustomerNameMatches } from '../common/customer-name-match.util';
 import { normalizePhoneToWaDigits } from '../common/phone-e164.util';
-import { parseWeeklyHoursJson, slotsForPublicBookingDate } from '../common/public-booking-hours.util';
+import {
+  parseWeeklyHoursJson,
+  slotsForPublicBookingDate,
+} from '../common/public-booking-hours.util';
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
-import { AppointmentEntity, TenantEntity, UserEntity } from '../infrastructure/sql-db/sql-db.types';
+import {
+  AppointmentEntity,
+  TenantEntity,
+  UserEntity,
+} from '../infrastructure/sql-db/sql-db.types';
 import { ConfirmPublicAttendanceDto } from './dto/confirm-public-attendance.dto';
 import { CreatePublicAppointmentDto } from './dto/create-public-appointment.dto';
 import { CreatePublicStoreVisitDto } from './dto/create-public-store-visit.dto';
 import { LookupPublicAppointmentsDto } from './dto/lookup-public-appointments.dto';
 import { ReschedulePublicAppointmentDto } from './dto/reschedule-public-appointment.dto';
+import { BookingNotificationService } from './booking-notification.service';
 
 function catalogoPublicoActivo(t: TenantEntity): boolean {
   const planOk = t.plan === 'Pro' || t.plan === 'Negocio';
@@ -53,7 +61,11 @@ function parseYmd(value: string): Date | null {
     return null;
   }
   const dt = new Date(y, mo - 1, d);
-  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) {
+  if (
+    dt.getFullYear() !== y ||
+    dt.getMonth() !== mo - 1 ||
+    dt.getDate() !== d
+  ) {
     return null;
   }
   return dt;
@@ -83,7 +95,9 @@ function publicAppointmentStartMs(when: string): number | null {
 
 const PUBLIC_RESCHEDULE_MIN_LEAD_MS = 90 * 60 * 1000;
 
-function publicServiceLabelForLookup(service: string | null | undefined): string {
+function publicServiceLabelForLookup(
+  service: string | null | undefined,
+): string {
   const s = service == null ? '' : String(service);
   const marker = '· Empleado';
   const idx = s.indexOf(marker);
@@ -122,13 +136,17 @@ function applyUnknownOccupancy(
  */
 @Injectable()
 export class PublicBookingService {
-  constructor(private readonly sqlDb: SqlDbService) {}
+  constructor(
+    private readonly sqlDb: SqlDbService,
+    private readonly bookingNotifications: BookingNotificationService,
+  ) {}
 
   private listActivePublicEmployees(users: UserEntity[]) {
     return users
       .filter(
         (u) =>
-          u.status === 'ACTIVE' && (u.role === UserRole.ADMIN || u.role === UserRole.EMPLEADO),
+          u.status === 'ACTIVE' &&
+          (u.role === UserRole.ADMIN || u.role === UserRole.EMPLEADO),
       )
       .map((u) => ({
         id: u.id,
@@ -137,7 +155,10 @@ export class PublicBookingService {
       }));
   }
 
-  private computeOpenSlotsForDate(dateYmd: string, publicBookingHoursJson: string | null): string[] {
+  private computeOpenSlotsForDate(
+    dateYmd: string,
+    publicBookingHoursJson: string | null,
+  ): string[] {
     const selected = parseYmd(dateYmd);
     if (!selected) {
       return [];
@@ -210,10 +231,16 @@ export class PublicBookingService {
       this.sqlDb.getTenantBranding(tenant.id),
     ]);
     const employees = this.listActivePublicEmployees(users);
-    const openSlots = this.computeOpenSlotsForDate(normalizedDate, branding.publicBookingHoursJson);
+    const openSlots = this.computeOpenSlotsForDate(
+      normalizedDate,
+      branding.publicBookingHoursJson,
+    );
     const appointmentsBySlot = new Map<string, AppointmentEntity[]>();
     for (const appt of appointments) {
-      if (!appt.when.startsWith(`${normalizedDate} `) || appt.status === 'cancelada') {
+      if (
+        !appt.when.startsWith(`${normalizedDate} `) ||
+        appt.status === 'cancelada'
+      ) {
         continue;
       }
       const slot = appt.when.slice(11, 16);
@@ -237,7 +264,11 @@ export class PublicBookingService {
             unknownCount += 1;
           }
         }
-        const effectiveTaken = applyUnknownOccupancy(employeeIds, knownTaken, unknownCount);
+        const effectiveTaken = applyUnknownOccupancy(
+          employeeIds,
+          knownTaken,
+          unknownCount,
+        );
         return !effectiveTaken.has(e.id);
       });
     }
@@ -259,7 +290,9 @@ export class PublicBookingService {
       throw new NotFoundException('Negocio no encontrado');
     }
     if (tenant.status !== 'ACTIVE') {
-      throw new ForbiddenException('Este negocio no acepta reservas publicas en este momento');
+      throw new ForbiddenException(
+        'Este negocio no acepta reservas publicas en este momento',
+      );
     }
     if (!tenant.modules.citas) {
       throw new ForbiddenException('Reservas no disponibles para este negocio');
@@ -270,14 +303,24 @@ export class PublicBookingService {
     ]);
     const employees = this.listActivePublicEmployees(users);
     const requestedEmployeeId = dto.employeeId?.trim() || '';
-    if (requestedEmployeeId && !employees.some((e) => e.id === requestedEmployeeId)) {
-      throw new ForbiddenException('Empleado invalido o no disponible para este negocio');
+    if (
+      requestedEmployeeId &&
+      !employees.some((e) => e.id === requestedEmployeeId)
+    ) {
+      throw new ForbiddenException(
+        'Empleado invalido o no disponible para este negocio',
+      );
     }
     const datePart = dto.when.slice(0, 10);
     const timePart = dto.when.slice(11, 16);
-    const openSlots = this.computeOpenSlotsForDate(datePart, branding.publicBookingHoursJson);
+    const openSlots = this.computeOpenSlotsForDate(
+      datePart,
+      branding.publicBookingHoursJson,
+    );
     if (!openSlots.includes(timePart)) {
-      throw new ForbiddenException('Horario fuera de disponibilidad para ese dia');
+      throw new ForbiddenException(
+        'Horario fuera de disponibilidad para ese dia',
+      );
     }
     const appointments = await this.sqlDb.listAppointmentsByTenantId(tenant.id);
     const sameMoment = appointments.filter(
@@ -295,9 +338,13 @@ export class PublicBookingService {
       }
     } else {
       const knownOccupied = new Set(
-        sameMoment.map((a) => readEmployeeIdFromService(a.service)).filter(Boolean) as string[],
+        sameMoment
+          .map((a) => readEmployeeIdFromService(a.service))
+          .filter(Boolean) as string[],
       );
-      const unknownCount = sameMoment.filter((a) => !readEmployeeIdFromService(a.service)).length;
+      const unknownCount = sameMoment.filter(
+        (a) => !readEmployeeIdFromService(a.service),
+      ).length;
       const occupied = applyUnknownOccupancy(
         employees.map((e) => e.id),
         knownOccupied,
@@ -312,7 +359,8 @@ export class PublicBookingService {
       employeeId = freeEmployee.id;
     }
     const consent = dto.whatsappReminderConsent === true;
-    const defaultCc = (process.env.PUBLIC_BOOKING_DEFAULT_COUNTRY_CODE ?? '34').trim() || '34';
+    const defaultCc =
+      (process.env.PUBLIC_BOOKING_DEFAULT_COUNTRY_CODE ?? '34').trim() || '34';
     const phoneDigits = normalizePhoneToWaDigits(dto.customerPhone, defaultCc);
     if (consent && !phoneDigits) {
       throw new BadRequestException(
@@ -320,7 +368,7 @@ export class PublicBookingService {
       );
     }
 
-    return this.sqlDb.createAppointment({
+    const appointment = await this.sqlDb.createAppointment({
       tenantId: tenant.id,
       customer: dto.customer.trim(),
       service: `${dto.service} · EmpleadoId:${employeeId || 'any'}`,
@@ -329,6 +377,18 @@ export class PublicBookingService {
       customerPhoneE164: consent ? phoneDigits : null,
       waReminderConsent: consent,
     });
+    void this.bookingNotifications
+      .onBookingCreated({
+        tenantSlug: slug,
+        tenantName: tenant.name,
+        appointmentId: appointment.id,
+        customer: appointment.customer,
+        service: dto.service,
+        when: appointment.when,
+        customerPhoneE164: appointment.customerPhoneE164 ?? null,
+      })
+      .catch(() => undefined);
+    return appointment;
   }
 
   async reprogramarCita(slug: string, dto: ReschedulePublicAppointmentDto) {
@@ -337,7 +397,9 @@ export class PublicBookingService {
       throw new NotFoundException('Negocio no encontrado');
     }
     if (tenant.status !== 'ACTIVE') {
-      throw new ForbiddenException('Este negocio no acepta reservas publicas en este momento');
+      throw new ForbiddenException(
+        'Este negocio no acepta reservas publicas en este momento',
+      );
     }
     if (!tenant.modules.citas) {
       throw new ForbiddenException('Reservas no disponibles para este negocio');
@@ -350,7 +412,9 @@ export class PublicBookingService {
       throw new ForbiddenException('El nombre no coincide con la reserva.');
     }
     if (appt.status === 'cancelada' || appt.attendance !== 'PENDIENTE') {
-      throw new ForbiddenException('Esta cita no se puede reprogramar desde aqui.');
+      throw new ForbiddenException(
+        'Esta cita no se puede reprogramar desde aqui.',
+      );
     }
     const startMs = publicAppointmentStartMs(appt.when);
     if (startMs == null) {
@@ -369,18 +433,29 @@ export class PublicBookingService {
     const employees = this.listActivePublicEmployees(users);
     const rawEmp = (dto.employeeId ?? '').trim();
     const requestedEmployeeId = rawEmp === 'any' ? '' : rawEmp;
-    if (requestedEmployeeId && !employees.some((e) => e.id === requestedEmployeeId)) {
-      throw new ForbiddenException('Empleado invalido o no disponible para este negocio');
+    if (
+      requestedEmployeeId &&
+      !employees.some((e) => e.id === requestedEmployeeId)
+    ) {
+      throw new ForbiddenException(
+        'Empleado invalido o no disponible para este negocio',
+      );
     }
     const datePart = dto.when.slice(0, 10);
     const timePart = dto.when.slice(11, 16);
-    const openSlots = this.computeOpenSlotsForDate(datePart, branding.publicBookingHoursJson);
+    const openSlots = this.computeOpenSlotsForDate(
+      datePart,
+      branding.publicBookingHoursJson,
+    );
     if (!openSlots.includes(timePart)) {
-      throw new ForbiddenException('Horario fuera de disponibilidad para ese dia');
+      throw new ForbiddenException(
+        'Horario fuera de disponibilidad para ese dia',
+      );
     }
     const appointments = await this.sqlDb.listAppointmentsByTenantId(tenant.id);
     const sameMoment = appointments.filter(
-      (a) => a.when === dto.when && a.status !== 'cancelada' && a.id !== appt.id,
+      (a) =>
+        a.when === dto.when && a.status !== 'cancelada' && a.id !== appt.id,
     );
     const baseService = publicServiceLabelForLookup(appt.service);
 
@@ -408,9 +483,13 @@ export class PublicBookingService {
         }
       } else {
         const knownOccupied = new Set(
-          sameMoment.map((a) => readEmployeeIdFromService(a.service)).filter(Boolean) as string[],
+          sameMoment
+            .map((a) => readEmployeeIdFromService(a.service))
+            .filter(Boolean) as string[],
         );
-        const unknownCount = sameMoment.filter((a) => !readEmployeeIdFromService(a.service)).length;
+        const unknownCount = sameMoment.filter(
+          (a) => !readEmployeeIdFromService(a.service),
+        ).length;
         const occupied = applyUnknownOccupancy(
           employees.map((e) => e.id),
           knownOccupied,
@@ -446,7 +525,9 @@ export class PublicBookingService {
       dto.customer,
     );
     if (!updated) {
-      throw new NotFoundException('No se pudo registrar la asistencia. Revisa referencia y nombre.');
+      throw new NotFoundException(
+        'No se pudo registrar la asistencia. Revisa referencia y nombre.',
+      );
     }
     return updated;
   }
@@ -459,7 +540,8 @@ export class PublicBookingService {
         'Indica la referencia de tu cita o el movil que usaste al reservar (con consentimiento de contacto).',
       );
     }
-    const defaultCc = (process.env.PUBLIC_BOOKING_DEFAULT_COUNTRY_CODE ?? '34').trim() || '34';
+    const defaultCc =
+      (process.env.PUBLIC_BOOKING_DEFAULT_COUNTRY_CODE ?? '34').trim() || '34';
     if (phone && !ref) {
       const digits = normalizePhoneToWaDigits(phone, defaultCc);
       if (!digits) {
@@ -493,10 +575,14 @@ export class PublicBookingService {
       throw new NotFoundException('Negocio no encontrado');
     }
     if (tenant.status !== 'ACTIVE') {
-      throw new ForbiddenException('Este enlace no esta disponible en este momento');
+      throw new ForbiddenException(
+        'Este enlace no esta disponible en este momento',
+      );
     }
     if (!tenant.modules.ventas) {
-      throw new ForbiddenException('Registro de tienda no disponible para este negocio');
+      throw new ForbiddenException(
+        'Registro de tienda no disponible para este negocio',
+      );
     }
     return this.sqlDb.createStoreVisitLog({
       tenantId: tenant.id,

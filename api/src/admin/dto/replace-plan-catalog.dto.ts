@@ -1,5 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsIn, IsNumber, IsString, Min, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsIn,
+  IsNumber,
+  IsString,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 
 export class PlanCatalogRowDto {
   @IsString()

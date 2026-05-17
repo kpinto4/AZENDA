@@ -25,7 +25,9 @@ export class UserRepository {
     };
   }
 
-  async findByEmailNormalized(normalizedEmail: string): Promise<UserEntity | undefined> {
+  async findByEmailNormalized(
+    normalizedEmail: string,
+  ): Promise<UserEntity | undefined> {
     const row = await this.pg.queryOne(
       `
         SELECT id, email, password, role, tenant_id, systems, status
@@ -96,16 +98,24 @@ export class UserRepository {
     return row;
   }
 
-  async update(userId: string, patch: Partial<Omit<UserEntity, 'id'>>): Promise<UserEntity | undefined> {
+  async update(
+    userId: string,
+    patch: Partial<Omit<UserEntity, 'id'>>,
+  ): Promise<UserEntity | undefined> {
     const current = await this.findById(userId);
     if (!current) {
       return undefined;
     }
 
     let nextPassword = current.password;
-    if (patch.password !== undefined && String(patch.password).trim().length > 0) {
+    if (
+      patch.password !== undefined &&
+      String(patch.password).trim().length > 0
+    ) {
       const p = String(patch.password);
-      nextPassword = this.passwordService.isBcryptHash(p) ? p : await this.passwordService.hash(p);
+      nextPassword = this.passwordService.isBcryptHash(p)
+        ? p
+        : await this.passwordService.hash(p);
     }
 
     const next: UserEntity = {
@@ -113,7 +123,8 @@ export class UserRepository {
       email: patch.email !== undefined ? patch.email : current.email,
       password: nextPassword,
       role: patch.role !== undefined ? patch.role : current.role,
-      tenantId: patch.tenantId !== undefined ? patch.tenantId : current.tenantId,
+      tenantId:
+        patch.tenantId !== undefined ? patch.tenantId : current.tenantId,
       systems: patch.systems !== undefined ? patch.systems : current.systems,
       status: patch.status !== undefined ? patch.status : current.status,
     };
@@ -152,7 +163,10 @@ export class UserRepository {
     if (!existing || existing.tenantId !== tenantId) {
       return false;
     }
-    await this.pg.exec(`DELETE FROM users WHERE id = ? AND tenant_id = ?`, [userId, tenantId]);
+    await this.pg.exec(`DELETE FROM users WHERE id = ? AND tenant_id = ?`, [
+      userId,
+      tenantId,
+    ]);
     return true;
   }
 
@@ -164,8 +178,13 @@ export class UserRepository {
       const id = String(r.id);
       const plain = String(r.password);
       const hash = await this.passwordService.hash(plain);
-      await this.pg.exec(`UPDATE users SET password = ? WHERE id = ?`, [hash, id]);
-      this.logger.log(`Clave de usuario ${id} migrada a hash (login compatible).`);
+      await this.pg.exec(`UPDATE users SET password = ? WHERE id = ?`, [
+        hash,
+        id,
+      ]);
+      this.logger.log(
+        `Clave de usuario ${id} migrada a hash (login compatible).`,
+      );
     }
   }
 }

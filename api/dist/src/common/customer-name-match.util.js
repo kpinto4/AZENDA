@@ -2,10 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.publicCustomerNameMatches = publicCustomerNameMatches;
 function publicCustomerNameMatches(storedCustomer, inputName) {
-    const norm = (s) => s
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, ' ');
+    const norm = (s) => s.trim().toLowerCase().replace(/\s+/g, ' ');
     const stored = norm(storedCustomer);
     const input = norm(inputName);
     if (stored === input) {

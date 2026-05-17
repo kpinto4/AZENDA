@@ -1,4 +1,11 @@
-import { IsArray, IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsArray,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 import { AppSystem, UserRole } from '../../auth/auth.types';
 
 export class CreateUserDto {
@@ -13,7 +20,12 @@ export class CreateUserDto {
   @MinLength(6)
   password!: string;
 
-  @IsIn([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.EMPLEADO, UserRole.CLIENTE_FINAL])
+  @IsIn([
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.EMPLEADO,
+    UserRole.CLIENTE_FINAL,
+  ])
   role!: UserRole;
 
   @IsOptional()

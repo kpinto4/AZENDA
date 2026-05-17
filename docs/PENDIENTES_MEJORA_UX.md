@@ -36,9 +36,9 @@ Lista viva: **tacha** lo que esté hecho cambiando `[ ]` por `[x]`, o borra la l
 
 ## Plataforma y sensación de “producto serio”
 
-- [ ] **Rendimiento y estabilidad**: checklist manual / CI antes de releases (consola, errores `500` en rutas demo).
+- [x] **Rendimiento y estabilidad (MVP)** — CI en GitHub + [`CHECKLIST_PRE_RELEASE.md`](CHECKLIST_PRE_RELEASE.md) antes de releases.
 - [x] **Onboarding del negocio** (primer nivel): tarjeta «Primeros pasos» en **Configuración** con enlaces a inventario y flujo del enlace público (**solo administrador del tenant**).
-- [ ] **Comunicación proactiva**: email al **cliente** tras reservar (reservado para B2B: planes/pagos; WA para cliente).
+- [x] **Comunicación tras reservar (MVP)** — `BookingNotificationService` en API (log + opcional `BOOKING_NOTIFY_EMAIL`); email transaccional al cliente con SMTP = integración futura.
 - [x] **Recordatorios WhatsApp manuales** (`wa.me` al cliente + marcar enviado; enlace al negocio tras reservar); sin Meta Cloud API.
 - [ ] **Push al staff** ante cambios concretos (websocket o notificación explícita más allá del polling).
 

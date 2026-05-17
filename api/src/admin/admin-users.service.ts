@@ -18,7 +18,10 @@ export class AdminUsersService {
     return this.users.create(data);
   }
 
-  update(userId: string, patch: Partial<Omit<UserEntity, 'id'>>): Promise<UserEntity | undefined> {
+  update(
+    userId: string,
+    patch: Partial<Omit<UserEntity, 'id'>>,
+  ): Promise<UserEntity | undefined> {
     return this.users.update(userId, patch);
   }
 

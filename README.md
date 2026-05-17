@@ -7,7 +7,7 @@ SaaS multi-tenant (**Angular 19** + **NestJS**) para **citas**, **ventas** e **i
 | **Piloto / API** | `src/environments/environment.ts` → `useLiveAuth: true` | Login JWT, tenant y super-admin contra PostgreSQL (Neon). Ver [`docs/BACKEND.md`](docs/BACKEND.md) y [`docs/PRUEBAS_SISTEMA.md`](docs/PRUEBAS_SISTEMA.md). |
 | **Demo solo front** | `useLiveAuth: false` | `MockDataService` en memoria (sin persistencia al recargar). |
 
-Plan de evolución por fases: [`docs/PLAN_MEJORAS_FASES.md`](docs/PLAN_MEJORAS_FASES.md) (**Fase 3 cerrada** en código: panel tenant y super-admin usan API cuando `useLiveAuth` es true).
+Plan de evolución por fases: [`docs/PLAN_MEJORAS_FASES.md`](docs/PLAN_MEJORAS_FASES.md) (**Fases 1–4 cerradas** · mayo 2026; CI + piloto con `useLiveAuth: true`).
 
 ## Requisitos
 
@@ -37,13 +37,14 @@ npm run build
 
 Salida en `dist/azenda`. API: `npm --prefix api run build`.
 
-## Tests
+## Tests y CI
 
 ```bash
-npm test
+npm test              # solo front (Karma)
+npm run ci            # API build + tests + e2e smoke + web build + test
 ```
 
-(Karma + ChromeHeadless; incluye tests mínimos del core, p. ej. coincidencia de nombre en reserva pública.)
+En GitHub: workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Antes de desplegar: [`docs/CHECKLIST_PRE_RELEASE.md`](docs/CHECKLIST_PRE_RELEASE.md).
 
 ## Mapa de rutas
 
@@ -76,3 +77,4 @@ Usuarios y contraseñas reales en base (p. ej. `super@azenda.dev` tras `db:boots
 | [`docs/BACKEND.md`](docs/BACKEND.md) | API, variables, prefijos de rutas |
 | [`docs/PRUEBAS_SISTEMA.md`](docs/PRUEBAS_SISTEMA.md) | Comandos, smoke, roles |
 | [`docs/PLAN_MEJORAS_FASES.md`](docs/PLAN_MEJORAS_FASES.md) | Fases 1–4 y criterios de cierre |
+| [`docs/CHECKLIST_PRE_RELEASE.md`](docs/CHECKLIST_PRE_RELEASE.md) | Checklist antes de desplegar |

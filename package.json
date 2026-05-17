@@ -13,7 +13,14 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false --browsers=ChromeHeadless",
-    "test:watch": "ng test"
+    "test:watch": "ng test",
+    "build:api": "npm --prefix api run build",
+    "test:api": "npm --prefix api test",
+    "test:api:e2e": "npm --prefix api run test:e2e",
+    "lint:api": "npm --prefix api run lint:ci",
+    "ci:api": "npm run lint:api && npm run build:api && npm run test:api && npm run test:api:e2e",
+    "ci:web": "npm run build && npm test",
+    "ci": "npm run ci:api && npm run ci:web"
   },
   "private": true,
   "dependencies": {

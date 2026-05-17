@@ -28,7 +28,12 @@ __decorate([
 ], UpdateUserDto.prototype, "password", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsIn)([auth_types_1.UserRole.SUPER_ADMIN, auth_types_1.UserRole.ADMIN, auth_types_1.UserRole.EMPLEADO, auth_types_1.UserRole.CLIENTE_FINAL]),
+    (0, class_validator_1.IsIn)([
+        auth_types_1.UserRole.SUPER_ADMIN,
+        auth_types_1.UserRole.ADMIN,
+        auth_types_1.UserRole.EMPLEADO,
+        auth_types_1.UserRole.CLIENTE_FINAL,
+    ]),
     __metadata("design:type", String)
 ], UpdateUserDto.prototype, "role", void 0);
 __decorate([

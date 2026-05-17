@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { BillingCycle, TenantEntity } from '../infrastructure/sql-db/sql-db.types';
+import {
+  BillingCycle,
+  TenantEntity,
+} from '../infrastructure/sql-db/sql-db.types';
 import { TenantBillingService } from '../infrastructure/sql-db/tenant-billing.service';
 import { TenantRepository } from '../infrastructure/sql-db/repositories/tenant.repository';
 
@@ -56,7 +59,11 @@ export class AdminTenantsService {
     return this.tenants.deleteTenant(tenantId);
   }
 
-  getUpgradeQuote(params: { tenantId: string; targetPlan: string; targetCycle: BillingCycle }) {
+  getUpgradeQuote(params: {
+    tenantId: string;
+    targetPlan: string;
+    targetCycle: BillingCycle;
+  }) {
     return this.billing.getUpgradeQuote(params);
   }
 }

@@ -188,7 +188,9 @@ let TenantService = class TenantService {
             password: dto.password?.trim() || 'azenda123',
             role: dto.role === 'ADMIN' ? auth_types_1.UserRole.ADMIN : auth_types_1.UserRole.EMPLEADO,
             tenantId,
-            systems: dto.role === 'ADMIN' ? [auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING] : [auth_types_1.AppSystem.TENANT],
+            systems: dto.role === 'ADMIN'
+                ? [auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING]
+                : [auth_types_1.AppSystem.TENANT],
             status: 'ACTIVE',
         });
         return {
@@ -215,7 +217,9 @@ let TenantService = class TenantService {
             email: dto.email?.trim().toLowerCase(),
             ...(pwd ? { password: pwd } : {}),
             role,
-            systems: role === auth_types_1.UserRole.ADMIN ? [auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING] : [auth_types_1.AppSystem.TENANT],
+            systems: role === auth_types_1.UserRole.ADMIN
+                ? [auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING]
+                : [auth_types_1.AppSystem.TENANT],
         });
         if (!updated) {
             throw new common_1.NotFoundException('Empleado no encontrado');
