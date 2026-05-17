@@ -31,6 +31,39 @@
     </div>
   </div>
 
+  @if (primaryLowStockAlert(); as alert) {
+    <div class="dashboard-stock-toast az-card" role="status">
+      <span class="dashboard-stock-toast-icon" aria-hidden="true">!</span>
+      <div class="dashboard-stock-toast-body">
+        <p>
+          <strong>Inventario:</strong> {{ alert.name }} por debajo del mínimo ({{ alert.stock }} uds. · mín.
+          {{ lowStockMinimum }})@if (lowStockAlerts().length > 1) {
+            <span class="muted"> y {{ lowStockAlerts().length - 1 }} más</span>
+          }
+          · <a routerLink="/app/inventario">reorden sugerido</a>
+        </p>
+      </div>
+    </div>
+  }
+
+  <div class="az-card dashboard-week-chart">
+    <div class="dashboard-week-chart-head">
+      <div>
+        <h3>Últimos 7 días</h3>
+        <p class="muted">{{ last7DaysChartSummary() }}</p>
+      </div>
+    </div>
+    <div class="week-bars" role="img" [attr.aria-label]="last7DaysChartSummary()">
+      @for (d of last7DaysChart(); track d.ymd) {
+        <div class="week-bar-col" [class.week-bar-col--today]="d.dayShort === 'Hoy'">
+          <span class="week-bar" [style.height.%]="d.barHeightPct"></span>
+          <span class="week-bar-count">{{ d.count }}</span>
+          <span class="week-bar-label">{{ d.dayShort }}</span>
+        </div>
+      }
+    </div>
+  </div>
+
   <div class="az-card agenda-principal">
     @let cal = dashboardCalendar();
     <div class="agenda-head">

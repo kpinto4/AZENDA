@@ -61,6 +61,95 @@
   margin-top: 1rem;
 }
 
+.dashboard-stock-toast {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.85rem 1rem;
+  border-color: color-mix(in srgb, #ea580c 35%, var(--az-border));
+  background: color-mix(in srgb, #fff7ed 50%, var(--az-surface));
+}
+
+.dashboard-stock-toast-icon {
+  flex-shrink: 0;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.75rem;
+  color: #9a3412;
+  background: #fed7aa;
+}
+
+.dashboard-stock-toast-body p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.dashboard-stock-toast-body a {
+  font-weight: 600;
+}
+
+.dashboard-week-chart {
+  margin-top: 1rem;
+}
+
+.dashboard-week-chart-head h3 {
+  margin: 0 0 0.2rem;
+}
+
+.week-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.35rem;
+  height: 5.75rem;
+  margin-top: 0.75rem;
+  padding: 0 0.15rem;
+}
+
+.week-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.22rem;
+  min-width: 0;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.week-bar-col--today .week-bar-label {
+  font-weight: 800;
+  color: var(--az-primary);
+}
+
+.week-bar {
+  display: block;
+  width: 100%;
+  max-width: 2.35rem;
+  border-radius: 6px 6px 4px 4px;
+  background: linear-gradient(180deg, var(--az-accent), var(--az-primary));
+  min-height: 2px;
+}
+
+.week-bar-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--az-text);
+}
+
+.week-bar-label {
+  font-size: 0.65rem;
+  color: var(--az-muted);
+  text-align: center;
+}
+
 .agenda-principal {
   margin-top: 1rem;
 }

@@ -25,10 +25,24 @@ interface DashboardCalDay {
   events: DashboardCalEvent[];
 }
 
+interface DashboardDayBar {
+  ymd: string;
+  dayShort: string;
+  count: number;
+  barHeightPct: number;
+}
+
+interface DashboardLowStockAlert {
+  id: string;
+  name: string;
+  stock: number;
+}
+
 const MESES_CORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const EMPLOYEE_COLORS = ['#2563eb', '#8b5cf6', '#db2777', '#0d9488', '#ea580c', '#4f46e5'];
 /** Igual que en demo mock: stock menor que este umbral cuenta como alerta. */
-const LOW_STOCK_BELOW = 5;
+export const DASHBOARD_LOW_STOCK_BELOW = 5;
+const LOW_STOCK_BELOW = DASHBOARD_LOW_STOCK_BELOW;
 
 function toYmdLocal(d: Date): string {
   const y = d.getFullYear();
@@ -105,6 +119,7 @@ function weekRangeLabel(monday: Date): string {
 })
 export class TenantDashboardComponent {
   @ViewChild('agendaScrollEl') private agendaScrollEl?: ElementRef<HTMLDivElement>;
+  readonly lowStockMinimum = LOW_STOCK_BELOW;
   readonly dashboardBaseDate = signal(new Date());
   readonly data = inject(MockDataService);
   readonly session = inject(MockSessionService);
@@ -262,6 +277,60 @@ export class TenantDashboardComponent {
   readonly citasHoyKpiLabel = computed(() =>
     this.apiAppointments.useRemote() ? 'Citas hoy' : 'Citas hoy (demo)',
   );
+
+  readonly last7DaysChart = computed((): DashboardDayBar[] => {
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    const rows: { ymd: string; dayShort: string; count: number }[] = [];
+    for (let offset = 6; offset >= 0; offset -= 1) {
+      const d = addDays(today, -offset);
+      const ymd = toYmdLocal(d);
+      const count = this.myAppointments().filter((a) => {
+        if (a.status === 'cancelada') {
+          return false;
+        }
+        return parseWhenLocal(a.when)?.ymd === ymd;
+      }).length;
+      const dayShort =
+        offset === 0 ? 'Hoy' : ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][d.getDay()];
+      rows.push({ ymd, dayShort, count });
+    }
+    const max = Math.max(1, ...rows.map((r) => r.count));
+    return rows.map((r) => ({
+      ...r,
+      barHeightPct: r.count === 0 ? 0 : Math.max(12, Math.round((r.count / max) * 100)),
+    }));
+  });
+
+  readonly last7DaysChartSummary = computed(() => {
+    const total = this.last7DaysChart().reduce((acc, d) => acc + d.count, 0);
+    return `${total} cita(s) en los últimos 7 días`;
+  });
+
+  readonly lowStockAlerts = computed((): DashboardLowStockAlert[] => {
+    if (!this.session.modules().inventory) {
+      return [];
+    }
+    const tid = this.session.tenantId();
+    if (!tid) {
+      return [];
+    }
+    if (this.apiAppointments.useRemote()) {
+      return this.dashboardProductsLive()
+        .filter((p) => p.stock < LOW_STOCK_BELOW)
+        .sort((a, b) => a.stock - b.stock)
+        .slice(0, 3)
+        .map((p) => ({ id: p.id, name: p.name, stock: p.stock }));
+    }
+    return this.data
+      .productsForTenant(tid)
+      .filter((p) => p.lowStock || p.stock < LOW_STOCK_BELOW)
+      .sort((a, b) => a.stock - b.stock)
+      .slice(0, 3)
+      .map((p) => ({ id: p.id, name: p.name, stock: p.stock }));
+  });
+
+  readonly primaryLowStockAlert = computed(() => this.lowStockAlerts()[0] ?? null);
 
   private readonly employeeColorByName = computed(() => {
     const map = new Map<string, string>();
