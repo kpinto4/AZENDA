@@ -57,6 +57,65 @@ let TenantRetailRepository = class TenantRetailRepository {
       )
     `);
         await this.pg.ensureIndex(`CREATE INDEX IF NOT EXISTS idx_tenant_sales_tenant_created ON tenant_sales (tenant_id, created_at DESC)`);
+        await this.pg.execScript(`
+      CREATE TABLE IF NOT EXISTS tenant_stock_movements (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL,
+        product_id TEXT NOT NULL,
+        product_name TEXT NOT NULL,
+        delta INT NOT NULL,
+        reason TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        CONSTRAINT fk_movement_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+      )
+    `);
+        await this.pg.ensureIndex(`CREATE INDEX IF NOT EXISTS idx_tenant_stock_movements_tenant_created ON tenant_stock_movements (tenant_id, created_at DESC)`);
+    }
+    mapStockMovementRow(row) {
+        return {
+            id: String(row.id),
+            tenantId: String(row.tenant_id),
+            productId: String(row.product_id),
+            productName: String(row.product_name),
+            delta: Number(row.delta) || 0,
+            reason: String(row.reason),
+            createdAt: String(row.created_at),
+        };
+    }
+    async listStockMovementsByTenantId(tenantId, limit = 50) {
+        const rows = await this.pg.queryRows(`
+        SELECT id, tenant_id, product_id, product_name, delta, reason, created_at
+        FROM tenant_stock_movements
+        WHERE tenant_id = ?
+        ORDER BY created_at DESC
+        LIMIT ?
+      `, [tenantId, limit]);
+        return rows.map((row) => this.mapStockMovementRow(row));
+    }
+    async insertStockMovement(data) {
+        const id = `mov_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        const createdAt = new Date().toISOString();
+        await this.pg.exec(`
+        INSERT INTO tenant_stock_movements (id, tenant_id, product_id, product_name, delta, reason, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [
+            id,
+            data.tenantId,
+            data.productId,
+            data.productName,
+            data.delta,
+            data.reason.trim(),
+            createdAt,
+        ]);
+        return {
+            id,
+            tenantId: data.tenantId,
+            productId: data.productId,
+            productName: data.productName,
+            delta: data.delta,
+            reason: data.reason.trim(),
+            createdAt,
+        };
     }
     async listStoreVisitsByTenantId(tenantId) {
         const rows = await this.pg.queryRows(`

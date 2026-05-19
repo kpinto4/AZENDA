@@ -24,6 +24,7 @@ import { UpsertTenantProductDto } from './dto/upsert-tenant-product.dto';
 import { UpsertTenantServiceDto } from './dto/upsert-tenant-service.dto';
 import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
 import { SimulateUpgradeDto } from './dto/simulate-upgrade.dto';
+import { ApplyStockMovementDto } from './dto/apply-stock-movement.dto';
 import { TenantService } from './tenant.service';
 
 type AuthenticatedRequest = Request & { user: AuthUser };
@@ -152,6 +153,20 @@ export class TenantController {
     @Body() dto: UpdateTenantBrandingDto,
   ) {
     return this.tenantService.updateBranding(req.user, dto);
+  }
+
+  @Get('inventory/movements')
+  listStockMovements(@Req() req: AuthenticatedRequest) {
+    return this.tenantService.listStockMovements(req.user);
+  }
+
+  @Post('inventory/movements')
+  @Roles(UserRole.ADMIN)
+  applyStockMovement(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ApplyStockMovementDto,
+  ) {
+    return this.tenantService.applyStockMovement(req.user, dto);
   }
 
   @Get('employees')

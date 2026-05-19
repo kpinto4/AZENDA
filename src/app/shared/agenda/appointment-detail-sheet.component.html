@@ -1,0 +1,113 @@
+@if (open()) {
+  <div class="appt-sheet-backdrop" (click)="onBackdropClick()" role="presentation">
+    <div
+      class="appt-sheet-panel"
+      role="dialog"
+      [attr.aria-modal]="true"
+      [attr.aria-label]="mode() === 'day-list' ? 'Citas del día' : 'Detalle de cita'"
+      (click)="onPanelClick($event)"
+    >
+      <div class="appt-sheet-handle" aria-hidden="true"></div>
+
+      @if (mode() === 'day-list') {
+        <header class="appt-sheet-head">
+          <h2 class="appt-sheet-title">Citas del día</h2>
+          @if (dayLabel()) {
+            <p class="appt-sheet-sub muted">{{ dayLabel() }} · {{ dayEvents().length }} cita(s)</p>
+          }
+        </header>
+        <div class="appt-sheet-day-list">
+          @for (ev of dayEvents(); track ev.id) {
+            <button type="button" class="appt-sheet-day-row" (click)="selectDayEvent(ev)">
+              <span class="appt-sheet-day-time">{{ ev.time }}</span>
+              <span class="appt-sheet-day-body">
+                <strong>{{ ev.customer }}</strong>
+                <span class="muted">{{ ev.serviceLabel }} · {{ ev.employeeName }}</span>
+              </span>
+              <span class="appt-sheet-day-chevron" aria-hidden="true">›</span>
+            </button>
+          } @empty {
+            <p class="muted appt-sheet-empty">Sin citas este día.</p>
+          }
+        </div>
+      } @else if (appointment()) {
+        @let a = appointment()!;
+        <header class="appt-sheet-head">
+          <h2 class="appt-sheet-title">Cita · {{ appointmentTimeLabel() }}</h2>
+          <p class="appt-sheet-sub muted">{{ whenDisplay() }}</p>
+        </header>
+
+        <dl class="appt-sheet-fields">
+          <div class="appt-sheet-field">
+            <dt>Cliente</dt>
+            <dd>{{ a.customer }}</dd>
+          </div>
+          <div class="appt-sheet-field">
+            <dt>Servicio</dt>
+            <dd>{{ serviceLabel() }}</dd>
+          </div>
+          <div class="appt-sheet-field">
+            <dt>Empleado</dt>
+            <dd>{{ employeeName() || 'Sin asignar' }}</dd>
+          </div>
+          <div class="appt-sheet-field">
+            <dt>Estado</dt>
+            <dd>
+              <span class="status-pill" [class]="statusClass()">{{ statusLabel() }}</span>
+            </dd>
+          </div>
+        </dl>
+
+        @if (attendanceOptions().length) {
+          <div class="appt-sheet-section">
+            <p class="appt-sheet-section-label">Asistencia</p>
+            <div class="attendance-chips" role="group" aria-label="Asistencia">
+              @for (opt of attendanceOptions(); track opt.value) {
+                <button
+                  type="button"
+                  class="att-chip"
+                  [class.att-chip--on]="(a.attendance ?? 'PENDIENTE') === opt.value"
+                  [attr.aria-pressed]="(a.attendance ?? 'PENDIENTE') === opt.value"
+                  [disabled]="restricted()"
+                  (click)="onAttendance(a.id, opt.value)"
+                >
+                  {{ opt.label }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        @if (useRemote() && a.waReminderConsent) {
+          <div class="appt-sheet-section">
+            <p class="appt-sheet-section-label">WhatsApp</p>
+            @if (a.waReminderSentAt) {
+              <span class="wa-pill wa-pill--ok">Recordatorio enviado</span>
+            } @else {
+              <span class="wa-pill wa-pill--pend">Pendiente de envío</span>
+            }
+            @if (waLink()) {
+              <div class="appt-sheet-wa-actions">
+                <a class="az-btn az-btn-secondary" [href]="waLink()!" target="_blank" rel="noopener">Abrir WhatsApp</a>
+                @if (!a.waReminderSentAt) {
+                  <button
+                    type="button"
+                    class="az-btn az-btn-primary"
+                    [disabled]="restricted()"
+                    (click)="markReminderDone.emit(a.id)"
+                  >
+                    Marcar enviado
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      }
+
+      <footer class="appt-sheet-foot">
+        <button type="button" class="az-btn az-btn-secondary appt-sheet-close" (click)="closed.emit()">Cerrar</button>
+      </footer>
+    </div>
+  </div>
+}

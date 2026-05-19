@@ -240,6 +240,36 @@ let TenantService = class TenantService {
         }
         return { ok: true };
     }
+    async listStockMovements(currentUser) {
+        const tenantId = this.requireTenantId(currentUser);
+        return this.sqlDbService.listStockMovementsByTenantId(tenantId, 50);
+    }
+    async applyStockMovement(currentUser, dto) {
+        const tenantId = this.requireTenantId(currentUser);
+        const delta = Number(dto.delta);
+        if (!delta || !Number.isFinite(delta)) {
+            throw new common_1.BadRequestException('Delta invalido');
+        }
+        const products = await this.sqlDbService.listProductsByTenantId(tenantId);
+        const product = products.find((p) => p.id === dto.productId.trim());
+        if (!product) {
+            throw new common_1.BadRequestException('Producto no encontrado');
+        }
+        const nextStock = product.stock + delta;
+        if (nextStock < 0) {
+            throw new common_1.BadRequestException(`Stock insuficiente (disponible: ${product.stock})`);
+        }
+        await this.sqlDbService.updateTenantProduct(tenantId, product.id, {
+            stock: nextStock,
+        });
+        return this.sqlDbService.insertStockMovement({
+            tenantId,
+            productId: product.id,
+            productName: product.name,
+            delta,
+            reason: dto.reason.trim(),
+        });
+    }
     requireTenantId(currentUser) {
         if (!currentUser.tenantId) {
             throw new common_1.NotFoundException('Usuario sin tenant asignado');

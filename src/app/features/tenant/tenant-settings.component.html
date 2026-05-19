@@ -1,6 +1,6 @@
-<div class="az-container az-page">
+<div class="az-container az-page tenant-page">
   @if (canManageOperations()) {
-    <div class="az-card mt onboarding-card">
+    <div class="az-card onboarding-card az-section">
       <h3>Primeros pasos</h3>
       <p class="muted small">
         Completa lo básico en pocos minutos: servicios, prueba tu enlace público y ajusta los textos que ven tus clientes al
@@ -20,7 +20,7 @@
       </ol>
     </div>
   }
-  <div class="az-page-head">
+  <div class="az-page-head tenant-page-head">
     <div>
       <h1 class="az-page-title">Configuración</h1>
       <p class="az-page-sub">Horario de reservas, WhatsApp del negocio, catálogo y branding (persistencia en API con cuenta real).</p>
@@ -30,38 +30,25 @@
     </button>
   </div>
 
-  <div class="tenant-cards-grid">
-    <div class="az-card">
-      <h3>Identificadores del negocio</h3>
-      <p class="muted">
-        El <strong>nombre</strong> puede coincidir con otro negocio; lo que no debe repetirse es el
-        <strong>slug</strong> de reservas y el <strong>id</strong> en base de datos.
-      </p>
-      <ul class="id-list">
-        <li><span class="lbl">Id panel (demo)</span> <code>{{ session.tenantId() || '—' }}</code></li>
-        @if (session.apiTenantId()) {
-          <li><span class="lbl">Id en servidor (API)</span> <code>{{ session.apiTenantId() }}</code></li>
-        }
-        <li>
-          <span class="lbl">Slug reservas</span> <code>{{ session.publicBookingSlug() || '—' }}</code>
-        </li>
-      </ul>
-    </div>
-
+  <div class="tenant-cards-grid az-section">
     <div class="az-card">
       <h3>Plan y facturación</h3>
       @if (billingSummary(); as b) {
+        <div class="tenant-metric-row">
+          <span class="tenant-metric-pill">Plan · {{ b.startedLabel }}</span>
+          <span class="tenant-metric-pill">{{ b.cycleLabel }}</span>
+        </div>
         <p class="muted">
-          Plan adquirido: <strong>{{ b.startedLabel }}</strong>
+          Renovación: <strong>{{ b.renewalLabel }}</strong>
         </p>
         <p class="muted">
-          Ciclo <strong>{{ b.cycleLabel }}</strong> · Renovación: <strong>{{ b.renewalLabel }}</strong>
-        </p>
-        <p class="muted">
-          Periodo actual: <strong>{{ b.periodStartLabel }}</strong> → <strong>{{ b.periodEndLabel }}</strong>
+          Periodo: <strong>{{ b.periodStartLabel }}</strong> → <strong>{{ b.periodEndLabel }}</strong>
         </p>
         <p class="muted">{{ b.daysLabel }}</p>
-        <p class="muted">{{ b.progressLabel }}</p>
+        <div class="tenant-progress" role="progressbar" [attr.aria-valuenow]="b.progressPct" aria-valuemin="0" aria-valuemax="100">
+          <span class="tenant-progress-bar" [style.width.%]="b.progressPct"></span>
+        </div>
+        <p class="muted tiny">{{ b.progressLabel }}</p>
       } @else {
         <p class="muted">El contador de plan estará disponible al conectar con el API.</p>
       }
@@ -70,93 +57,90 @@
       }
     </div>
 
-    <div class="az-card">
-      <h3>Operación de citas</h3>
-      <p class="muted">
-        Decide si tu equipo puede crear citas manualmente desde el panel. El enlace público de reservas sigue activo.
-      </p>
-      <form [formGroup]="form" (ngSubmit)="saveOperationalSettings()">
-        <label class="remember-row">
-          <input type="checkbox" formControlName="manualBookingEnabled" />
-          <span>Permitir creación manual de citas en panel</span>
-        </label>
-        <button type="submit" class="az-btn az-btn-primary mt" [disabled]="!canManageOperations()">
-          Guardar operación de citas
-        </button>
-      </form>
-      @if (!canManageOperations()) {
-        <p class="muted tiny">Solo el admin del negocio puede cambiar esta opción.</p>
-      }
-      @if (opsMsg()) {
-        <p class="services-msg">{{ opsMsg() }}</p>
-      }
-    </div>
-
     @if (session.publicBookingSlug()) {
-      <div class="az-card span-2">
-        <h3>Enlace público de cliente (reservas, asistencia y catálogo)</h3>
-        <p class="muted">
-          Tu cliente usa la <strong>misma página</strong> para pedir cita, confirmar que asistió y, si tienes catálogo y
-          tienda pública activados, <strong>solicitar productos</strong> (solo interés y contacto; el negocio gestiona pago
-          y entrega fuera de Azenda). Puedes copiar la URL general o el enlace con pestaña.
+      <div class="az-card public-links-card">
+        <h3>Enlace público</h3>
+        <p class="muted small">
+          Una sola página para reservar, confirmar asistencia y catálogo (si está activo).
         </p>
-        <p class="booking-actions">
-          <a class="az-btn az-btn-primary" [routerLink]="['/reservar', session.publicBookingSlug()]">Vista previa</a>
-          <button type="button" class="az-btn az-btn-secondary" (click)="copyBookingLink()">Copiar URL principal</button>
-        </p>
-        <label class="az-label">URL principal (reservar)</label>
-        <input class="az-input wide" type="text" readonly [value]="publicBookingUrl()" />
+        <div class="booking-actions compact">
+          <a class="az-btn az-btn-primary small" [routerLink]="['/reservar', session.publicBookingSlug()]">Vista previa</a>
+          <button type="button" class="az-btn az-btn-secondary small" (click)="copyBookingLink()">Copiar principal</button>
+        </div>
         @if (publicClientUrls(); as urls) {
-          <label class="az-label lbl-top">Mis citas / buscador (misma página, pestaña)</label>
-          <div class="url-row">
-            <input class="az-input wide" type="text" readonly [value]="urls.asistencia" />
-            <button type="button" class="az-btn az-btn-secondary" (click)="copyUrl(urls.asistencia)">Copiar</button>
-          </div>
-          <label class="az-label lbl-top">Catálogo y solicitudes (planes Pro+ con tienda activada)</label>
-          <div class="url-row">
-            <input class="az-input wide" type="text" readonly [value]="urls.catalogo" />
-            <button type="button" class="az-btn az-btn-secondary" (click)="copyUrl(urls.catalogo)">Copiar</button>
-          </div>
+          <ul class="url-compact-list">
+            <li class="url-compact-item">
+              <span class="url-compact-label">Reservar</span>
+              <div class="url-row-compact">
+                <input class="az-input" type="text" readonly [value]="urls.reserva" />
+                <button type="button" class="az-btn az-btn-secondary small" (click)="copyUrl(urls.reserva)">Copiar</button>
+              </div>
+            </li>
+            <li class="url-compact-item">
+              <span class="url-compact-label">Mis citas</span>
+              <div class="url-row-compact">
+                <input class="az-input" type="text" readonly [value]="urls.asistencia" />
+                <button type="button" class="az-btn az-btn-secondary small" (click)="copyUrl(urls.asistencia)">Copiar</button>
+              </div>
+            </li>
+            <li class="url-compact-item">
+              <span class="url-compact-label">Catálogo</span>
+              <div class="url-row-compact">
+                <input class="az-input" type="text" readonly [value]="urls.catalogo" />
+                <button type="button" class="az-btn az-btn-secondary small" (click)="copyUrl(urls.catalogo)">Copiar</button>
+              </div>
+            </li>
+          </ul>
         }
       </div>
     }
   </div>
 
   <div class="az-grid cols-2">
-    <div class="az-card" [formGroup]="hoursForm">
+    <div class="az-card schedule-card" [formGroup]="hoursForm">
       <h3>Horario de reservas públicas</h3>
       <p class="muted small">
-        Días abiertos y franjas (media hora entre inicio y fin). El cliente solo verá huecos dentro de lo que marques aquí.
+        Marca los días abiertos y el rango horario. El cliente solo verá huecos dentro de estas franjas.
       </p>
-      @for (d of dayScheduleMeta; track d.code) {
-        <div class="day-hours-block" [formGroupName]="d.code">
-          <label class="day-hours-head">
-            <input type="checkbox" formControlName="enabled" />
-            {{ d.label }}
-          </label>
-          @if (hoursForm.get(d.code)?.get('enabled')?.value) {
-            <div class="day-hours-row">
-              <input type="time" class="az-input" formControlName="aOpen" />
-              <span class="day-hours-sep">–</span>
-              <input type="time" class="az-input" formControlName="aClose" />
-            </div>
-            <label class="split-check">
-              <input type="checkbox" formControlName="split" />
-              Partir el día (segunda franja)
-            </label>
-            @if (hoursForm.get(d.code)?.get('split')?.value) {
-              <div class="day-hours-row">
-                <input type="time" class="az-input" formControlName="bOpen" />
-                <span class="day-hours-sep">–</span>
-                <input type="time" class="az-input" formControlName="bClose" />
-              </div>
-            }
-          }
+      <div class="schedule-table">
+        <div class="schedule-head">
+          <span>Día</span>
+          <span>Abierto</span>
+          <span>Inicio</span>
+          <span>Fin</span>
+          <span>2ª franja</span>
         </div>
-      }
+        @for (d of dayScheduleMeta; track d.code) {
+          <div class="schedule-row" [formGroupName]="d.code" [class.is-closed]="!hoursForm.get(d.code)?.get('enabled')?.value">
+            <span class="schedule-day">{{ d.shortLabel }}</span>
+            <label class="schedule-check">
+              <input type="checkbox" formControlName="enabled" [attr.aria-label]="'Abrir ' + d.label" />
+            </label>
+            @if (hoursForm.get(d.code)?.get('enabled')?.value) {
+              <input type="time" class="az-input schedule-time" formControlName="aOpen" />
+              <input type="time" class="az-input schedule-time" formControlName="aClose" />
+              <label class="schedule-split" title="Partir el día (segunda franja)">
+                <input type="checkbox" formControlName="split" />
+              </label>
+              @if (hoursForm.get(d.code)?.get('split')?.value) {
+                <div class="schedule-split-row">
+                  <input type="time" class="az-input schedule-time" formControlName="bOpen" />
+                  <span class="schedule-sep">–</span>
+                  <input type="time" class="az-input schedule-time" formControlName="bClose" />
+                </div>
+              }
+            } @else {
+              <span class="schedule-closed muted">Cerrado</span>
+            }
+          </div>
+        }
+      </div>
       <button type="button" class="az-btn az-btn-primary mt" (click)="saveScheduleAndWhatsapp()">
-        Guardar horario y WhatsApp
+        Guardar horario
       </button>
+      @if (scheduleMsg()) {
+        <p class="services-msg">{{ scheduleMsg() }}</p>
+      }
     </div>
     <div class="az-card">
       <h3>WhatsApp del negocio</h3>
@@ -177,151 +161,134 @@
     </div>
   </div>
 
-  <div class="az-card mt">
-    <h3>Personalización ampliada</h3>
-    <p class="muted">
-      Esta identidad visual se aplica al panel del negocio y también al enlace público de reservas.
-    </p>
+  <div class="az-card mt branding-card">
+    <h3>Personalización</h3>
+    <p class="muted small">Identidad visual del panel y del enlace público.</p>
     <form [formGroup]="form" (ngSubmit)="saveBranding()">
-      <div class="brand-grid">
-        <div>
-          <label class="az-label">Nombre interno del negocio</label>
-          <input class="az-input wide" formControlName="tenantName" />
+      <div class="branding-layout">
+        <div class="branding-col branding-col--identity">
+          <div class="brand-grid identity-grid">
+            <div>
+              <label class="az-label">Nombre interno</label>
+              <input class="az-input wide" formControlName="tenantName" />
+            </div>
+            <div>
+              <label class="az-label">Marca visible</label>
+              <input class="az-input wide" formControlName="displayName" />
+            </div>
+            <div class="full-row logo-field">
+              <label class="az-label">Logo</label>
+              <div class="logo-upload-block">
+                <div class="logo-preview-box" [class.has-logo]="!!logoPreview()">
+                  @if (logoPreview(); as logo) {
+                    <img [src]="logo" alt="Logo actual del negocio" />
+                  } @else {
+                    <span class="logo-placeholder">{{ logoInitial() }}</span>
+                  }
+                </div>
+                <div class="logo-upload-actions">
+                  <input type="file" accept="image/*" (change)="onLogoSelected($event)" />
+                  @if (logoPreview()) {
+                    <button type="button" class="az-btn az-btn-ghost small" (click)="clearLogo()">Quitar</button>
+                  }
+                </div>
+              </div>
+              @if (brandingImageHint()) {
+                <p class="field-error">{{ brandingImageHint() }}</p>
+              }
+            </div>
+            <div class="full-row">
+              <h4 class="subsection-title">Textos para quien reserva</h4>
+            </div>
+            <div class="full-row">
+              <label class="az-label" for="pub-addr">Dirección</label>
+              <textarea id="pub-addr" class="az-input wide branding-ta" rows="2" formControlName="publicAddress" placeholder="Ej.: Calle Mayor 12, 2º B"></textarea>
+            </div>
+            <div class="full-row">
+              <label class="az-label" for="pub-maps">Mapa (opcional)</label>
+              <input id="pub-maps" class="az-input wide" type="url" formControlName="publicMapsUrl" placeholder="https://maps.app.goo.gl/…" />
+            </div>
+            <div class="full-row">
+              <label class="az-label" for="pub-cancel">Cancelación</label>
+              <textarea id="pub-cancel" class="az-input wide branding-ta" rows="2" formControlName="cancellationPolicy" placeholder="Ej.: Cancelación gratuita hasta 24 h antes…"></textarea>
+            </div>
+            <div class="full-row">
+              <label class="az-label" for="pub-reminder">Aviso contacto</label>
+              <textarea id="pub-reminder" class="az-input wide branding-ta" rows="2" formControlName="reminderNotice" placeholder="Ej.: Te llamaremos para confirmar."></textarea>
+            </div>
+          </div>
         </div>
-        <div>
-          <label class="az-label">Nombre de marca visible</label>
-          <input class="az-input wide" formControlName="displayName" />
-        </div>
-        <div class="full-row">
-          <h4 class="subsection-title">Información para quien reserva (enlace público)</h4>
-          <p class="muted small">
-            Se muestra en el último paso antes de confirmar la cita. Si dejas un campo vacío, el cliente verá un texto
-            genérico útil (excepto dirección y mapa, que solo aparecen si los rellenas).
-          </p>
-        </div>
-        <div class="full-row">
-          <label class="az-label" for="pub-addr">Dirección o cómo llegar</label>
-          <textarea
-            id="pub-addr"
-            class="az-input wide branding-ta"
-            rows="2"
-            formControlName="publicAddress"
-            placeholder="Ej.: Calle Mayor 12, 2º puerta B"
-          ></textarea>
-        </div>
-        <div class="full-row">
-          <label class="az-label" for="pub-maps">Enlace a mapa o ficha (opcional)</label>
-          <input
-            id="pub-maps"
-            class="az-input wide"
-            type="url"
-            formControlName="publicMapsUrl"
-            placeholder="https://maps.app.goo.gl/…"
-          />
-        </div>
-        <div class="full-row">
-          <label class="az-label" for="pub-cancel">Política de cancelación o cambios</label>
-          <textarea
-            id="pub-cancel"
-            class="az-input wide branding-ta"
-            rows="3"
-            formControlName="cancellationPolicy"
-            placeholder="Ej.: Cancelación gratuita hasta 24 h antes…"
-          ></textarea>
-        </div>
-        <div class="full-row">
-          <label class="az-label" for="pub-reminder">Aviso sobre contacto o recordatorios</label>
-          <textarea
-            id="pub-reminder"
-            class="az-input wide branding-ta"
-            rows="2"
-            formControlName="reminderNotice"
-            placeholder="Ej.: Te llamaremos para confirmar. No enviamos SMS automáticos."
-          ></textarea>
-        </div>
-        <div class="full-row">
-          <label class="az-label">Logo (opcional)</label>
-          <input type="file" accept="image/*" (change)="onLogoSelected($event)" />
-          @if (brandingImageHint()) {
-            <p class="field-error">{{ brandingImageHint() }}</p>
-          }
-          @if (logoPreview(); as logo) {
-            <div class="logo-row">
-              <img [src]="logo" alt="Logo" />
-              <button type="button" class="az-btn az-btn-ghost small" (click)="clearLogo()">Quitar logo</button>
+
+        <div class="branding-col branding-col--colors">
+          <h4 class="subsection-title">Colores y estilo</h4>
+          <div class="color-palette-grid">
+            <label class="color-field">
+              <span class="az-label">Primario</span>
+              <input class="color-input" type="color" formControlName="brandColor" />
+            </label>
+            <label class="color-field">
+              <span class="az-label">Acento</span>
+              <input class="color-input" type="color" formControlName="accentColor" />
+            </label>
+            <label class="color-field">
+              <span class="az-label">Fondo</span>
+              <input class="color-input" type="color" formControlName="bgColor" />
+            </label>
+            <label class="color-field">
+              <span class="az-label">Superficie</span>
+              <input class="color-input" type="color" formControlName="surfaceColor" />
+            </label>
+            <label class="color-field">
+              <span class="az-label">Texto</span>
+              <input class="color-input" type="color" formControlName="textColor" />
+            </label>
+            <label class="color-field color-field--num">
+              <span class="az-label">Redondeado</span>
+              <input class="az-input num-input" type="number" min="4" max="28" formControlName="borderRadiusPx" />
+            </label>
+          </div>
+          <label class="gradient-toggle compact">
+            <input type="checkbox" formControlName="useGradient" />
+            Fondo degradado
+          </label>
+          @if (form.controls.useGradient.getRawValue()) {
+            <div class="color-palette-grid gradient-grid">
+              <label class="color-field">
+                <span class="az-label">Desde</span>
+                <input class="color-input" type="color" formControlName="gradientFrom" />
+              </label>
+              <label class="color-field">
+                <span class="az-label">Hacia</span>
+                <input class="color-input" type="color" formControlName="gradientTo" />
+              </label>
+              <label class="color-field color-field--num">
+                <span class="az-label">Ángulo</span>
+                <input class="az-input num-input" type="number" min="0" max="360" formControlName="gradientAngleDeg" />
+              </label>
             </div>
           }
-        </div>
-        <div>
-          <label class="az-label">Color primario</label>
-          <input class="az-input wide" type="color" formControlName="brandColor" />
-        </div>
-        <div>
-          <label class="az-label">Color acento</label>
-          <input class="az-input wide" type="color" formControlName="accentColor" />
-        </div>
-        <div>
-          <label class="az-label">Fondo</label>
-          <input class="az-input wide" type="color" formControlName="bgColor" />
-        </div>
-        <div>
-          <label class="az-label">Superficie (cards)</label>
-          <input class="az-input wide" type="color" formControlName="surfaceColor" />
-        </div>
-        <div>
-          <label class="az-label">Texto</label>
-          <input class="az-input wide" type="color" formControlName="textColor" />
-        </div>
-        <div>
-          <label class="az-label">Redondeado (px)</label>
-          <input class="az-input wide" type="number" min="4" max="28" formControlName="borderRadiusPx" />
-        </div>
-        <div class="full-row gradient-toggle">
-          <label>
-            <input type="checkbox" formControlName="useGradient" />
-            Usar fondo degradado
-          </label>
-        </div>
-        @if (form.controls.useGradient.getRawValue()) {
-          <div>
-            <label class="az-label">Degradado desde</label>
-            <input class="az-input wide" type="color" formControlName="gradientFrom" />
+          <div class="preset-wrap">
+            <label class="az-label">Paletas</label>
+            <div class="preset-grid compact">
+              @for (p of colorPresets; track p.id) {
+                <button type="button" class="preset-card" (click)="applyColorPreset(p)" [title]="p.name">
+                  <span class="preset-swatches">
+                    <span class="swatch" [style.background]="p.primaryColor"></span>
+                    <span class="swatch" [style.background]="p.accentColor"></span>
+                    <span class="swatch" [style.background]="p.bgColor"></span>
+                    <span class="swatch" [style.background]="p.surfaceColor"></span>
+                    <span class="swatch" [style.background]="p.textColor"></span>
+                  </span>
+                  <span class="preset-title">{{ p.name }}</span>
+                </button>
+              }
+            </div>
           </div>
-          <div>
-            <label class="az-label">Degradado hacia</label>
-            <input class="az-input wide" type="color" formControlName="gradientTo" />
+          <div class="branding-actions">
+            <button type="submit" class="az-btn az-btn-primary">Guardar</button>
+            <button type="button" class="az-btn az-btn-secondary" (click)="resetBrandingColors()">Restablecer</button>
           </div>
-          <div>
-            <label class="az-label">Ángulo degradado (0-360)</label>
-            <input class="az-input wide" type="number" min="0" max="360" formControlName="gradientAngleDeg" />
-          </div>
-        }
-      </div>
-      <div class="preset-wrap">
-        <label class="az-label">Colores recomendados</label>
-        <div class="preset-grid">
-          @for (p of colorPresets; track p.id) {
-            <button type="button" class="preset-card" (click)="applyColorPreset(p)">
-              <span class="preset-title">{{ p.name }}</span>
-              <span class="preset-swatches">
-                <span class="swatch" [style.background]="p.primaryColor" title="Primario"></span>
-                <span class="swatch" [style.background]="p.accentColor" title="Acento"></span>
-                <span class="swatch" [style.background]="p.bgColor" title="Fondo"></span>
-                <span class="swatch" [style.background]="p.surfaceColor" title="Superficie"></span>
-                <span class="swatch" [style.background]="p.textColor" title="Texto"></span>
-              </span>
-            </button>
-          }
         </div>
-      </div>
-      <p class="muted tiny">
-        Consejo: evita usar color de texto muy parecido al fondo/superficie para mantener legibilidad.
-      </p>
-      <div class="branding-actions">
-        <button type="submit" class="az-btn az-btn-primary mt">Guardar personalización</button>
-        <button type="button" class="az-btn az-btn-secondary mt" (click)="resetBrandingColors()">
-          Restablecer colores
-        </button>
       </div>
     </form>
     @if (brandingMsg()) {

@@ -730,6 +730,56 @@ export class MockDataService {
     });
   }
 
+  /** Sincroniza branding desde respuesta del API (panel + enlace público). */
+  applyBrandingFromApi(
+    tenantId: string,
+    b: {
+      displayName: string;
+      logoUrl: string | null;
+      publicAddress?: string | null;
+      publicMapsUrl?: string | null;
+      cancellationPolicy?: string | null;
+      reminderNotice?: string | null;
+      whatsappPhoneE164?: string | null;
+      whatsappDefaultMessage?: string | null;
+      publicBookingHoursJson?: string | null;
+      catalogLayout?: 'horizontal' | 'grid';
+      primaryColor: string;
+      accentColor: string;
+      bgColor: string;
+      surfaceColor: string;
+      textColor: string;
+      borderRadiusPx: number;
+      useGradient: boolean;
+      gradientFrom: string;
+      gradientTo: string;
+      gradientAngleDeg: number;
+    },
+  ): void {
+    this.updateTenantBranding(tenantId, {
+      displayName: b.displayName,
+      logoUrl: b.logoUrl,
+      publicAddress: b.publicAddress ?? null,
+      publicMapsUrl: b.publicMapsUrl ?? null,
+      cancellationPolicy: b.cancellationPolicy ?? null,
+      reminderNotice: b.reminderNotice ?? null,
+      whatsappPhoneE164: b.whatsappPhoneE164 ?? null,
+      whatsappDefaultMessage: b.whatsappDefaultMessage ?? null,
+      publicBookingHoursJson: b.publicBookingHoursJson ?? null,
+      catalogLayout: b.catalogLayout,
+      primaryColor: b.primaryColor,
+      accentColor: b.accentColor,
+      bgColor: b.bgColor,
+      surfaceColor: b.surfaceColor,
+      textColor: b.textColor,
+      borderRadiusPx: b.borderRadiusPx,
+      useGradient: b.useGradient,
+      gradientFrom: b.gradientFrom,
+      gradientTo: b.gradientTo,
+      gradientAngleDeg: b.gradientAngleDeg,
+    });
+  }
+
   updateTenantName(tenantId: string, name: string): void {
     const clean = name.trim();
     if (!clean) {

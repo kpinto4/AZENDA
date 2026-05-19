@@ -182,6 +182,12 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     async insertTenantSale(data) {
         return this.retail.insertTenantSale(data);
     }
+    async listStockMovementsByTenantId(tenantId, limit) {
+        return this.retail.listStockMovementsByTenantId(tenantId, limit);
+    }
+    async insertStockMovement(data) {
+        return this.retail.insertStockMovement(data);
+    }
     async getTenantBranding(tenantId) {
         return this.tenantBranding.get(tenantId);
     }

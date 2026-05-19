@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   ApiAppointmentsService,
@@ -12,29 +12,18 @@ import {
 } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
 import { UiAlertService } from '../../core/services/ui-alert.service';
+import { AgendaCalendarComponent } from '../../shared/agenda/agenda-calendar.component';
+import type { AgendaCalendarEvent } from '../../shared/agenda/agenda-calendar.types';
+import {
+  DOW_LABELS,
+  MESES_CORT,
+  cleanServiceLabel,
+  parseWhenLocal,
+  readEmployeeIdFromService,
+} from '../../shared/agenda/agenda-calendar.utils';
+import { AppointmentDetailSheetComponent } from '../../shared/agenda/appointment-detail-sheet.component';
 
-export interface CalSimDay {
-  key: string;
-  label: string;
-  sub: string;
-  isToday: boolean;
-  events: { id: string; title: string; time: string; tone: 'primary' | 'accent' | 'neutral' }[];
-}
-
-const MESES_CORT = [
-  'ene',
-  'feb',
-  'mar',
-  'abr',
-  'may',
-  'jun',
-  'jul',
-  'ago',
-  'sep',
-  'oct',
-  'nov',
-  'dic',
-];
+const EMPLOYEE_COLORS = ['#2563eb', '#8b5cf6', '#db2777', '#0d9488', '#ea580c', '#4f46e5'];
 
 function toYmdLocal(d: Date): string {
   const y = d.getFullYear();
@@ -43,80 +32,13 @@ function toYmdLocal(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Lunes de la semana que contiene “hoy”, más `offsetWeeks` semanas. */
-function mondayOfWeekWithOffset(offsetWeeks: number): Date {
-  const now = new Date();
-  now.setHours(12, 0, 0, 0);
-  const dow = now.getDay();
-  const diff = dow === 0 ? -6 : 1 - dow;
-  const mon = new Date(now);
-  mon.setDate(now.getDate() + diff + offsetWeeks * 7);
-  mon.setHours(0, 0, 0, 0);
-  return mon;
-}
-
-function parseWhenLocal(when: string): { ymd: string; time: string } | null {
-  const s = when.trim();
-  let m = /^(\d{4}-\d{2}-\d{2})[ T](\d{1,2}):(\d{2})(?::\d{2})?/.exec(s);
-  if (m) {
-    const hh = m[2].padStart(2, '0');
-    return { ymd: m[1], time: `${hh}:${m[3]}` };
-  }
-  m = /^(\d{4}-\d{2}-\d{2})$/.exec(s);
-  if (m) {
-    return { ymd: m[1], time: '—' };
-  }
-  return null;
-}
-
-function readEmployeeIdFromService(service: string): string | null {
-  const m = /\bEmpleadoId:([A-Za-z0-9_-]+)\b/.exec(service);
-  return m?.[1] ?? null;
-}
-
-function cleanServiceLabel(service: string): string {
-  return service.replace(/\s*·\s*EmpleadoId:[A-Za-z0-9_-]+/g, '').trim();
-}
-
-function weekRangeLabel(monday: Date): string {
-  const fri = new Date(monday);
-  fri.setDate(monday.getDate() + 4);
-  const yMon = monday.getFullYear();
-  if (monday.getMonth() === fri.getMonth()) {
-    return `${monday.getDate()} – ${fri.getDate()} ${MESES_CORT[monday.getMonth()]} ${yMon}`;
-  }
-  return `${monday.getDate()} ${MESES_CORT[monday.getMonth()]} – ${fri.getDate()} ${MESES_CORT[fri.getMonth()]} ${fri.getFullYear()}`;
-}
-
-function statusTone(status: MockAppointment['status']): 'primary' | 'accent' | 'neutral' {
-  if (status === 'confirmada') {
-    return 'primary';
-  }
-  if (status === 'pendiente') {
-    return 'accent';
-  }
-  return 'neutral';
-}
-
-function eventTone(a: MockAppointment): 'primary' | 'accent' | 'neutral' {
-  const att = a.attendance ?? 'PENDIENTE';
-  if (att === 'ASISTIO') {
-    return 'primary';
-  }
-  if (att === 'NO_ASISTIO') {
-    return 'neutral';
-  }
-  return statusTone(a.status);
-}
-
 @Component({
   selector: 'app-tenant-appointments',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, AgendaCalendarComponent, AppointmentDetailSheetComponent],
   templateUrl: './tenant-appointments.component.html',
   styleUrl: './tenant-appointments.component.scss',
 })
 export class TenantAppointmentsComponent {
-  @ViewChild('calWeekScrollEl') private calWeekScrollEl?: ElementRef<HTMLDivElement>;
   private readonly fb = inject(FormBuilder);
   readonly data = inject(MockDataService);
   readonly session = inject(MockSessionService);
@@ -128,6 +50,13 @@ export class TenantAppointmentsComponent {
   readonly creatingAppointment = signal(false);
   readonly liveServiceOptions = signal<string[]>([]);
   readonly refreshingList = signal(false);
+
+  readonly sheetOpen = signal(false);
+  readonly sheetMode = signal<'detail' | 'day-list'>('detail');
+  readonly sheetAppointment = signal<MockAppointment | null>(null);
+  readonly sheetDayEvents = signal<AgendaCalendarEvent[]>([]);
+  readonly sheetDayLabel = signal('');
+  readonly createSheetOpen = signal(false);
 
   readonly attendanceQuickOptions: { value: MockAppointmentAttendance; label: string }[] = [
     { value: 'PENDIENTE', label: 'Pendiente' },
@@ -142,14 +71,9 @@ export class TenantAppointmentsComponent {
     time: ['09:00', Validators.required],
   });
 
-  readonly canCreateManualAppointment = computed(
-    () =>
-      this.session.role() === 'EMPLOYEE' &&
-      this.session.manualBookingEnabled() &&
-      !this.session.isTenantRestricted(),
-  );
+  readonly showManualCreateCard = computed(() => false);
+  readonly canCreateManualAppointment = computed(() => false);
   readonly appointmentsBlockedMessage = computed(() => this.session.tenantRestrictionMessage());
-  readonly showManualCreateCard = computed(() => this.canCreateManualAppointment());
   readonly manualServiceOptions = computed(() => {
     if (this.apiAppointments.useRemote()) {
       return this.liveServiceOptions();
@@ -175,6 +99,34 @@ export class TenantAppointmentsComponent {
       return mapped;
     }
     return this.data.appointmentsForBookingSlug(this.session.publicBookingSlug());
+  });
+
+  readonly employeeColorMap = computed(() => {
+    const map = new Map<string, string>();
+    const names = new Set<string>();
+    for (const a of this.tenantAppointments()) {
+      names.add(this.employeeForAppointment(a));
+    }
+    [...names].forEach((name, idx) => map.set(name, EMPLOYEE_COLORS[idx % EMPLOYEE_COLORS.length]));
+    return map;
+  });
+
+  readonly sheetEmployeeName = computed(() => {
+    const a = this.sheetAppointment();
+    return a ? this.employeeForAppointment(a) : '';
+  });
+
+  readonly sheetWaLink = computed(() => {
+    const a = this.sheetAppointment();
+    if (!a?.waReminderConsent || !a.customerPhoneE164) {
+      return null;
+    }
+    const tid = this.session.tenantId();
+    const branding = tid ? this.data.brandingForTenant(tid) : null;
+    const biz = (branding?.displayName ?? '').trim() || 'Tu negocio';
+    const phoneDigits = a.customerPhoneE164.replace(/\D/g, '');
+    const text = `Hola, te recordamos tu cita el ${a.when} en ${biz}. Ref: ${a.id}`;
+    return `https://wa.me/${phoneDigits}?text=${encodeURIComponent(text)}`;
   });
 
   /** Citas hoy o mañana con móvil y sin marcar recordatorio manual enviado. */
@@ -208,75 +160,7 @@ export class TenantAppointmentsComponent {
       });
   });
 
-  private buildClientWaReminderLink(
-    a: MockAppointment,
-    businessDisplay: string,
-    phoneDigits: string,
-  ): string {
-    const text = `Hola, te recordamos tu cita el ${a.when} en ${businessDisplay}. Ref: ${a.id}`;
-    return `https://wa.me/${phoneDigits}?text=${encodeURIComponent(text)}`;
-  }
-
-  markManualReminderDone(id: string): void {
-    if (!this.apiAppointments.useRemote()) {
-      this.alerts.info('Modo demo: no hay persistencia de recordatorio en servidor.');
-      return;
-    }
-    this.apiAppointments.patchManualReminderSent(id).subscribe({
-      next: () => this.alerts.success('Recordatorio marcado como enviado.'),
-      error: () => this.alerts.warning('No se pudo actualizar la cita.'),
-    });
-  }
-
-  /** Desplazamiento en semanas respecto a la semana actual (lunes–viernes). */
-  readonly calWeekOffset = signal(0);
-
-  readonly calendarWeek = computed(() => {
-    const monday = mondayOfWeekWithOffset(this.calWeekOffset());
-    const dowLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'];
-    const list = this.tenantAppointments();
-    const todayYmd = toYmdLocal(new Date());
-
-    const days: CalSimDay[] = [];
-    for (let i = 0; i < 5; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      const ymdStr = toYmdLocal(d);
-      const events = list
-        .map((a) => ({ a, p: parseWhenLocal(a.when) }))
-        .filter(({ p }) => p && p.ymd === ymdStr)
-        .sort((x, y) => x.a.when.localeCompare(y.a.when))
-        .map(({ a, p }) => ({
-          id: a.id,
-          title: `${a.customer} · ${cleanServiceLabel(a.service)}`,
-          time: p!.time,
-          tone: eventTone(a),
-        }));
-      days.push({
-        key: `w${toYmdLocal(d)}`,
-        label: dowLabels[i],
-        sub: String(d.getDate()),
-        isToday: ymdStr === todayYmd,
-        events,
-      });
-    }
-
-    return {
-      weekLabel: weekRangeLabel(monday),
-      days,
-      totalEvents: days.reduce((acc, day) => acc + day.events.length, 0),
-    };
-  });
-
-  readonly calGridTemplate = computed(() =>
-    this.calendarWeek()
-      .days.map((d) => (d.events.length ? 'minmax(162px, 1fr)' : 'minmax(100px, 0.62fr)'))
-      .join(' '),
-  );
-
-  readonly calBoardMinWidth = computed(() =>
-    Math.max(650, this.calendarWeek().days.reduce((acc, d) => acc + (d.events.length ? 162 : 100), 0)),
-  );
+  readonly employeeResolver = (a: MockAppointment) => this.employeeForAppointment(a);
 
   constructor() {
     effect(() => {
@@ -285,10 +169,6 @@ export class TenantAppointmentsComponent {
       } else {
         this.createForm.enable({ emitEvent: false });
       }
-    });
-    effect(() => {
-      this.calendarWeek();
-      queueMicrotask(() => this.scrollCalendarToToday());
     });
     effect((onCleanup) => {
       if (!this.apiAppointments.useRemote()) {
@@ -313,8 +193,30 @@ export class TenantAppointmentsComponent {
     });
   }
 
-  shiftCalWeek(delta: number): void {
-    this.calWeekOffset.update((o) => o + delta);
+  private buildClientWaReminderLink(
+    a: MockAppointment,
+    businessDisplay: string,
+    phoneDigits: string,
+  ): string {
+    const text = `Hola, te recordamos tu cita el ${a.when} en ${businessDisplay}. Ref: ${a.id}`;
+    return `https://wa.me/${phoneDigits}?text=${encodeURIComponent(text)}`;
+  }
+
+  markManualReminderDone(id: string): void {
+    if (!this.apiAppointments.useRemote()) {
+      this.alerts.info('Modo demo: no hay persistencia de recordatorio en servidor.');
+      return;
+    }
+    this.apiAppointments.patchManualReminderSent(id).subscribe({
+      next: () => {
+        this.alerts.success('Recordatorio marcado como enviado.');
+        const current = this.sheetAppointment();
+        if (current?.id === id) {
+          this.sheetAppointment.set({ ...current, waReminderSentAt: new Date().toISOString() });
+        }
+      },
+      error: () => this.alerts.warning('No se pudo actualizar la cita.'),
+    });
   }
 
   refreshAppointmentList(): void {
@@ -335,19 +237,6 @@ export class TenantAppointmentsComponent {
     });
   }
 
-  private scrollCalendarToToday(): void {
-    const host = this.calWeekScrollEl?.nativeElement;
-    if (!host) {
-      return;
-    }
-    const todayEl = host.querySelector('.cal-day-column.today') as HTMLElement | null;
-    if (todayEl) {
-      todayEl.scrollIntoView({ block: 'nearest', inline: 'center' });
-      return;
-    }
-    host.scrollLeft = 0;
-  }
-
   statusLabel(status: MockAppointment['status']): string {
     if (status === 'confirmada') {
       return 'confirmada';
@@ -365,10 +254,81 @@ export class TenantAppointmentsComponent {
     }
     const attendance = raw as MockAppointmentAttendance;
     if (this.apiAppointments.useRemote()) {
-      this.apiAppointments.patchAttendance(id, attendance).subscribe({ error: () => {} });
+      this.apiAppointments.patchAttendance(id, attendance).subscribe({
+        next: () => {
+          const current = this.sheetAppointment();
+          if (current?.id === id) {
+            this.sheetAppointment.set({ ...current, attendance });
+          }
+        },
+        error: () => {},
+      });
     } else {
       this.data.setAppointmentAttendance(id, attendance);
+      const current = this.sheetAppointment();
+      if (current?.id === id) {
+        this.sheetAppointment.set({ ...current, attendance });
+      }
     }
+  }
+
+  onAppointmentSelected(ev: AgendaCalendarEvent): void {
+    this.sheetMode.set('detail');
+    this.sheetAppointment.set(ev.appointment);
+    this.sheetOpen.set(true);
+  }
+
+  onDayOverflow(payload: { dayKey: string; events: AgendaCalendarEvent[] }): void {
+    this.sheetMode.set('day-list');
+    this.sheetDayEvents.set(payload.events);
+    this.sheetDayLabel.set(this.formatDayLabel(payload.dayKey));
+    this.sheetAppointment.set(null);
+    this.sheetOpen.set(true);
+  }
+
+  onSheetEventSelected(ev: AgendaCalendarEvent): void {
+    this.sheetMode.set('detail');
+    this.sheetAppointment.set(ev.appointment);
+  }
+
+  closeSheet(): void {
+    this.sheetOpen.set(false);
+  }
+
+  openCreateSheet(): void {
+    this.createSheetOpen.set(true);
+  }
+
+  closeCreateSheet(): void {
+    this.createSheetOpen.set(false);
+  }
+
+  private formatDayLabel(ymd: string): string {
+    const [y, mo, d] = ymd.split('-').map(Number);
+    const date = new Date(y, (mo ?? 1) - 1, d ?? 1);
+    return `${DOW_LABELS[date.getDay()]} ${d} ${MESES_CORT[(mo ?? 1) - 1]} ${y}`;
+  }
+
+  private employeeForAppointment(appt: MockAppointment): string {
+    if (this.apiAppointments.useRemote()) {
+      const employeeId = readEmployeeIdFromService(appt.service);
+      if (!employeeId) {
+        return 'Sin asignar';
+      }
+      if (employeeId === this.session.currentUserId()) {
+        const own = this.session.userName().trim();
+        return own || 'Mi cita';
+      }
+      return employeeId;
+    }
+    const employees = this.data.employees();
+    if (!employees.length) {
+      return 'Sin asignar';
+    }
+    const seed = `${appt.id}|${appt.customer}|${appt.service}`
+      .split('')
+      .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    return employees[seed % employees.length].name;
   }
 
   createAppointment(): void {
@@ -412,6 +372,7 @@ export class TenantAppointmentsComponent {
                 this.createMsg.set('Cita creada correctamente.');
                 this.alerts.success('Reserva creada correctamente.');
                 this.createForm.patchValue({ customer: '', service: '', time: '09:00' });
+                this.createSheetOpen.set(false);
               },
               error: () => {
                 this.creatingAppointment.set(false);
@@ -448,6 +409,7 @@ export class TenantAppointmentsComponent {
     this.createMsg.set('Cita creada (modo demo).');
     this.alerts.success('Cita creada en modo demo.');
     this.createForm.patchValue({ customer: '', service: '', time: '09:00' });
+    this.createSheetOpen.set(false);
   }
 
   displayServiceLabel(service: string): string {

@@ -123,6 +123,15 @@ export interface TenantSaleEntity {
     stockNote: string | null;
     createdAt: string;
 }
+export interface TenantStockMovementEntity {
+    id: string;
+    tenantId: string;
+    productId: string;
+    productName: string;
+    delta: number;
+    reason: string;
+    createdAt: string;
+}
 export interface PlatformSiteLandingCopy {
     navBrand: string;
     eyebrow: string;

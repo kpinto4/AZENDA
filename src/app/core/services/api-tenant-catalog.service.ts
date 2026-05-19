@@ -57,6 +57,16 @@ export interface ApiTenantCatalogResponse {
   branding: ApiTenantBrandingDto;
 }
 
+export interface ApiTenantStockMovementDto {
+  id: string;
+  tenantId: string;
+  productId: string;
+  productName: string;
+  delta: number;
+  reason: string;
+  createdAt: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiTenantCatalogService {
   private readonly http = inject(HttpClient);
@@ -151,5 +161,20 @@ export class ApiTenantCatalogService {
     body: Partial<Omit<ApiTenantBrandingDto, 'tenantId'>>,
   ): Observable<ApiTenantBrandingDto> {
     return this.http.patch<ApiTenantBrandingDto>(`${environment.apiBaseUrl}/tenant/branding`, body);
+  }
+
+  listStockMovements(): Observable<ApiTenantStockMovementDto[]> {
+    return this.http.get<ApiTenantStockMovementDto[]>(`${environment.apiBaseUrl}/tenant/inventory/movements`);
+  }
+
+  applyStockMovement(body: {
+    productId: string;
+    delta: number;
+    reason: string;
+  }): Observable<ApiTenantStockMovementDto> {
+    return this.http.post<ApiTenantStockMovementDto>(
+      `${environment.apiBaseUrl}/tenant/inventory/movements`,
+      body,
+    );
   }
 }

@@ -154,6 +154,17 @@ export interface TenantSaleEntity {
   createdAt: string;
 }
 
+/** Movimiento de inventario (ajuste manual o venta). */
+export interface TenantStockMovementEntity {
+  id: string;
+  tenantId: string;
+  productId: string;
+  productName: string;
+  delta: number;
+  reason: string;
+  createdAt: string;
+}
+
 /** Textos de la landing y moneda global (Super Admin + lectura pública). */
 export interface PlatformSiteLandingCopy {
   navBrand: string;

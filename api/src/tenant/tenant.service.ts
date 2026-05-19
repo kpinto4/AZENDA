@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { AppSystem, AuthUser, UserRole } from '../auth/auth.types';
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
 import { CreateTenantEmployeeDto } from './dto/create-tenant-employee.dto';
@@ -9,6 +9,7 @@ import { UpsertTenantProductDto } from './dto/upsert-tenant-product.dto';
 import { UpsertTenantServiceDto } from './dto/upsert-tenant-service.dto';
 import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
 import { SimulateUpgradeDto } from './dto/simulate-upgrade.dto';
+import { ApplyStockMovementDto } from './dto/apply-stock-movement.dto';
 
 @Injectable()
 export class TenantService {
@@ -297,6 +298,40 @@ export class TenantService {
       throw new NotFoundException('Empleado no encontrado');
     }
     return { ok: true };
+  }
+
+  async listStockMovements(currentUser: AuthUser) {
+    const tenantId = this.requireTenantId(currentUser);
+    return this.sqlDbService.listStockMovementsByTenantId(tenantId, 50);
+  }
+
+  async applyStockMovement(currentUser: AuthUser, dto: ApplyStockMovementDto) {
+    const tenantId = this.requireTenantId(currentUser);
+    const delta = Number(dto.delta);
+    if (!delta || !Number.isFinite(delta)) {
+      throw new BadRequestException('Delta invalido');
+    }
+    const products = await this.sqlDbService.listProductsByTenantId(tenantId);
+    const product = products.find((p) => p.id === dto.productId.trim());
+    if (!product) {
+      throw new BadRequestException('Producto no encontrado');
+    }
+    const nextStock = product.stock + delta;
+    if (nextStock < 0) {
+      throw new BadRequestException(
+        `Stock insuficiente (disponible: ${product.stock})`,
+      );
+    }
+    await this.sqlDbService.updateTenantProduct(tenantId, product.id, {
+      stock: nextStock,
+    });
+    return this.sqlDbService.insertStockMovement({
+      tenantId,
+      productId: product.id,
+      productName: product.name,
+      delta,
+      reason: dto.reason.trim(),
+    });
   }
 
   private requireTenantId(currentUser: AuthUser): string {

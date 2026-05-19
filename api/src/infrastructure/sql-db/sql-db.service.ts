@@ -15,6 +15,7 @@ import {
   TenantProductEntity,
   TenantSaleEntity,
   TenantServiceEntity,
+  TenantStockMovementEntity,
   UserEntity,
 } from './sql-db.types';
 import { AppointmentRepository } from './repositories/appointment.repository';
@@ -366,6 +367,23 @@ export class SqlDbService implements OnModuleInit {
     stockNote: string | null;
   }): Promise<TenantSaleEntity> {
     return this.retail.insertTenantSale(data);
+  }
+
+  async listStockMovementsByTenantId(
+    tenantId: string,
+    limit?: number,
+  ): Promise<TenantStockMovementEntity[]> {
+    return this.retail.listStockMovementsByTenantId(tenantId, limit);
+  }
+
+  async insertStockMovement(data: {
+    tenantId: string;
+    productId: string;
+    productName: string;
+    delta: number;
+    reason: string;
+  }): Promise<TenantStockMovementEntity> {
+    return this.retail.insertStockMovement(data);
   }
 
   async getTenantBranding(tenantId: string): Promise<TenantBrandingEntity> {

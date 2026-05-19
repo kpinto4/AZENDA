@@ -1,5 +1,5 @@
-<div class="az-container az-page">
-  <div class="az-page-head dashboard-head">
+<div class="az-container az-page tenant-page tenant-dashboard-page">
+  <div class="az-page-head dashboard-head tenant-page-head">
     <div>
       <h1 class="az-page-title">Resumen</h1>
       <p class="az-page-sub">{{ panelSubtitle() }}</p>
@@ -11,12 +11,12 @@
         >Área cliente</a
       >
       @if (session.modules().inventory) {
-        <a class="az-btn az-btn-secondary" routerLink="/app/inventario">Productos y servicios</a>
+        <a class="az-btn az-btn-secondary" routerLink="/app/inventario">Productos</a>
       }
     </div>
   </div>
 
-  <div class="az-grid cols-3 dashboard-kpis">
+  <div class="az-grid cols-3 dashboard-kpis az-section">
     <div class="az-card kpi-tile">
       <div class="az-kpi-label">{{ citasHoyKpiLabel() }}</div>
       <div class="az-kpi">{{ appointmentsTodayCount() }}</div>
@@ -31,8 +31,23 @@
     </div>
   </div>
 
+  <div class="az-card az-section agenda-principal">
+    <app-agenda-calendar
+      title="Agenda principal"
+      [appointments]="myAppointments()"
+      [employeeColorMap]="employeeColorMap()"
+      [employeeResolver]="employeeResolver"
+      [compact]="true"
+      (appointmentSelected)="onAppointmentSelected($event)"
+      (dayOverflowSelected)="onDayOverflow($event)"
+    />
+    <p class="agenda-foot-link muted">
+      <a routerLink="/app/citas">Ver gestión completa de citas →</a>
+    </p>
+  </div>
+
   @if (primaryLowStockAlert(); as alert) {
-    <div class="dashboard-stock-toast az-card" role="status">
+    <div class="dashboard-stock-toast az-card az-section" role="status">
       <span class="dashboard-stock-toast-icon" aria-hidden="true">!</span>
       <div class="dashboard-stock-toast-body">
         <p>
@@ -46,7 +61,22 @@
     </div>
   }
 
-  <div class="az-card dashboard-week-chart">
+  <div class="az-card az-section upcoming-card">
+    <h3>Próximas citas</h3>
+    <ul class="mini-card-list">
+      @for (a of upcomingAppointments().slice(0, 4); track a.id) {
+        <li class="mini-card-item">
+          <strong>{{ a.customer }}</strong>
+          <span class="muted">{{ displayServiceLabel(a.service) }}</span>
+          <span class="muted mini-card-when">{{ a.when }}</span>
+        </li>
+      } @empty {
+        <li class="mini-card-item mini-card-item--empty muted">No hay citas pendientes próximas.</li>
+      }
+    </ul>
+  </div>
+
+  <div class="az-card az-section dashboard-week-chart">
     <div class="dashboard-week-chart-head">
       <div>
         <h3>Últimos 7 días</h3>
@@ -64,70 +94,7 @@
     </div>
   </div>
 
-  <div class="az-card agenda-principal">
-    @let cal = dashboardCalendar();
-    <div class="agenda-head">
-      <div>
-        <h3>Agenda principal</h3>
-        <p class="muted">{{ cal.weekLabel }} · {{ cal.total }} cita(s) esta semana</p>
-      </div>
-      <div class="agenda-head-actions">
-        <div class="agenda-nav">
-          <button type="button" class="cal-nav-btn" (click)="shiftDashboardByDays(-7)" aria-label="Semana anterior">
-            «
-          </button>
-          <button type="button" class="cal-nav-btn" (click)="shiftDashboardByDays(-1)" aria-label="Día anterior">
-            ‹
-          </button>
-          <button type="button" class="cal-nav-btn today-btn" (click)="resetDashboardToToday()">Hoy</button>
-          <button type="button" class="cal-nav-btn" (click)="shiftDashboardByDays(1)" aria-label="Día siguiente">
-            ›
-          </button>
-          <button type="button" class="cal-nav-btn" (click)="shiftDashboardByDays(7)" aria-label="Semana siguiente">
-            »
-          </button>
-        </div>
-      </div>
-    </div>
-    <div class="employee-legend">
-      @for (emp of employeeLegend(); track emp.name) {
-        <span class="legend-item">
-          <i class="legend-dot" [style.background]="emp.color"></i>
-          {{ emp.name }}
-        </span>
-      }
-    </div>
-    <div class="agenda-scroll" #agendaScrollEl>
-      <div
-        class="agenda-board"
-        [style.gridTemplateColumns]="dashboardGridTemplate()"
-        [style.minWidth.px]="dashboardBoardMinWidth()"
-      >
-        @for (day of cal.days; track day.key) {
-          <section class="agenda-day" [class.today]="day.isToday" [class.empty-day]="!day.events.length">
-            <header class="agenda-day-head">
-              <span class="dow">{{ day.label }}</span>
-              <span class="dom">{{ day.sub }}</span>
-            </header>
-            <div class="agenda-day-list">
-              @if (!day.events.length) {
-                <p class="empty">Sin citas</p>
-              }
-              @for (ev of day.events; track ev.id) {
-                <article class="agenda-event" [style.borderLeftColor]="ev.employeeColor">
-                  <span class="time">{{ ev.time }}</span>
-                  <strong>{{ ev.title }}</strong>
-                  <span class="muted">{{ ev.employeeName }}</span>
-                </article>
-              }
-            </div>
-          </section>
-        }
-      </div>
-    </div>
-  </div>
-
-  <div class="az-card quick-access">
+  <div class="az-card az-section quick-access">
     <h3>Accesos rápidos</h3>
     <p class="muted">Organizado por áreas para evitar navegación saturada.</p>
     <div class="quick-grid">
@@ -162,47 +129,48 @@
     </div>
   </div>
 
-  <div class="az-grid cols-2 below">
-    <div class="az-card">
-      <h3>Próximas citas</h3>
-      <ul class="list">
-        @for (a of upcomingAppointments().slice(0, 4); track a.id) {
-          <li>
-            <strong>{{ a.customer }}</strong> · {{ displayServiceLabel(a.service) }}
-            <span class="muted">{{ a.when }}</span>
+  <div class="az-card az-section sales-card">
+    <h3>{{ ultimasVentasSectionTitle() }}</h3>
+    @if (session.modules().sales && dashboardUsesLiveApi()) {
+      <ul class="mini-card-list">
+        @for (s of dashboardSalesLive().slice(0, 4); track s.id) {
+          <li class="mini-card-item">
+            <strong>{{ s.total }}</strong>
+            <span class="muted">{{ s.method }}</span>
+            <span class="muted mini-card-when">{{ s.saleDate }}</span>
           </li>
         } @empty {
-          <li class="muted">No hay citas pendientes próximas.</li>
+          <li class="mini-card-item mini-card-item--empty muted">Aún no hay ventas registradas.</li>
         }
       </ul>
-    </div>
-    <div class="az-card">
-      <h3>{{ ultimasVentasSectionTitle() }}</h3>
-      @if (session.modules().sales && dashboardUsesLiveApi()) {
-        <ul class="list">
-          @for (s of dashboardSalesLive().slice(0, 4); track s.id) {
-            <li>
-              <strong>{{ s.total }}</strong> · {{ s.method }}
-              <span class="muted">{{ s.saleDate }}</span>
-            </li>
-          } @empty {
-            <li class="muted">Aún no hay ventas registradas.</li>
-          }
-        </ul>
-      } @else if (session.modules().sales) {
-        <ul class="list">
-          @for (s of data.sales().slice(0, 4); track s.id) {
-            <li>
-              <strong>{{ s.total }} €</strong> · {{ s.method }}
-              <span class="muted">{{ s.date }}</span>
-            </li>
-          } @empty {
-            <li class="muted">Aún no hay ventas en la demo.</li>
-          }
-        </ul>
-      } @else {
-        <p class="muted">Activa el módulo ventas para ver registros desde el panel.</p>
-      }
-    </div>
+    } @else if (session.modules().sales) {
+      <ul class="mini-card-list">
+        @for (s of data.sales().slice(0, 4); track s.id) {
+          <li class="mini-card-item">
+            <strong>{{ s.total }} €</strong>
+            <span class="muted">{{ s.method }}</span>
+            <span class="muted mini-card-when">{{ s.date }}</span>
+          </li>
+        } @empty {
+          <li class="mini-card-item mini-card-item--empty muted">Aún no hay ventas en la demo.</li>
+        }
+      </ul>
+    } @else {
+      <p class="muted">Activa el módulo ventas para ver registros desde el panel.</p>
+    }
   </div>
+
+  <app-appointment-detail-sheet
+    [open]="sheetOpen()"
+    [mode]="sheetMode()"
+    [appointment]="sheetAppointment()"
+    [dayEvents]="sheetDayEvents()"
+    [dayLabel]="sheetDayLabel()"
+    [employeeName]="sheetEmployeeName()"
+    [useRemote]="apiAppointments.useRemote()"
+    [restricted]="session.isTenantRestricted()"
+    [attendanceOptions]="[]"
+    (closed)="closeSheet()"
+    (eventSelected)="onSheetEventSelected($event)"
+  />
 </div>

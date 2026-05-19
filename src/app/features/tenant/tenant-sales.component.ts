@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiStoreVisitDto, ApiStoreVisitsService } from '../../core/services/api-store-visits.service';
@@ -13,14 +13,38 @@ import { MockSessionService } from '../../core/services/mock-session.service';
 import { FormatCopPipe } from '../../core/format-cop.pipe';
 import { UiAlertService } from '../../core/services/ui-alert.service';
 
+export interface SaleCatalogProduct {
+  id: string;
+  name: string;
+  description: string | null;
+  sku: string;
+  listPrice: number;
+  promoPrice: number | null;
+  unitPrice: number;
+  stock: number;
+}
+
+function mapToSaleProduct(p: MockProduct | ApiTenantProductDto): SaleCatalogProduct {
+  const promo = p.promoPrice != null && p.promoPrice > 0 ? p.promoPrice : null;
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description ?? null,
+    sku: p.sku,
+    listPrice: p.price,
+    promoPrice: promo,
+    unitPrice: promo ?? p.price,
+    stock: p.stock,
+  };
+}
+
 @Component({
   selector: 'app-tenant-sales',
-  imports: [ReactiveFormsModule, FormatCopPipe],
+  imports: [FormsModule, FormatCopPipe],
   templateUrl: './tenant-sales.component.html',
   styleUrl: './tenant-sales.component.scss',
 })
 export class TenantSalesComponent {
-  private readonly fb = inject(FormBuilder);
   readonly data = inject(MockDataService);
   readonly session = inject(MockSessionService);
   private readonly apiStore = inject(ApiStoreVisitsService);
@@ -32,6 +56,16 @@ export class TenantSalesComponent {
   readonly tenantSalesLive = signal<ApiTenantSaleDto[]>([]);
   readonly catalogProductsLive = signal<ApiTenantProductDto[]>([]);
   readonly savingSale = signal(false);
+  readonly showHistory = signal(true);
+
+  readonly searchQuery = signal('');
+  readonly selectedProduct = signal<SaleCatalogProduct | null>(null);
+  readonly quantity = signal(1);
+  readonly paymentMethod = signal('Efectivo');
+
+  readonly methods = ['Efectivo', 'Tarjeta', 'Bizum', 'Transferencia'];
+  readonly salesBlockedMessage = computed(() => this.session.tenantRestrictionMessage());
+  readonly canCreateSales = computed(() => !this.session.isTenantRestricted());
 
   readonly isSalesLiveApi = computed(
     () =>
@@ -41,36 +75,49 @@ export class TenantSalesComponent {
       this.session.modules().sales,
   );
 
-  readonly tenantProducts = computed((): (MockProduct | ApiTenantProductDto)[] => {
-    if (this.isSalesLiveApi()) {
-      return this.catalogProductsLive();
+  readonly catalogProducts = computed((): SaleCatalogProduct[] => {
+    const raw = this.isSalesLiveApi()
+      ? this.catalogProductsLive()
+      : this.session.tenantId()
+        ? this.data.productsForTenant(this.session.tenantId()!)
+        : [];
+    return raw.map(mapToSaleProduct);
+  });
+
+  readonly searchResults = computed(() => {
+    const q = this.searchQuery().trim().toLowerCase();
+    if (q.length < 1) {
+      return [];
     }
-    const tid = this.session.tenantId();
-    return tid ? this.data.productsForTenant(tid) : [];
+    return this.catalogProducts()
+      .filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))
+      .slice(0, 10);
   });
 
-  readonly form = this.fb.nonNullable.group({
-    total: [12, [Validators.required, Validators.min(1)]],
-    method: ['Tarjeta', Validators.required],
-    linked: [''],
-    productId: [''],
-    stockQty: [1, [Validators.min(1)]],
+  readonly lineTotal = computed(() => {
+    const p = this.selectedProduct();
+    if (!p) {
+      return 0;
+    }
+    return p.unitPrice * this.quantity();
   });
 
-  readonly methods = ['Efectivo', 'Tarjeta', 'Bizum', 'Transferencia'];
-  readonly salesBlockedMessage = computed(() => this.session.tenantRestrictionMessage());
-  readonly canCreateSales = computed(() => !this.session.isTenantRestricted());
+  readonly canConfirm = computed(() => {
+    const p = this.selectedProduct();
+    const qty = this.quantity();
+    return (
+      this.canCreateSales() &&
+      !this.savingSale() &&
+      !!p &&
+      qty >= 1 &&
+      qty <= p.stock &&
+      p.stock > 0
+    );
+  });
 
   protected readonly environment = environment;
 
   constructor() {
-    effect(() => {
-      if (this.canCreateSales()) {
-        this.form.enable({ emitEvent: false });
-      } else {
-        this.form.disable({ emitEvent: false });
-      }
-    });
     effect((onCleanup) => {
       if (!this.isSalesLiveApi()) {
         untracked(() => {
@@ -106,13 +153,64 @@ export class TenantSalesComponent {
     });
   }
 
+  onSearchKeydown(ev: KeyboardEvent): void {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      this.tryAutoSelectFromSearch();
+    }
+  }
+
+  tryAutoSelectFromSearch(): void {
+    const q = this.searchQuery().trim().toLowerCase();
+    if (!q) {
+      return;
+    }
+    const exact = this.catalogProducts().find((p) => p.sku.toLowerCase() === q);
+    if (exact) {
+      this.pickProduct(exact);
+      return;
+    }
+    const results = this.searchResults();
+    if (results.length === 1) {
+      this.pickProduct(results[0]);
+    }
+  }
+
+  pickProduct(product: SaleCatalogProduct): void {
+    this.selectedProduct.set(product);
+    this.quantity.set(1);
+    this.searchQuery.set('');
+  }
+
+  clearSelection(): void {
+    this.selectedProduct.set(null);
+    this.quantity.set(1);
+    this.searchQuery.set('');
+  }
+
+  setQuantity(raw: number): void {
+    const p = this.selectedProduct();
+    if (!p) {
+      return;
+    }
+    const n = Math.max(1, Math.min(p.stock, Math.floor(Number(raw) || 1)));
+    this.quantity.set(n);
+  }
+
+  adjustQuantity(delta: number): void {
+    this.setQuantity(this.quantity() + delta);
+  }
+
+  selectMethod(method: string): void {
+    this.paymentMethod.set(method);
+  }
+
+  toggleHistory(): void {
+    this.showHistory.update((v) => !v);
+  }
+
   refreshPublicLogs(): void {
-    if (
-      !environment.useLiveAuth ||
-      !this.session.accessToken() ||
-      !this.session.isTenantUser() ||
-      !this.session.modules().sales
-    ) {
+    if (!this.isSalesLiveApi()) {
       return;
     }
     this.apiStore.list().subscribe({
@@ -131,41 +229,63 @@ export class TenantSalesComponent {
     });
   }
 
-  add(): void {
+  private refreshCatalog(): void {
+    if (this.isSalesLiveApi()) {
+      this.apiCatalog.getCatalog().subscribe({
+        next: (c) => this.catalogProductsLive.set(c.products),
+        error: () => {},
+      });
+      return;
+    }
+    const p = this.selectedProduct();
+    if (p) {
+      const updated = this.catalogProducts().find((x) => x.id === p.id);
+      if (updated) {
+        this.selectedProduct.set(updated);
+        if (this.quantity() > updated.stock) {
+          this.quantity.set(Math.max(1, updated.stock));
+        }
+      }
+    }
+  }
+
+  confirmSale(): void {
     if (!this.canCreateSales()) {
       this.alerts.warning(this.session.tenantRestrictionMessage() ?? 'Ventas deshabilitadas.');
       return;
     }
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
+    const product = this.selectedProduct();
+    if (!product) {
+      this.alerts.warning('Busca y selecciona un producto.');
       return;
     }
-    const v = this.form.getRawValue();
+    const qty = this.quantity();
+    if (qty < 1 || qty > product.stock) {
+      this.alerts.warning(`Cantidad inválida. Stock disponible: ${product.stock}.`);
+      return;
+    }
+
+    const total = product.unitPrice * qty;
     const today = new Date().toISOString().slice(0, 10);
-    const pid = v.productId?.trim() || undefined;
-    const qty = Number(v.stockQty) || 1;
-    const linked = v.linked?.trim() || undefined;
+    const method = this.paymentMethod();
 
     if (this.isSalesLiveApi()) {
       this.savingSale.set(true);
       this.apiSales
         .create({
-          total: Number(v.total),
-          method: v.method,
+          total,
+          method,
           saleDate: today,
-          linkedAppointmentId: linked,
-          productId: pid,
-          quantity: pid ? qty : undefined,
+          productId: product.id,
+          quantity: qty,
         })
         .pipe(finalize(() => this.savingSale.set(false)))
         .subscribe({
           next: () => {
-            this.alerts.success('Venta registrada correctamente.');
+            this.alerts.success(`Venta registrada. Se descontaron ${qty} unidad(es) del inventario.`);
+            this.clearSelection();
             this.refreshSalesLive();
-            this.apiCatalog.getCatalog().subscribe({
-              next: (c) => this.catalogProductsLive.set(c.products),
-              error: () => {},
-            });
+            this.refreshCatalog();
           },
           error: (err: { error?: { message?: string | string[] } }) => {
             const m = err?.error?.message;
@@ -177,20 +297,11 @@ export class TenantSalesComponent {
     }
 
     this.data.addSale(
-      {
-        date: today,
-        total: Number(v.total),
-        method: v.method,
-        linkedAppointment: linked,
-      },
-      pid
-        ? {
-            productId: pid,
-            stockQty: qty,
-            tenantId: this.session.tenantId(),
-          }
-        : undefined,
+      { date: today, total, method: method },
+      { productId: product.id, stockQty: qty, tenantId: this.session.tenantId() },
     );
-    this.alerts.success('Venta registrada correctamente.');
+    this.alerts.success(`Venta registrada. Se descontaron ${qty} unidad(es) del inventario.`);
+    this.clearSelection();
+    this.refreshCatalog();
   }
 }

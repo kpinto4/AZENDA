@@ -119,6 +119,49 @@ h3 {
   margin: 2rem 0 0.75rem;
 }
 
+.inventory-ops-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+}
+
+.inventory-move-history {
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--az-border);
+  border-radius: var(--az-radius-sm);
+}
+
+.inventory-move-history .tenant-table-head {
+  margin: 0;
+}
+
+.inventory-move-form h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.inventory-move-form .muted.small {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+}
+
+.move-row.compact {
+  gap: 0.5rem;
+}
+
+.move-row.compact .az-label {
+  font-size: 0.72rem;
+  margin-bottom: 0.15rem;
+}
+
+@media (min-width: 900px) {
+  .inventory-ops-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    align-items: start;
+  }
+}
+
 .neg {
   color: var(--az-danger);
   font-weight: 700;

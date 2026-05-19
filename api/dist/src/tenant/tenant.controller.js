@@ -28,6 +28,7 @@ const upsert_tenant_product_dto_1 = require("./dto/upsert-tenant-product.dto");
 const upsert_tenant_service_dto_1 = require("./dto/upsert-tenant-service.dto");
 const update_tenant_settings_dto_1 = require("./dto/update-tenant-settings.dto");
 const simulate_upgrade_dto_1 = require("./dto/simulate-upgrade.dto");
+const apply_stock_movement_dto_1 = require("./dto/apply-stock-movement.dto");
 const tenant_service_1 = require("./tenant.service");
 let TenantController = class TenantController {
     constructor(tenantService) {
@@ -74,6 +75,12 @@ let TenantController = class TenantController {
     }
     updateBranding(req, dto) {
         return this.tenantService.updateBranding(req.user, dto);
+    }
+    listStockMovements(req) {
+        return this.tenantService.listStockMovements(req.user);
+    }
+    applyStockMovement(req, dto) {
+        return this.tenantService.applyStockMovement(req.user, dto);
     }
     listEmployees(req) {
         return this.tenantService.listEmployees(req.user);
@@ -214,6 +221,22 @@ __decorate([
     __metadata("design:paramtypes", [Object, update_tenant_branding_dto_1.UpdateTenantBrandingDto]),
     __metadata("design:returntype", void 0)
 ], TenantController.prototype, "updateBranding", null);
+__decorate([
+    (0, common_1.Get)('inventory/movements'),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], TenantController.prototype, "listStockMovements", null);
+__decorate([
+    (0, common_1.Post)('inventory/movements'),
+    (0, roles_decorator_1.Roles)(auth_types_1.UserRole.ADMIN),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, apply_stock_movement_dto_1.ApplyStockMovementDto]),
+    __metadata("design:returntype", void 0)
+], TenantController.prototype, "applyStockMovement", null);
 __decorate([
     (0, common_1.Get)('employees'),
     (0, roles_decorator_1.Roles)(auth_types_1.UserRole.ADMIN),

@@ -1,5 +1,5 @@
 import { PgClientService } from '../pg-client.service';
-import { StoreVisitLogEntity, TenantSaleEntity } from '../sql-db.types';
+import { StoreVisitLogEntity, TenantSaleEntity, TenantStockMovementEntity } from '../sql-db.types';
 export declare class TenantRetailRepository {
     private readonly pg;
     constructor(pg: PgClientService);
@@ -7,6 +7,15 @@ export declare class TenantRetailRepository {
     private mapStoreVisitRow;
     private mapTenantSaleRow;
     ensureSalesTable(): Promise<void>;
+    private mapStockMovementRow;
+    listStockMovementsByTenantId(tenantId: string, limit?: number): Promise<TenantStockMovementEntity[]>;
+    insertStockMovement(data: {
+        tenantId: string;
+        productId: string;
+        productName: string;
+        delta: number;
+        reason: string;
+    }): Promise<TenantStockMovementEntity>;
     listStoreVisitsByTenantId(tenantId: string): Promise<StoreVisitLogEntity[]>;
     createStoreVisitLog(data: {
         tenantId: string;

@@ -8,6 +8,7 @@ import {
   ApiTenantCatalogService,
   ApiTenantProductDto,
   ApiTenantServiceDto,
+  ApiTenantStockMovementDto,
 } from '../../core/services/api-tenant-catalog.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
 import { formatCop } from '../../core/format-currency';
@@ -56,6 +57,7 @@ export class TenantInventoryComponent {
   readonly pendingDelete = signal<PendingDelete | null>(null);
   readonly liveProducts = signal<ApiTenantProductDto[]>([]);
   readonly liveServices = signal<ApiTenantServiceDto[]>([]);
+  readonly liveStockMovements = signal<ApiTenantStockMovementDto[]>([]);
 
   readonly canManageCatalog = computed(
     () => this.session.role() === 'TENANT_ADMIN' && !this.session.isTenantRestricted(),
@@ -127,12 +129,21 @@ export class TenantInventoryComponent {
     return this.data.brandingForTenant(tenantId).catalogLayout;
   });
 
+  readonly tenantStockMovements = computed(() => {
+    if (this.isInventoryLiveApi()) {
+      return this.liveStockMovements();
+    }
+    const productIds = new Set(this.tenantProducts().map((p) => p.id));
+    return this.data.stockMovements().filter((m) => productIds.has(m.productId));
+  });
+
   constructor() {
     effect((onCleanup) => {
       if (!this.isInventoryLiveApi()) {
         untracked(() => {
           this.liveProducts.set([]);
           this.liveServices.set([]);
+          this.liveStockMovements.set([]);
         });
         return;
       }
@@ -148,7 +159,14 @@ export class TenantInventoryComponent {
           this.alerts.error('No se pudo cargar catalogo desde API.');
         },
       });
-      onCleanup(() => sub.unsubscribe());
+      const subMov = this.apiCatalog.listStockMovements().subscribe({
+        next: (rows) => this.liveStockMovements.set(rows),
+        error: () => this.liveStockMovements.set([]),
+      });
+      onCleanup(() => {
+        sub.unsubscribe();
+        subMov.unsubscribe();
+      });
     });
   }
 
@@ -506,21 +524,12 @@ export class TenantInventoryComponent {
 
     if (this.isInventoryLiveApi()) {
       const productId = v.productId;
-      const row = this.liveProducts().find((p) => p.id === productId);
-      if (!row) {
-        this.alerts.error('Producto no encontrado.');
-        return;
-      }
-      const nextStock = Math.max(0, row.stock + delta);
+      const delta = Number(v.delta);
       this.apiCatalog
-        .updateProduct(productId, {
-          name: row.name,
-          description: row.description ?? '',
-          price: row.price,
-          promoPrice: row.promoPrice,
-          sku: row.sku,
-          stock: nextStock,
-          imageUrl: row.imageUrl,
+        .applyStockMovement({
+          productId,
+          delta,
+          reason: v.reason.trim() || 'Ajuste manual',
         })
         .subscribe({
           next: () => {
@@ -528,9 +537,11 @@ export class TenantInventoryComponent {
             this.alerts.success('Movimiento de stock aplicado.');
             this.refreshInventoryLive();
           },
-          error: () => {
-            this.flashMsg.set('No se pudo actualizar stock en API.');
-            this.alerts.error('No se pudo actualizar stock en API.');
+          error: (err: HttpErrorResponse) => {
+            const m = err.error?.message;
+            const msg = Array.isArray(m) ? m.join('. ') : m ?? 'No se pudo actualizar stock.';
+            this.flashMsg.set(String(msg));
+            this.alerts.error(String(msg));
           },
         });
       return;
@@ -542,6 +553,7 @@ export class TenantInventoryComponent {
     }
     this.data.applyStockMovement(tid, v.productId, delta, v.reason);
     this.alerts.success('Movimiento de stock aplicado.');
+    this.moveForm.patchValue({ delta: 1, reason: 'Ajuste demo' });
   }
 
   moveProduct(productId: string, dir: -1 | 1): void {
@@ -695,8 +707,8 @@ export class TenantInventoryComponent {
     }
   }
 
-  /** Recarga lista local tras CRUD cuando el panel usa API real. */
-  private refreshInventoryLive(): void {
+  /** Recarga catálogo y movimientos cuando el panel usa API real. */
+  refreshInventoryLive(): void {
     this.apiCatalog.getCatalog().subscribe({
       next: (res) => this.ingestCatalogResponse(res),
       error: (err: unknown) => {
@@ -707,6 +719,27 @@ export class TenantInventoryComponent {
         this.alerts.error('No se pudo cargar catalogo desde API.');
       },
     });
+    this.apiCatalog.listStockMovements().subscribe({
+      next: (rows) => this.liveStockMovements.set(rows),
+      error: () => {},
+    });
+  }
+
+  formatMovementDate(iso: string): string {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) {
+      return iso;
+    }
+    return d.toLocaleString(undefined, {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  movementRowDate(m: { at?: string; createdAt?: string }): string {
+    return this.formatMovementDate(m.createdAt ?? m.at ?? '');
   }
 
   private notifyRestriction(): void {

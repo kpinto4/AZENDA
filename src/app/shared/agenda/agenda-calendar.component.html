@@ -1,0 +1,101 @@
+<div class="agenda-cal" [class.agenda-cal--compact]="compact()" [class.agenda-cal--month]="viewMode() === 'month'">
+  <header class="agenda-cal-head">
+    <div class="agenda-cal-head-main">
+      <div class="agenda-cal-title-row">
+        @if (viewMode() === 'month') {
+          <button type="button" class="agenda-cal-year-back" (click)="yearBack()" aria-label="Año anterior">
+            {{ anchorDate().getFullYear() }}
+          </button>
+        }
+        <h3 class="agenda-cal-title">{{ title() }}</h3>
+      </div>
+      <p class="agenda-cal-sub muted">
+        @if (viewMode() === 'week') {
+          {{ weekLabel() }} · {{ totalEvents() }} cita(s)
+        } @else {
+          {{ monthTitle() }} · {{ totalEvents() }} cita(s)
+        }
+      </p>
+    </div>
+    <div class="agenda-cal-toolbar">
+      @if (showCreateButton()) {
+        <button type="button" class="agenda-cal-icon-btn agenda-cal-add" (click)="createRequested.emit()" aria-label="Nueva cita">
+          +
+        </button>
+      }
+      @if (showViewToggle()) {
+        <button
+          type="button"
+          class="agenda-cal-icon-btn"
+          (click)="toggleViewMode()"
+          [attr.aria-label]="viewMode() === 'week' ? 'Ver mes' : 'Ver semana'"
+        >
+          {{ viewMode() === 'week' ? '▦' : '▤' }}
+        </button>
+      }
+      <div class="agenda-cal-nav">
+        <button type="button" class="agenda-cal-nav-btn" (click)="shiftPeriod(-1)" aria-label="Anterior">‹</button>
+        <button type="button" class="agenda-cal-nav-btn agenda-cal-today" (click)="goToday()">Hoy</button>
+        <button type="button" class="agenda-cal-nav-btn" (click)="shiftPeriod(1)" aria-label="Siguiente">›</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="agenda-cal-dow" aria-hidden="true">
+    @for (h of dowHeaders; track $index) {
+      <span class="agenda-cal-dow-cell">{{ h }}</span>
+    }
+  </div>
+
+  <div
+    class="agenda-cal-grid"
+    [class.agenda-cal-grid--week]="viewMode() === 'week'"
+    [class.agenda-cal-grid--month]="viewMode() === 'month'"
+    [class.agenda-cal-grid--month-6]="viewMode() === 'month' && activeDays().length > 35"
+  >
+    @for (day of activeDays(); track day.key) {
+      @let visible = visibleEvents(day);
+      @let hidden = hiddenCount(day, visible);
+      <section
+        class="agenda-cal-day"
+        [class.today]="day.isToday"
+        [class.outside]="!day.isCurrentMonth"
+        [class.has-events]="day.events.length > 0"
+        [class.empty-day]="!day.events.length"
+      >
+        <button
+          type="button"
+          class="agenda-cal-day-num"
+          [class.today-badge]="day.isToday"
+          (click)="onDayNumberClick(day, $event)"
+          [attr.aria-label]="day.label + ' ' + day.sub"
+        >
+          {{ day.sub }}
+        </button>
+        <div class="agenda-cal-pills">
+          @for (ev of visible; track ev.id) {
+            <button
+              type="button"
+              class="agenda-cal-pill"
+              [class.tone-primary]="ev.tone === 'primary'"
+              [class.tone-accent]="ev.tone === 'accent'"
+              [class.tone-neutral]="ev.tone === 'neutral'"
+              [style.--pill-accent]="ev.employeeColor"
+              (click)="onPillClick(ev, $event)"
+            >
+              <span class="agenda-cal-pill-time">{{ ev.time }}</span>
+              <span class="agenda-cal-pill-label">{{ pillLabel(ev) }}</span>
+            </button>
+          }
+          @if (hidden > 0) {
+            <button type="button" class="agenda-cal-more" (click)="onOverflowClick(day, $event)">+{{ hidden }}</button>
+          }
+        </div>
+      </section>
+    }
+  </div>
+
+  <footer class="agenda-cal-foot">
+    <button type="button" class="agenda-cal-foot-today" (click)="goToday()">Hoy</button>
+  </footer>
+</div>

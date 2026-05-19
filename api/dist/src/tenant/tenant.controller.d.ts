@@ -8,6 +8,7 @@ import { UpsertTenantProductDto } from './dto/upsert-tenant-product.dto';
 import { UpsertTenantServiceDto } from './dto/upsert-tenant-service.dto';
 import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
 import { SimulateUpgradeDto } from './dto/simulate-upgrade.dto';
+import { ApplyStockMovementDto } from './dto/apply-stock-movement.dto';
 import { TenantService } from './tenant.service';
 type AuthenticatedRequest = Request & {
     user: AuthUser;
@@ -71,6 +72,8 @@ export declare class TenantController {
         ok: boolean;
     }>;
     updateBranding(req: AuthenticatedRequest, dto: UpdateTenantBrandingDto): Promise<import("../infrastructure/sql-db/sql-db.types").TenantBrandingEntity>;
+    listStockMovements(req: AuthenticatedRequest): Promise<import("../infrastructure/sql-db/sql-db.types").TenantStockMovementEntity[]>;
+    applyStockMovement(req: AuthenticatedRequest, dto: ApplyStockMovementDto): Promise<import("../infrastructure/sql-db/sql-db.types").TenantStockMovementEntity>;
     listEmployees(req: AuthenticatedRequest): Promise<{
         id: string;
         name: string;

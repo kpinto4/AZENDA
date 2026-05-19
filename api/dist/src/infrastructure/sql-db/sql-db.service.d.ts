@@ -1,5 +1,5 @@
 import { OnModuleInit } from '@nestjs/common';
-import { AppointmentAttendance, AppointmentEntity, AppointmentStatus, BillingCycle, PlanCatalogEntry, PlatformSiteConfig, PlatformSiteLandingCopy, StoreVisitLogEntity, TenantBillingSnapshot, TenantBrandingEntity, TenantEntity, TenantProductEntity, TenantSaleEntity, TenantServiceEntity, UserEntity } from './sql-db.types';
+import { AppointmentAttendance, AppointmentEntity, AppointmentStatus, BillingCycle, PlanCatalogEntry, PlatformSiteConfig, PlatformSiteLandingCopy, StoreVisitLogEntity, TenantBillingSnapshot, TenantBrandingEntity, TenantEntity, TenantProductEntity, TenantSaleEntity, TenantServiceEntity, TenantStockMovementEntity, UserEntity } from './sql-db.types';
 import { AppointmentRepository } from './repositories/appointment.repository';
 import { PlatformSiteConfigRepository } from './repositories/platform-site-config.repository';
 import { TenantBrandingRepository } from './repositories/tenant-branding.repository';
@@ -106,6 +106,14 @@ export declare class SqlDbService implements OnModuleInit {
         linkedAppointmentId: string | null;
         stockNote: string | null;
     }): Promise<TenantSaleEntity>;
+    listStockMovementsByTenantId(tenantId: string, limit?: number): Promise<TenantStockMovementEntity[]>;
+    insertStockMovement(data: {
+        tenantId: string;
+        productId: string;
+        productName: string;
+        delta: number;
+        reason: string;
+    }): Promise<TenantStockMovementEntity>;
     getTenantBranding(tenantId: string): Promise<TenantBrandingEntity>;
     updateTenantBranding(tenantId: string, patch: Partial<Omit<TenantBrandingEntity, 'tenantId'>>): Promise<TenantBrandingEntity>;
     listProductsByTenantId(tenantId: string): Promise<TenantProductEntity[]>;

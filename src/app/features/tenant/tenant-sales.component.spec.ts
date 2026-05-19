@@ -26,7 +26,7 @@ describe('TenantSalesComponent', () => {
         method: 'Tarjeta',
         saleDate: '2026-05-16',
         linkedAppointmentId: null,
-        stockNote: null,
+        stockNote: 'Stock: −1 · prueba',
         createdAt: '2026-05-16T00:00:00.000Z',
       }),
     );
@@ -61,11 +61,29 @@ describe('TenantSalesComponent', () => {
     fixture.detectChanges();
   });
 
-  it('add() usa API en modo live y no MockDataService.addSale', () => {
+  it('confirmSale() usa API en modo live y no MockDataService.addSale', () => {
     const comp = fixture.componentInstance;
-    comp.form.patchValue({ total: 25, method: 'Efectivo', linked: '', productId: '', stockQty: 1 });
-    comp.add();
-    expect(apiSales.create).toHaveBeenCalled();
+    comp.pickProduct({
+      id: 'p1',
+      name: 'prueba',
+      description: null,
+      sku: '123',
+      listPrice: 10,
+      promoPrice: 9,
+      unitPrice: 9,
+      stock: 10,
+    });
+    comp.setQuantity(2);
+    comp.selectMethod('Efectivo');
+    comp.confirmSale();
+    expect(apiSales.create).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        total: 18,
+        method: 'Efectivo',
+        productId: 'p1',
+        quantity: 2,
+      }),
+    );
     expect(mockData.addSale).not.toHaveBeenCalled();
   });
 });

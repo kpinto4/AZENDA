@@ -1,47 +1,57 @@
-<div class="az-container az-page">
-  <div class="az-page-head">
+<div class="az-container az-page tenant-page">
+  <div class="az-page-head tenant-page-head">
     <div>
       <h1 class="az-page-title">Empleados</h1>
       <p class="az-page-sub">Gestiona el acceso del equipo al mini panel con correo, rol y credenciales.</p>
     </div>
   </div>
 
-  <div class="az-card toolbar-card az-adaptive-toolbar">
-    <p class="muted no-margin">Total activos: <strong>{{ employees().length }}</strong></p>
+  <div class="az-card toolbar-card tenant-toolbar-card az-section az-adaptive-toolbar">
+    <div class="tenant-metric-row no-margin">
+      <span class="tenant-metric-pill">Activos: <strong>{{ employees().length }}</strong></span>
+      @if (employees().length) {
+        <span class="tenant-metric-pill">Admin: {{ adminCount() }}</span>
+      }
+    </div>
     <button type="button" class="az-btn az-btn-primary" (click)="openCreate()">Nuevo empleado</button>
   </div>
   @if (msg()) {
-    <p class="muted">{{ msg() }}</p>
+    <p class="services-msg az-section">{{ msg() }}</p>
   }
 
-  <div class="az-table-wrap mt">
-    <table class="az-table">
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Correo</th>
-          <th>Función panel</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (e of employees(); track e.id) {
+  <div class="az-card tenant-table-card az-section">
+    <div class="tenant-table-head">
+      <h3>Equipo</h3>
+    </div>
+    <div class="az-table-wrap">
+      <table class="az-table tenant-responsive-table">
+        <thead>
           <tr>
-            <td>{{ e.name }}</td>
-            <td>{{ e.email }}</td>
-            <td>{{ e.panelRole }}</td>
-            <td class="row-actions">
-              <button type="button" class="az-btn az-btn-secondary small" (click)="openEdit(e)">Editar</button>
-              <button type="button" class="az-btn az-btn-ghost small" (click)="requestDelete(e)">Eliminar</button>
-            </td>
+            <th>Nombre</th>
+            <th>Correo</th>
+            <th>Función panel</th>
+            <th>Acciones</th>
           </tr>
-        } @empty {
-          <tr>
-            <td colspan="4">Aún no hay empleados cargados.</td>
-          </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (e of employees(); track e.id) {
+            <tr>
+              <td data-label="Nombre">{{ e.name }}</td>
+              <td data-label="Correo">{{ e.email }}</td>
+              <td data-label="Función">{{ e.panelRole }}</td>
+              <td class="row-actions" data-label="Acciones">
+                <button type="button" class="az-btn az-btn-secondary small" (click)="openEdit(e)">Editar</button>
+                <button type="button" class="az-btn az-btn-ghost small" (click)="requestDelete(e)">Eliminar</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4">Aún no hay empleados cargados.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 

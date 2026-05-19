@@ -1,126 +1,60 @@
-<div class="az-container az-page">
-  <div class="az-page-head">
+<div class="az-container az-page tenant-page tenant-appts-page">
+  <div class="az-page-head tenant-page-head">
     <div>
       <h1 class="az-page-title">Citas</h1>
       <p class="az-page-sub">
-        La vista semanal muestra las citas de la semana (lunes a viernes). Usa las flechas para otras semanas.
+        Calendario semanal o mensual: toca una cita para ver el detalle completo.
       </p>
     </div>
   </div>
+
   @if (appointmentsBlockedMessage(); as msg) {
-    <div class="tenant-warn" role="status">
+    <div class="tenant-warn az-section" role="status">
       <strong>Reservas deshabilitadas:</strong> {{ msg }}
     </div>
   }
 
-  <div class="az-card op-note">
+  <div class="az-card az-section op-note">
     <h3>Gestión operativa</h3>
     <p class="muted small">
-      El estado ahora se actualiza automáticamente según asistencia:
+      Las citas se crean desde el enlace público de reservas. Aquí puedes consultar la agenda y actualizar asistencia:
       <strong>asistió → confirmada</strong>, <strong>no asistió → cancelada</strong>,
       <strong>pendiente → pendiente</strong>.
     </p>
-    @if (!session.manualBookingEnabled()) {
-      <p class="muted small">
-        En este negocio la creación manual de citas está desactivada. Solo se crean desde el enlace público.
-      </p>
-    }
   </div>
 
-  @if (showManualCreateCard()) {
-    <div class="az-card manual-create-card">
-      <h3>Crear cita manual (panel interno)</h3>
-      <p class="muted small">Disponible para empleados del negocio.</p>
-      @if (createMsg()) {
-        <p class="muted success-line">{{ createMsg() }}</p>
-      }
-      @if (createErr()) {
-        <p class="muted field-error">{{ createErr() }}</p>
-      }
-      <form class="manual-create-grid" [formGroup]="createForm" (ngSubmit)="createAppointment()">
-        <div class="manual-field">
-          <label class="az-label compact" for="manual-customer">Cliente</label>
-          <input
-            id="manual-customer"
-            class="az-input"
-            formControlName="customer"
-            autocomplete="name"
-            placeholder="Nombre"
-          />
-        </div>
-        <div class="manual-field">
-          <label class="az-label compact" for="manual-service">Servicio</label>
-          <select id="manual-service" class="az-select" formControlName="service">
-            <option value="" disabled>Selecciona un servicio</option>
-            @for (s of manualServiceOptions(); track s) {
-              <option [value]="s">{{ s }}</option>
-            }
-          </select>
-        </div>
-        <div class="manual-field">
-          <label class="az-label compact" for="manual-date">Fecha</label>
-          <input id="manual-date" class="az-input" type="date" formControlName="date" />
-        </div>
-        <div class="manual-field">
-          <label class="az-label compact" for="manual-time">Hora</label>
-          <input id="manual-time" class="az-input" type="time" formControlName="time" />
-        </div>
-        <button type="submit" class="az-btn az-btn-primary manual-submit" [disabled]="creatingAppointment()">
-          {{ creatingAppointment() ? 'Guardando…' : 'Crear cita manual' }}
-        </button>
-      </form>
-    </div>
-  }
-
-  <div class="az-card cal-sim-card">
-      @let cal = calendarWeek();
-      <div class="cal-sim-head">
-        <div>
-          <h3>Agenda semanal</h3>
-          <p class="muted">Vista rápida estilo planner: simple, clara y por día.</p>
-        </div>
-        <div class="cal-sim-nav">
-          <button type="button" class="cal-nav-btn" (click)="shiftCalWeek(-1)" aria-label="Semana anterior">
-            ‹
-          </button>
-          <span class="cal-week-pill">{{ cal.weekLabel }}</span>
-          <button type="button" class="cal-nav-btn" (click)="shiftCalWeek(1)" aria-label="Semana siguiente">
-            ›
-          </button>
-        </div>
-      </div>
-      <div class="cal-total muted small">{{ cal.totalEvents }} cita(s) en esta semana</div>
-      <div class="cal-week-scroll" #calWeekScrollEl>
-        <div
-          class="cal-week-board"
-          [style.gridTemplateColumns]="calGridTemplate()"
-          [style.minWidth.px]="calBoardMinWidth()"
-        >
-          @for (day of cal.days; track day.key) {
-            <section class="cal-day-column" [class.today]="day.isToday" [class.empty-day]="!day.events.length">
-              <header class="cal-day-head">
-                <span class="dow">{{ day.label }}</span>
-                <span class="dom">{{ day.sub }}</span>
-              </header>
-              <div class="cal-day-list">
-                @if (!day.events.length) {
-                  <p class="cal-empty">Sin citas</p>
-                }
-                @for (ev of day.events; track ev.id) {
-                  <article class="cal-event" [class.primary]="ev.tone === 'primary'" [class.accent]="ev.tone === 'accent'">
-                    <span class="t">{{ ev.time }}</span>
-                    <span class="n">{{ ev.title }}</span>
-                  </article>
-                }
-              </div>
-            </section>
-          }
-        </div>
-      </div>
+  <div class="az-card az-section agenda-card">
+    <app-agenda-calendar
+      title="Agenda"
+      [appointments]="tenantAppointments()"
+      [employeeColorMap]="employeeColorMap()"
+      [employeeResolver]="employeeResolver"
+      [showCreateButton]="showManualCreateCard()"
+      (appointmentSelected)="onAppointmentSelected($event)"
+      (dayOverflowSelected)="onDayOverflow($event)"
+      (createRequested)="openCreateSheet()"
+    />
   </div>
+
+  <app-appointment-detail-sheet
+    [open]="sheetOpen()"
+    [mode]="sheetMode()"
+    [appointment]="sheetAppointment()"
+    [dayEvents]="sheetDayEvents()"
+    [dayLabel]="sheetDayLabel()"
+    [employeeName]="sheetEmployeeName()"
+    [useRemote]="apiAppointments.useRemote()"
+    [restricted]="session.isTenantRestricted()"
+    [waLink]="sheetWaLink()"
+    [attendanceOptions]="attendanceQuickOptions"
+    (closed)="closeSheet()"
+    (attendanceChange)="setAttendance($event.id, $event.value)"
+    (markReminderDone)="markManualReminderDone($event)"
+    (eventSelected)="onSheetEventSelected($event)"
+  />
 
   @if (apiAppointments.useRemote() && manualReminderCandidates().length) {
-    <div class="az-card mt reminder-card">
+    <div class="az-card az-section reminder-card">
       <h3>Recordatorios por WhatsApp (hoy y mañana)</h3>
       <p class="muted small">
         Abre el chat con el cliente con el texto ya preparado; cuando hayas enviado el mensaje, marca «Listo».
@@ -149,10 +83,10 @@
     </div>
   }
 
-  <div class="az-table-wrap mt">
+  <div class="az-table-wrap az-section appts-table-desktop">
     <div class="table-toolbar">
       @if (apiAppointments.useRemote()) {
-        <p class="muted small table-hint">La tabla muestra las citas reales de tu negocio (datos del API).</p>
+        <p class="muted small table-hint">Vista de tabla (escritorio): datos del API.</p>
         <button
           type="button"
           class="az-btn az-btn-secondary btn-refresh-appts"
@@ -173,7 +107,7 @@
           <th>Cuándo</th>
           <th>Estado</th>
           <th>Asistencia</th>
-            @if (apiAppointments.useRemote()) {
+          @if (apiAppointments.useRemote()) {
             <th>Contacto WA</th>
           }
         </tr>
@@ -185,16 +119,17 @@
             <td>{{ displayServiceLabel(a.service) }}</td>
             <td>{{ a.when }}</td>
             <td>
-              <span class="status-pill" [class.pending]="a.status === 'pendiente'" [class.ok]="a.status === 'confirmada'" [class.cancelled]="a.status === 'cancelada'">
+              <span
+                class="status-pill"
+                [class.pending]="a.status === 'pendiente'"
+                [class.ok]="a.status === 'confirmada'"
+                [class.cancelled]="a.status === 'cancelada'"
+              >
                 {{ statusLabel(a.status) }}
               </span>
             </td>
             <td>
-              <div
-                class="attendance-chips"
-                role="group"
-                [attr.aria-label]="'Asistencia de ' + a.customer"
-              >
+              <div class="attendance-chips" role="group" [attr.aria-label]="'Asistencia de ' + a.customer">
                 @for (opt of attendanceQuickOptions; track opt.value) {
                   <button
                     type="button"
@@ -215,7 +150,7 @@
                   @if (a.waReminderSentAt) {
                     <span class="wa-pill wa-pill--ok" title="Recordatorio manual marcado como enviado">Listo</span>
                   } @else {
-                    <span class="wa-pill wa-pill--pend" title="Pendiente: usa la lista de recordatorios o abre WhatsApp">Pend.</span>
+                    <span class="wa-pill wa-pill--pend" title="Pendiente">Pend.</span>
                   }
                 } @else {
                   <span class="muted tiny">—</span>

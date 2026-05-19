@@ -17,6 +17,16 @@ export const DAY_LABELS: Record<DayCode, string> = {
   sun: 'Domingo',
 };
 
+export const DAY_SHORT_LABELS: Record<DayCode, string> = {
+  mon: 'Lun',
+  tue: 'Mar',
+  wed: 'Mié',
+  thu: 'Jue',
+  fri: 'Vie',
+  sat: 'Sáb',
+  sun: 'Dom',
+};
+
 export function parseWeeklyHoursJson(raw: string | null | undefined): WeeklyBusinessHours | null {
   if (raw == null || String(raw).trim() === '') {
     return null;

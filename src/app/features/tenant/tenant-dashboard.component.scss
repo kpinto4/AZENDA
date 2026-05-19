@@ -1,3 +1,11 @@
+.tenant-dashboard-page {
+  --section-gap: 1.5rem;
+}
+
+.az-section {
+  margin-top: var(--section-gap);
+}
+
 .head-actions {
   display: flex;
   flex-wrap: wrap;
@@ -18,7 +26,7 @@
 }
 
 .dashboard-kpis {
-  margin-top: 0.25rem;
+  margin-top: var(--section-gap);
 }
 
 .kpi-tile {
@@ -53,20 +61,29 @@
   font-variant-numeric: tabular-nums;
 }
 
-.below {
-  margin-top: 1.25rem;
+.agenda-principal {
+  padding: 1.15rem;
 }
 
-.quick-access {
-  margin-top: 1rem;
+.agenda-foot-link {
+  margin: 0.85rem 0 0;
+  font-size: 0.82rem;
+}
+
+.agenda-foot-link a {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.agenda-foot-link a:hover {
+  text-decoration: underline;
 }
 
 .dashboard-stock-toast {
-  margin-top: 1rem;
   display: flex;
-  gap: 0.65rem;
+  gap: 0.75rem;
   align-items: flex-start;
-  padding: 0.85rem 1rem;
+  padding: 0.9rem 1rem;
   border-color: color-mix(in srgb, #ea580c 35%, var(--az-border));
   background: color-mix(in srgb, #fff7ed 50%, var(--az-surface));
 }
@@ -94,10 +111,6 @@
   font-weight: 600;
 }
 
-.dashboard-week-chart {
-  margin-top: 1rem;
-}
-
 .dashboard-week-chart-head h3 {
   margin: 0 0 0.2rem;
 }
@@ -106,9 +119,9 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 0.35rem;
+  gap: 0.45rem;
   height: 5.75rem;
-  margin-top: 0.75rem;
+  margin-top: 0.85rem;
   padding: 0 0.15rem;
 }
 
@@ -117,7 +130,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.22rem;
+  gap: 0.28rem;
   min-width: 0;
   height: 100%;
   justify-content: flex-end;
@@ -150,179 +163,54 @@
   text-align: center;
 }
 
-.agenda-principal {
-  margin-top: 1rem;
-}
-
-.agenda-head {
+.mini-card-list {
+  list-style: none;
+  margin: 0.65rem 0 0;
+  padding: 0;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.8rem;
-  margin-bottom: 0.65rem;
+  flex-direction: column;
+  gap: 0.55rem;
 }
 
-.agenda-head-actions {
+.mini-card-item {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.agenda-nav {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.cal-nav-btn {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  border: 1px solid var(--az-border);
-  background: var(--az-bg);
-  font: inherit;
-  font-weight: 700;
-  color: var(--az-muted);
-  cursor: pointer;
-}
-
-.cal-nav-btn:hover {
-  color: var(--az-text);
-  background: var(--az-surface);
-}
-
-.today-btn {
-  width: auto;
-  min-width: 48px;
-  padding: 0 0.6rem;
-  font-size: 0.78rem;
-}
-
-.employee-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem 0.75rem;
-  margin-bottom: 0.65rem;
-}
-
-.legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.78rem;
-  color: var(--az-muted);
-}
-
-.legend-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  display: inline-block;
-}
-
-.agenda-scroll {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.7rem 0.85rem;
   border: 1px solid var(--az-border);
   border-radius: var(--az-radius-sm);
-  background: var(--az-bg);
+  background: color-mix(in srgb, var(--az-primary) 3%, var(--az-surface));
+  font-size: 0.88rem;
 }
 
-.agenda-board {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(160px, 1fr));
-  min-width: 1120px;
+.mini-card-item--empty {
+  background: transparent;
+  border-style: dashed;
 }
 
-.agenda-day {
-  border-right: 1px solid var(--az-border);
-  background: color-mix(in srgb, var(--az-surface) 65%, var(--az-bg));
-}
-
-.agenda-day:last-child {
-  border-right: none;
-}
-
-.agenda-day.today {
-  background: color-mix(in srgb, var(--az-primary) 8%, var(--az-surface));
-}
-
-.agenda-day-head {
-  height: 44px;
-  padding: 0 0.65rem;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  border-bottom: 1px solid var(--az-border);
-  background: var(--az-surface);
-}
-
-.agenda-day-head .dow {
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--az-muted);
-}
-
-.agenda-day-head .dom {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: var(--az-text);
-}
-
-.agenda-day-list {
-  min-height: 220px;
-  padding: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.agenda-day.empty-day .agenda-day-list {
-  min-height: 86px;
-}
-
-.agenda-event {
-  border: 1px solid var(--az-border);
-  border-left: 4px solid #64748b;
-  border-radius: 8px;
-  background: var(--az-surface);
-  padding: 0.42rem 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.12rem;
+.mini-card-when {
   font-size: 0.78rem;
 }
 
-.agenda-event .time {
-  font-size: 0.7rem;
-  color: var(--az-muted);
-  font-weight: 700;
-}
-
-.empty {
-  margin: 0.2rem 0.15rem;
-  font-size: 0.78rem;
-  color: var(--az-muted);
+.upcoming-card h3,
+.sales-card h3,
+.quick-access h3 {
+  margin-top: 0;
 }
 
 .quick-grid {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
 }
 
 .quick-card {
   position: relative;
   display: grid;
-  gap: 0.12rem;
+  gap: 0.15rem;
   border: 1px solid var(--az-border);
   border-radius: var(--az-radius-sm);
-  padding: 0.75rem 2rem 0.75rem 0.85rem;
+  padding: 0.8rem 2rem 0.8rem 0.9rem;
   background: color-mix(in srgb, var(--az-primary) 4%, var(--az-surface));
   color: var(--az-text);
   text-decoration: none;
@@ -356,80 +244,121 @@
   font-size: 0.8rem;
 }
 
-.list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.list li {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  font-size: 0.9rem;
-}
-
 .muted {
   font-size: 0.8rem;
   color: var(--az-muted);
 }
 
-@media (min-width: 940px) {
-  .quick-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+@media (min-width: 720px) {
+  .dashboard-kpis {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
-@media (max-width: 900px) {
-  .agenda-head-actions {
-    width: 100%;
-    justify-content: space-between;
+@media (min-width: 900px) {
+  .tenant-dashboard-page {
+    --section-gap: 1.75rem;
   }
 
-  .agenda-board {
-    grid-template-columns: repeat(7, minmax(136px, 1fr));
-    min-width: 960px;
+  .quick-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .agenda-day-head {
-    height: 40px;
-    padding: 0 0.5rem;
+  .dashboard-main-split {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: var(--section-gap);
+  }
+}
+
+@media (max-width: 719px) {
+  .dashboard-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .agenda-day-head .dow {
-    font-size: 0.66rem;
-  }
-
-  .agenda-day-head .dom {
-    font-size: 0.86rem;
-  }
-
-  .agenda-event {
-    font-size: 0.72rem;
-    padding: 0.36rem 0.42rem;
+  .dashboard-kpis .kpi-tile:last-child {
+    grid-column: 1 / -1;
   }
 }
 
 @media (max-width: 560px) {
-  .agenda-board {
-    grid-template-columns: repeat(7, minmax(122px, 1fr));
-    min-width: 860px;
+  .agenda-principal {
+    padding: 0.75rem 0.5rem;
   }
 
-  .agenda-day-list {
-    min-height: 120px;
-    padding: 0.4rem;
-    gap: 0.3rem;
+  .agenda-principal h3,
+  .agenda-foot-link {
+    font-size: 0.82rem;
   }
 
-  .agenda-day.empty-day .agenda-day-list {
-    min-height: 64px;
+  .agenda-foot-link {
+    margin-top: 0.65rem;
   }
 
-  .agenda-event {
-    font-size: 0.68rem;
+  .head-actions .az-btn {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.78rem;
+    padding: 0.45rem 0.65rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .tenant-dashboard-page {
+    --section-gap: 1.25rem;
+  }
+
+  .dashboard-head {
+    padding: 0.75rem 0.85rem;
+  }
+
+  .az-page-title {
+    font-size: 1.1rem;
+  }
+
+  .az-page-sub {
+    font-size: 0.78rem;
+  }
+
+  .kpi-tile {
+    padding: 0.85rem 0.9rem;
+  }
+
+  .kpi-tile .az-kpi-label {
+    font-size: 0.64rem;
+  }
+
+  .kpi-tile .az-kpi {
+    font-size: 1.35rem;
+  }
+
+  .mini-card-item {
+    padding: 0.55rem 0.65rem;
+    font-size: 0.82rem;
+  }
+
+  .mini-card-when {
+    font-size: 0.72rem;
+  }
+
+  .upcoming-card h3,
+  .sales-card h3,
+  .quick-access h3,
+  .dashboard-week-chart-head h3 {
+    font-size: 0.92rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .agenda-principal {
+    padding: 0.65rem 0.4rem;
+  }
+
+  .kpi-tile .az-kpi-label {
+    font-size: 0.6rem;
+  }
+
+  .kpi-tile .az-kpi {
+    font-size: 1.2rem;
   }
 }

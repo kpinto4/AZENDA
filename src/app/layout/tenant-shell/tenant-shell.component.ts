@@ -5,6 +5,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiAppointmentsService } from '../../core/services/api-appointments.service';
+import { ApiTenantCatalogService } from '../../core/services/api-tenant-catalog.service';
 import { MockDataService } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
 
@@ -17,6 +18,7 @@ import { MockSessionService } from '../../core/services/mock-session.service';
 export class TenantShellComponent {
   readonly session = inject(MockSessionService);
   private readonly data = inject(MockDataService);
+  private readonly apiCatalog = inject(ApiTenantCatalogService);
   private readonly router = inject(Router);
   private readonly apiAppointments = inject(ApiAppointmentsService);
   private readonly destroyRef = inject(DestroyRef);
@@ -88,6 +90,24 @@ export class TenantShellComponent {
         );
         onCleanup(() => sub.unsubscribe());
       }
+    });
+    effect((onCleanup) => {
+      if (!(environment.useLiveAuth && this.session.accessToken() && this.session.isTenantUser())) {
+        return;
+      }
+      const tenantId = this.session.tenantId();
+      if (!tenantId) {
+        return;
+      }
+      const sub = untracked(() =>
+        this.apiCatalog.getCatalog().subscribe({
+          next: (res) => {
+            this.data.applyBrandingFromApi(tenantId, res.branding);
+          },
+          error: () => {},
+        }),
+      );
+      onCleanup(() => sub.unsubscribe());
     });
     effect(() => {
       if (environment.useLiveAuth && this.session.accessToken() && this.session.isTenantUser()) {

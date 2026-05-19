@@ -235,7 +235,10 @@ nav a.sidebar-booking:hover {
 .main {
   flex: 1;
   min-width: 0;
-  background: var(--az-page-gradient, var(--az-bg));
+  background:
+    radial-gradient(ellipse 120% 70% at 50% -15%, color-mix(in srgb, var(--az-primary) 10%, transparent), transparent 52%),
+    radial-gradient(ellipse 80% 50% at 100% 0%, color-mix(in srgb, var(--az-accent) 6%, transparent), transparent 45%),
+    var(--az-page-gradient, var(--az-bg));
   display: flex;
   flex-direction: column;
 }

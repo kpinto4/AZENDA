@@ -1,73 +1,306 @@
-.public-logs-head {
+.tenant-sales-page {
+  --pos-gap: 1rem;
+}
+
+.tenant-pos-card {
+  padding: 0.85rem 0.95rem 1rem;
+}
+
+.tenant-compact-side {
+  padding: 0;
+  overflow: hidden;
+  max-height: 32rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.tenant-compact-side .compact-table {
+  flex: 1;
+  overflow: auto;
+  max-height: 26rem;
+}
+
+.compact-table-card .tenant-table-head h3 {
+  font-size: 0.92rem;
+}
+
+.pos-search-block {
+  position: relative;
+  margin-bottom: var(--pos-gap);
+}
+
+.pos-search-input {
+  width: 100%;
+  max-width: none;
+  font-size: 1rem;
+}
+
+.pos-search-results {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  border: 1px solid var(--az-border);
+  border-radius: var(--az-radius-sm);
+  background: var(--az-surface);
+  max-height: 14rem;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.1);
+}
+
+.pos-search-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--az-border) 80%, transparent);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pos-search-item:last-child {
+  border-bottom: none;
+}
+
+.pos-search-item:hover {
+  background: color-mix(in srgb, var(--az-primary) 6%, var(--az-surface));
+}
+
+.pos-search-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.pos-search-meta {
+  font-size: 0.75rem;
+  color: var(--az-muted);
+}
+
+.pos-search-meta code {
+  font-size: 0.72rem;
+}
+
+.pos-no-results,
+.pos-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.84rem;
+}
+
+.pos-product-detail {
+  margin-bottom: var(--pos-gap);
+  padding: 0.85rem 0.9rem;
+  border-radius: var(--az-radius-sm);
+  border: 1px solid color-mix(in srgb, var(--az-accent) 30%, var(--az-border));
+  background: color-mix(in srgb, var(--az-accent) 5%, var(--az-surface));
+}
+
+.pos-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.pos-detail-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.pos-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem 0.75rem;
+  margin: 0 0 0.75rem;
+}
+
+.pos-detail-grid .full {
+  grid-column: 1 / -1;
+}
+
+.pos-detail-grid dt {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--az-muted);
+}
+
+.pos-detail-grid dd {
+  margin: 0.1rem 0 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.pos-detail-grid dd.warn {
+  color: var(--az-warning, #b45309);
+}
+
+.pos-detail-grid .strike {
+  text-decoration: line-through;
+  font-weight: 500;
+}
+
+.pos-qty-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.35rem;
+  gap: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed var(--az-border);
 }
 
-.public-logs-head h3 {
+.pos-qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pos-qty-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--az-radius-sm);
+  border: 1px solid var(--az-border);
+  background: var(--az-bg);
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pos-qty-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pos-qty-input {
+  width: 4rem;
+  text-align: center;
+  font-weight: 700;
+  max-width: none;
+}
+
+.pos-total-block {
+  text-align: center;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: var(--pos-gap);
+  border-radius: var(--az-radius-sm);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--az-primary) 10%, var(--az-surface)),
+    color-mix(in srgb, var(--az-accent) 6%, var(--az-surface))
+  );
+  border: 1px solid color-mix(in srgb, var(--az-primary) 22%, var(--az-border));
+}
+
+.pos-total-block.inactive {
+  opacity: 0.55;
+}
+
+.pos-total-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--az-muted);
+}
+
+.pos-total-value {
+  margin: 0.35rem 0 0.25rem;
+  font-size: clamp(1.85rem, 6vw, 2.35rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.pos-total-breakdown {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: 650;
+}
+
+.pos-section {
+  margin-bottom: var(--pos-gap);
+}
+
+.pos-section.inactive {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.pos-section-label {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--az-muted);
+}
+
+.pos-method-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.pos-method-btn {
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--az-radius-sm);
+  border: 1px solid var(--az-border);
+  background: var(--az-bg);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pos-method-btn.active {
+  border-color: var(--az-primary);
+  background: color-mix(in srgb, var(--az-primary) 12%, var(--az-surface));
+  color: var(--az-primary);
+}
+
+.pos-charge-btn {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.pos-charge-btn:disabled {
+  opacity: 0.55;
+}
+
+.pos-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.muted {
+  color: var(--az-muted);
 }
 
 .small {
   font-size: 0.82rem;
-  margin: 0 0 0.75rem;
 }
 
-.form-card h3 {
-  margin-top: 0;
+@media (min-width: 720px) {
+  .pos-method-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: flex-end;
-}
+@media (max-width: 420px) {
+  .tenant-pos-card {
+    padding: 0.9rem 0.75rem 1rem;
+  }
 
-.full-row {
-  flex-basis: 100%;
-}
-
-.stock-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.az-select.wide {
-  max-width: 280px;
-}
-
-.qty {
-  width: 4.5rem;
-  max-width: none;
-}
-
-.full-row-btn {
-  flex-basis: 100%;
-  justify-self: flex-start;
-  width: auto;
-}
-
-.grow {
-  flex: 1;
-  min-width: 200px;
-}
-
-.az-input.wide {
-  max-width: none;
-}
-
-.end {
-  align-self: flex-end;
-}
-
-.mt {
-  margin-top: 1.25rem;
+  .pos-detail-grid {
+    grid-template-columns: 1fr;
+  }
 }

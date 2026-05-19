@@ -1,17 +1,17 @@
-<div class="az-container az-page">
-  <div class="az-page-head">
+<div class="az-container az-page tenant-page">
+  <div class="az-page-head tenant-page-head">
     <div>
       <h1 class="az-page-title">Productos y servicios</h1>
       <p class="az-page-sub">Un solo panel para administrar catálogo comercial e inventario operativo.</p>
     </div>
   </div>
   @if (inventoryBlockedMessage(); as msg) {
-    <div class="tenant-warn" role="status">
+    <div class="tenant-warn az-section" role="status">
       <strong>Catálogo e inventario en solo lectura:</strong> {{ msg }}
     </div>
   }
 
-  <div class="az-card toolbar-card az-adaptive-toolbar">
+  <div class="az-card toolbar-card tenant-toolbar-card az-section az-adaptive-toolbar">
     <div class="view-switch">
       <button type="button" class="az-btn small" [class.az-btn-primary]="activeView() === 'products'" [class.az-btn-secondary]="activeView() !== 'products'" (click)="setActiveView('products')">Productos</button>
       <button type="button" class="az-btn small" [class.az-btn-primary]="activeView() === 'services'" [class.az-btn-secondary]="activeView() !== 'services'" (click)="setActiveView('services')">Servicios</button>
@@ -40,12 +40,16 @@
   </div>
 
   @if (flashMsg()) {
-    <p class="services-msg">{{ flashMsg() }}</p>
+    <p class="services-msg az-section">{{ flashMsg() }}</p>
   }
 
-  <div class="az-table-wrap mt">
+  <div class="az-card tenant-table-card az-section">
+    <div class="tenant-table-head">
+      <h3>{{ activeView() === 'products' ? 'Productos' : 'Servicios' }}</h3>
+    </div>
+    <div class="az-table-wrap">
     @if (activeView() === 'products') {
-      <table class="az-table">
+      <table class="az-table tenant-responsive-table">
         <thead>
           <tr>
             <th>Producto</th>
@@ -63,13 +67,13 @@
         <tbody>
           @for (p of tenantProducts(); track p.id) {
             <tr>
-              <td>{{ p.name }}</td>
-              <td>{{ p.description || '—' }}</td>
-              <td>{{ p.price | formatCop }}</td>
-              <td>{{ p.promoPrice != null ? (p.promoPrice | formatCop) : '—' }}</td>
-              <td>{{ p.sku }}</td>
-              <td>{{ p.stock }}</td>
-              <td>
+              <td data-label="Producto">{{ p.name }}</td>
+              <td data-label="Descripción">{{ p.description || '—' }}</td>
+              <td data-label="Precio">{{ p.price | formatCop }}</td>
+              <td data-label="Promo">{{ p.promoPrice != null ? (p.promoPrice | formatCop) : '—' }}</td>
+              <td data-label="SKU">{{ p.sku }}</td>
+              <td data-label="Stock">{{ p.stock }}</td>
+              <td data-label="Estado">
                 @if (p.lowStock) {
                   <span class="az-badge warn">Stock bajo</span>
                 } @else {
@@ -77,7 +81,7 @@
                 }
               </td>
               @if (canManageCatalog()) {
-                <td class="row-actions">
+                <td class="row-actions" data-label="Acciones">
                   <button type="button" class="az-btn az-btn-ghost small" (click)="moveProduct(p.id, -1)">↑</button>
                   <button type="button" class="az-btn az-btn-ghost small" (click)="moveProduct(p.id, 1)">↓</button>
                   <button type="button" class="az-btn az-btn-secondary small" (click)="openEditProduct(p)">Editar</button>
@@ -93,7 +97,7 @@
         </tbody>
       </table>
     } @else {
-      <table class="az-table">
+      <table class="az-table tenant-responsive-table">
         <thead>
           <tr>
             <th>Servicio</th>
@@ -109,13 +113,13 @@
         <tbody>
           @for (s of businessServices(); track s.id) {
             <tr>
-              <td>{{ s.name }}</td>
-              <td>{{ s.description || '—' }}</td>
-              <td>{{ s.price | formatCop }}</td>
-              <td>{{ s.promoPrice != null ? (s.promoPrice | formatCop) : '—' }}</td>
-              <td>{{ s.promoLabel || '—' }}</td>
+              <td data-label="Servicio">{{ s.name }}</td>
+              <td data-label="Descripción">{{ s.description || '—' }}</td>
+              <td data-label="Precio">{{ s.price | formatCop }}</td>
+              <td data-label="Promo">{{ s.promoPrice != null ? (s.promoPrice | formatCop) : '—' }}</td>
+              <td data-label="Promoción">{{ s.promoLabel || '—' }}</td>
               @if (canManageCatalog()) {
-                <td class="row-actions">
+                <td class="row-actions" data-label="Acciones">
                   <button type="button" class="az-btn az-btn-ghost small" (click)="moveService(s.id, -1)">↑</button>
                   <button type="button" class="az-btn az-btn-ghost small" (click)="moveService(s.id, 1)">↓</button>
                   <button type="button" class="az-btn az-btn-secondary small" (click)="openEditService(s)">Editar</button>
@@ -131,75 +135,73 @@
         </tbody>
       </table>
     }
+    </div>
   </div>
 
   @if (canManageCatalog()) {
-    <div class="az-card mt">
-      <h3>
-        Registrar movimiento
-        @if (!isInventoryLiveApi()) {
-          <span class="muted">(mock)</span>
-        }
-      </h3>
-      @if (isInventoryLiveApi()) {
-        <p class="muted">Ajusta stock en servidor: delta negativo = salida, positivo = entrada. El motivo solo se registra en modo demo.</p>
-      } @else {
-        <p class="muted">Solo aplica para productos; usa delta negativo para salida (ej. −3) o positivo para entrada.</p>
-      }
-      <form [formGroup]="moveForm" (ngSubmit)="applyMovement()" class="move-row">
-        <div>
-          <label class="az-label" for="pid">Producto</label>
-          <select id="pid" class="az-select wide" formControlName="productId">
-            <option value="" disabled>— Elegir —</option>
-            @for (p of tenantProducts(); track p.id) {
-              <option [value]="p.id">{{ p.name }} ({{ p.stock }})</option>
-            }
-          </select>
+    <div class="az-card tenant-inventory-ops az-section">
+      <div class="inventory-ops-grid">
+        <div class="inventory-move-form">
+          <h3>Registrar movimiento</h3>
+          <p class="muted small">Delta negativo = salida · positivo = entrada. Queda en el historial.</p>
+          <form [formGroup]="moveForm" (ngSubmit)="applyMovement()" class="move-row compact">
+            <div>
+              <label class="az-label" for="pid">Producto</label>
+              <select id="pid" class="az-select wide" formControlName="productId">
+                <option value="" disabled>— Elegir —</option>
+                @for (p of tenantProducts(); track p.id) {
+                  <option [value]="p.id">{{ p.name }} ({{ p.stock }})</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label class="az-label" for="delta">Delta</label>
+              <input id="delta" class="az-input narrow" type="number" formControlName="delta" />
+            </div>
+            <div class="grow">
+              <label class="az-label" for="rs">Motivo</label>
+              <input id="rs" class="az-input wide" formControlName="reason" />
+            </div>
+            <button type="submit" class="az-btn az-btn-primary end">Aplicar</button>
+          </form>
         </div>
-        <div>
-          <label class="az-label" for="delta">Delta</label>
-          <input id="delta" class="az-input narrow" type="number" formControlName="delta" />
-        </div>
-        <div class="grow">
-          <label class="az-label" for="rs">Motivo</label>
-          <input id="rs" class="az-input wide" formControlName="reason" />
-        </div>
-        <button type="submit" class="az-btn az-btn-primary end">Aplicar</button>
-      </form>
-    </div>
 
-    <h2 class="sub-title">
-      Movimientos recientes
-      @if (!isInventoryLiveApi()) {
-        <span class="muted">(simulado)</span>
-      }
-    </h2>
-    @if (isInventoryLiveApi()) {
-      <p class="muted">Historia de movimientos en panel solo existe en modo demo; con API usa la tabla de ventas o el stock actualizado arriba.</p>
-    } @else {
-      <div class="az-table-wrap">
-        <table class="az-table">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Producto</th>
-              <th>Δ</th>
-              <th>Motivo</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (m of data.stockMovements(); track m.id) {
-              <tr>
-                <td>{{ m.at }}</td>
-                <td>{{ m.productName }}</td>
-                <td [class.neg]="m.delta < 0" [class.pos]="m.delta > 0">{{ m.delta > 0 ? '+' : '' }}{{ m.delta }}</td>
-                <td>{{ m.reason }}</td>
-              </tr>
+        <div class="inventory-move-history tenant-table-card">
+          <div class="tenant-table-head compact">
+            <h3>Movimientos recientes</h3>
+            @if (isInventoryLiveApi()) {
+              <button type="button" class="az-btn az-btn-ghost small" (click)="refreshInventoryLive()">Actualizar</button>
             }
-          </tbody>
-        </table>
+          </div>
+          <div class="az-table-wrap compact-table">
+            <table class="az-table tenant-responsive-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Producto</th>
+                  <th>Δ</th>
+                  <th>Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (m of tenantStockMovements(); track m.id) {
+                  <tr>
+                    <td data-label="Fecha">{{ movementRowDate(m) }}</td>
+                    <td data-label="Producto">{{ m.productName }}</td>
+                    <td data-label="Δ" [class.neg]="m.delta < 0" [class.pos]="m.delta > 0">
+                      {{ m.delta > 0 ? '+' : '' }}{{ m.delta }}
+                    </td>
+                    <td data-label="Motivo">{{ m.reason }}</td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="4">Sin movimientos aún.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    }
+    </div>
   }
 </div>
 

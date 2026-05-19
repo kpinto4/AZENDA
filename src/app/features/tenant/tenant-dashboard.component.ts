@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ApiAppointmentsService, mapApiAppointmentToMock } from '../../core/services/api-appointments.service';
@@ -8,22 +8,18 @@ import { ApiTenantEmployeesService } from '../../core/services/api-tenant-employ
 import { ApiTenantSaleDto, ApiTenantSalesService } from '../../core/services/api-tenant-sales.service';
 import { MockAppointment, MockDataService } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
-
-interface DashboardCalEvent {
-  id: string;
-  time: string;
-  title: string;
-  employeeName: string;
-  employeeColor: string;
-}
-
-interface DashboardCalDay {
-  key: string;
-  label: string;
-  sub: string;
-  isToday: boolean;
-  events: DashboardCalEvent[];
-}
+import { AgendaCalendarComponent } from '../../shared/agenda/agenda-calendar.component';
+import type { AgendaCalendarEvent } from '../../shared/agenda/agenda-calendar.types';
+import {
+  DOW_LABELS,
+  MESES_CORT,
+  addDays,
+  cleanServiceLabel,
+  parseWhenLocal,
+  readEmployeeIdFromService,
+  toYmdLocal,
+} from '../../shared/agenda/agenda-calendar.utils';
+import { AppointmentDetailSheetComponent } from '../../shared/agenda/appointment-detail-sheet.component';
 
 interface DashboardDayBar {
   ymd: string;
@@ -38,57 +34,9 @@ interface DashboardLowStockAlert {
   stock: number;
 }
 
-const MESES_CORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const EMPLOYEE_COLORS = ['#2563eb', '#8b5cf6', '#db2777', '#0d9488', '#ea580c', '#4f46e5'];
-/** Igual que en demo mock: stock menor que este umbral cuenta como alerta. */
 export const DASHBOARD_LOW_STOCK_BELOW = 5;
 const LOW_STOCK_BELOW = DASHBOARD_LOW_STOCK_BELOW;
-
-function toYmdLocal(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function addDays(base: Date, days: number): Date {
-  const next = new Date(base);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function mondayOfWeek(date: Date): Date {
-  const now = new Date(date);
-  now.setHours(12, 0, 0, 0);
-  const dow = now.getDay();
-  const diff = dow === 0 ? -6 : 1 - dow;
-  const mon = new Date(now);
-  mon.setDate(now.getDate() + diff);
-  mon.setHours(0, 0, 0, 0);
-  return mon;
-}
-
-function parseWhenLocal(when: string): { ymd: string; time: string } | null {
-  const s = when.trim();
-  let m = /^(\d{4}-\d{2}-\d{2})[ T](\d{1,2}):(\d{2})(?::\d{2})?/.exec(s);
-  if (m) {
-    return { ymd: m[1], time: `${m[2].padStart(2, '0')}:${m[3]}` };
-  }
-  m = /^(\d{4}-\d{2}-\d{2})$/.exec(s);
-  if (m) {
-    return { ymd: m[1], time: '—' };
-  }
-  return null;
-}
-
-function readEmployeeIdFromService(service: string): string | null {
-  const m = /\bEmpleadoId:([A-Za-z0-9_-]+)\b/.exec(service);
-  return m?.[1] ?? null;
-}
-
-function cleanServiceLabel(service: string): string {
-  return service.replace(/\s*·\s*EmpleadoId:[A-Za-z0-9_-]+/g, '').trim();
-}
 
 function parseWhenDate(when: string): Date | null {
   const p = parseWhenLocal(when);
@@ -101,29 +49,17 @@ function parseWhenDate(when: string): Date | null {
   return Number.isNaN(dt.getTime()) ? null : dt;
 }
 
-function weekRangeLabel(monday: Date): string {
-  const sun = new Date(monday);
-  sun.setDate(monday.getDate() + 6);
-  const yMon = monday.getFullYear();
-  if (monday.getMonth() === sun.getMonth()) {
-    return `${monday.getDate()} – ${sun.getDate()} ${MESES_CORT[monday.getMonth()]} ${yMon}`;
-  }
-  return `${monday.getDate()} ${MESES_CORT[monday.getMonth()]} – ${sun.getDate()} ${MESES_CORT[sun.getMonth()]} ${sun.getFullYear()}`;
-}
-
 @Component({
   selector: 'app-tenant-dashboard',
-  imports: [RouterLink],
+  imports: [RouterLink, AgendaCalendarComponent, AppointmentDetailSheetComponent],
   templateUrl: './tenant-dashboard.component.html',
   styleUrl: './tenant-dashboard.component.scss',
 })
 export class TenantDashboardComponent {
-  @ViewChild('agendaScrollEl') private agendaScrollEl?: ElementRef<HTMLDivElement>;
   readonly lowStockMinimum = LOW_STOCK_BELOW;
-  readonly dashboardBaseDate = signal(new Date());
   readonly data = inject(MockDataService);
   readonly session = inject(MockSessionService);
-  private readonly apiAppointments = inject(ApiAppointmentsService);
+  readonly apiAppointments = inject(ApiAppointmentsService);
   private readonly apiSales = inject(ApiTenantSalesService);
   private readonly apiCatalog = inject(ApiTenantCatalogService);
   private readonly apiEmployees = inject(ApiTenantEmployeesService);
@@ -132,12 +68,13 @@ export class TenantDashboardComponent {
   readonly dashboardProductsLive = signal<ApiTenantProductDto[]>([]);
   readonly dashboardEmployeesLive = signal<ApiTenantEmployeeDto[]>([]);
 
-  constructor() {
-    effect(() => {
-      this.dashboardCalendar();
-      queueMicrotask(() => this.scrollAgendaToToday());
-    });
+  readonly sheetOpen = signal(false);
+  readonly sheetMode = signal<'detail' | 'day-list'>('detail');
+  readonly sheetAppointment = signal<MockAppointment | null>(null);
+  readonly sheetDayEvents = signal<AgendaCalendarEvent[]>([]);
+  readonly sheetDayLabel = signal('');
 
+  constructor() {
     effect((onCleanup) => {
       if (!this.apiAppointments.useRemote()) {
         this.dashboardSalesLive.set([]);
@@ -268,7 +205,6 @@ export class TenantDashboardComponent {
       });
   });
 
-  /** Misma fecha local que usa la vista semanal (no total de citas del tenant). */
   readonly appointmentsTodayCount = computed(() => {
     const todayYmd = toYmdLocal(new Date());
     return this.myAppointments().filter((a) => parseWhenLocal(a.when)?.ymd === todayYmd).length;
@@ -332,7 +268,7 @@ export class TenantDashboardComponent {
 
   readonly primaryLowStockAlert = computed(() => this.lowStockAlerts()[0] ?? null);
 
-  private readonly employeeColorByName = computed(() => {
+  readonly employeeColorMap = computed(() => {
     const map = new Map<string, string>();
     const apiEm = this.dashboardEmployeesLive();
     if (this.apiAppointments.useRemote() && this.session.role() === 'TENANT_ADMIN' && apiEm.length) {
@@ -344,8 +280,21 @@ export class TenantDashboardComponent {
         map.set(e.name, EMPLOYEE_COLORS[idx % EMPLOYEE_COLORS.length]);
       });
     }
+    for (const a of this.myAppointments()) {
+      const name = this.employeeForAppointment(a);
+      if (!map.has(name)) {
+        map.set(name, EMPLOYEE_COLORS[map.size % EMPLOYEE_COLORS.length]);
+      }
+    }
     return map;
   });
+
+  readonly sheetEmployeeName = computed(() => {
+    const a = this.sheetAppointment();
+    return a ? this.employeeForAppointment(a) : '';
+  });
+
+  readonly employeeResolver = (a: MockAppointment) => this.employeeForAppointment(a);
 
   private employeeForAppointment(appt: MockAppointment): string {
     if (this.apiAppointments.useRemote()) {
@@ -374,95 +323,33 @@ export class TenantDashboardComponent {
     return employees[seed % employees.length].name;
   }
 
-  readonly employeeLegend = computed(() => {
-    const colors = this.employeeColorByName();
-    const apiEm = this.dashboardEmployeesLive();
-    if (this.apiAppointments.useRemote() && apiEm.length) {
-      return apiEm.map((e) => ({
-        name: e.name,
-        color: colors.get(e.name) ?? '#64748b',
-      }));
-    }
-    if (!this.apiAppointments.useRemote()) {
-      return this.data.employees().map((e) => ({
-        name: e.name,
-        color: colors.get(e.name) ?? '#64748b',
-      }));
-    }
-    return [];
-  });
-
-  readonly dashboardCalendar = computed(() => {
-    const monday = mondayOfWeek(this.dashboardBaseDate());
-    const dowLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-    const todayYmd = toYmdLocal(new Date());
-    const colorMap = this.employeeColorByName();
-
-    const days: DashboardCalDay[] = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      const ymdStr = toYmdLocal(d);
-      const events = this.myAppointments()
-        .map((a) => ({ a, p: parseWhenLocal(a.when) }))
-        .filter(({ p }) => p && p.ymd === ymdStr)
-        .sort((x, y) => x.a.when.localeCompare(y.a.when))
-        .map(({ a, p }) => {
-          const employeeName = this.employeeForAppointment(a);
-          return {
-            id: a.id,
-            time: p!.time,
-            title: `${a.customer} · ${cleanServiceLabel(a.service)}`,
-            employeeName,
-            employeeColor: colorMap.get(employeeName) ?? '#64748b',
-          };
-        });
-
-      days.push({
-        key: ymdStr,
-        label: dowLabels[i],
-        sub: String(d.getDate()),
-        isToday: ymdStr === todayYmd,
-        events,
-      });
-    }
-
-    return {
-      weekLabel: weekRangeLabel(monday),
-      total: days.reduce((acc, day) => acc + day.events.length, 0),
-      days,
-    };
-  });
-
-  readonly dashboardGridTemplate = computed(() =>
-    this.dashboardCalendar()
-      .days.map((d) => (d.events.length ? 'minmax(150px, 1fr)' : 'minmax(92px, 0.62fr)'))
-      .join(' '),
-  );
-
-  readonly dashboardBoardMinWidth = computed(() =>
-    Math.max(860, this.dashboardCalendar().days.reduce((acc, d) => acc + (d.events.length ? 150 : 92), 0)),
-  );
-
-  private scrollAgendaToToday(): void {
-    const host = this.agendaScrollEl?.nativeElement;
-    if (!host) {
-      return;
-    }
-    const todayEl = host.querySelector('.agenda-day.today') as HTMLElement | null;
-    if (todayEl) {
-      todayEl.scrollIntoView({ block: 'nearest', inline: 'center' });
-      return;
-    }
-    host.scrollLeft = 0;
+  onAppointmentSelected(ev: AgendaCalendarEvent): void {
+    this.sheetMode.set('detail');
+    this.sheetAppointment.set(ev.appointment);
+    this.sheetOpen.set(true);
   }
 
-  shiftDashboardByDays(deltaDays: number): void {
-    this.dashboardBaseDate.update((d) => addDays(d, deltaDays));
+  onDayOverflow(payload: { dayKey: string; events: AgendaCalendarEvent[] }): void {
+    this.sheetMode.set('day-list');
+    this.sheetDayEvents.set(payload.events);
+    this.sheetDayLabel.set(this.formatDayLabel(payload.dayKey));
+    this.sheetAppointment.set(null);
+    this.sheetOpen.set(true);
   }
 
-  resetDashboardToToday(): void {
-    this.dashboardBaseDate.set(new Date());
+  onSheetEventSelected(ev: AgendaCalendarEvent): void {
+    this.sheetMode.set('detail');
+    this.sheetAppointment.set(ev.appointment);
+  }
+
+  closeSheet(): void {
+    this.sheetOpen.set(false);
+  }
+
+  private formatDayLabel(ymd: string): string {
+    const [y, mo, d] = ymd.split('-').map(Number);
+    const date = new Date(y, (mo ?? 1) - 1, d ?? 1);
+    return `${DOW_LABELS[date.getDay()]} ${d} ${MESES_CORT[(mo ?? 1) - 1]} ${y}`;
   }
 
   displayServiceLabel(service: string): string {

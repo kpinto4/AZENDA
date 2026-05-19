@@ -11,6 +11,7 @@ import { MockSessionService } from '../../core/services/mock-session.service';
 import {
   DAY_CODES,
   DAY_LABELS,
+  DAY_SHORT_LABELS,
   type WeeklyBusinessHours,
   parseWeeklyHoursJson,
   weeklyHoursToJson,
@@ -45,7 +46,7 @@ export class TenantSettingsComponent {
   private readonly doc = inject(DOCUMENT);
 
   readonly brandingMsg = signal('');
-  readonly opsMsg = signal('');
+  readonly scheduleMsg = signal('');
   readonly billingMsg = signal('');
   readonly billingStatus = signal<ApiTenantBillingStatusResponse | null>(null);
   readonly brandingImageHint = signal<string | null>(null);
@@ -180,7 +181,11 @@ export class TenantSettingsComponent {
     void this.doc.defaultView?.navigator.clipboard.writeText(text);
   }
 
-  readonly dayScheduleMeta = DAY_CODES.map((code) => ({ code, label: DAY_LABELS[code] }));
+  readonly dayScheduleMeta = DAY_CODES.map((code) => ({
+    code,
+    label: DAY_LABELS[code],
+    shortLabel: DAY_SHORT_LABELS[code],
+  }));
 
   private dayHoursGroup(enabledDefault: boolean): FormGroup {
     return this.fb.group({
@@ -218,23 +223,18 @@ export class TenantSettingsComponent {
     gradientFrom: '#4f46e5',
     gradientTo: '#06b6d4',
     gradientAngleDeg: 135,
-    manualBookingEnabled: true,
     publicAddress: '',
     publicMapsUrl: '',
     cancellationPolicy: '',
     reminderNotice: '',
   });
 
+  readonly logoInitial = computed(() => {
+    const name = this.form.controls.displayName.getRawValue().trim() || this.session.tenantName();
+    return (name.charAt(0) || 'A').toUpperCase();
+  });
+
   constructor() {
-    effect(() => {
-      const canManage = this.canManageOperations();
-      const ctrl = this.form.controls.manualBookingEnabled;
-      if (canManage) {
-        ctrl.enable({ emitEvent: false });
-      } else {
-        ctrl.disable({ emitEvent: false });
-      }
-    });
     effect((onCleanup) => {
       if (environment.useLiveAuth && this.session.accessToken() && this.session.isTenantUser()) {
         const tenantId = this.session.tenantId();
@@ -246,28 +246,7 @@ export class TenantSettingsComponent {
             const b = res.branding;
             const tenant = this.data.tenantById(tenantId);
             untracked(() => {
-              this.data.updateTenantBranding(tenantId, {
-                displayName: b.displayName,
-                logoUrl: b.logoUrl,
-                publicAddress: b.publicAddress,
-                publicMapsUrl: b.publicMapsUrl,
-                cancellationPolicy: b.cancellationPolicy,
-                reminderNotice: b.reminderNotice,
-                whatsappPhoneE164: b.whatsappPhoneE164 ?? null,
-                whatsappDefaultMessage: b.whatsappDefaultMessage ?? null,
-                publicBookingHoursJson: b.publicBookingHoursJson ?? null,
-                catalogLayout: b.catalogLayout,
-                primaryColor: b.primaryColor,
-                accentColor: b.accentColor,
-                bgColor: b.bgColor,
-                surfaceColor: b.surfaceColor,
-                textColor: b.textColor,
-                borderRadiusPx: b.borderRadiusPx,
-                useGradient: b.useGradient,
-                gradientFrom: b.gradientFrom,
-                gradientTo: b.gradientTo,
-                gradientAngleDeg: b.gradientAngleDeg,
-              });
+              this.data.applyBrandingFromApi(tenantId, b);
               this.form.patchValue(
                 {
                   tenantName: tenant?.name ?? '',
@@ -282,7 +261,6 @@ export class TenantSettingsComponent {
                   gradientFrom: b.gradientFrom,
                   gradientTo: b.gradientTo,
                   gradientAngleDeg: b.gradientAngleDeg,
-                  manualBookingEnabled: tenant?.manualBookingEnabled ?? true,
                   publicAddress: b.publicAddress ?? '',
                   publicMapsUrl: b.publicMapsUrl ?? '',
                   cancellationPolicy: b.cancellationPolicy ?? '',
@@ -322,7 +300,6 @@ export class TenantSettingsComponent {
             gradientFrom: branding.gradientFrom,
             gradientTo: branding.gradientTo,
             gradientAngleDeg: branding.gradientAngleDeg,
-            manualBookingEnabled: tenant?.manualBookingEnabled ?? true,
             publicAddress: branding.publicAddress ?? '',
             publicMapsUrl: branding.publicMapsUrl ?? '',
             cancellationPolicy: branding.cancellationPolicy ?? '',
@@ -416,7 +393,8 @@ export class TenantSettingsComponent {
     }
     if (environment.useLiveAuth && this.session.accessToken()) {
       this.apiCatalog.patchBranding(brandingPatch).subscribe({
-        next: () => {
+        next: (b) => {
+          this.data.applyBrandingFromApi(tenantId, b);
           this.brandingMsg.set(
             'Identidad y estilo guardados en API. Aplica al panel y al enlace de reservas.',
           );
@@ -478,6 +456,7 @@ export class TenantSettingsComponent {
     }
     return {
       cycleLabel: billing.cycle === 'YEARLY' ? 'Anual' : 'Mensual',
+      progressPct: billing.progressPct,
       progressLabel: `${billing.progressPct.toFixed(0)}% del ciclo consumido`,
       daysLabel: `${billing.daysRemaining} dia(s) restantes de ${billing.daysTotal}`,
       startedLabel: new Date(this.billingStatus()!.subscriptionStartedAt).toLocaleDateString(),
@@ -486,51 +465,6 @@ export class TenantSettingsComponent {
       renewalLabel: new Date(billing.nextRenewalAt).toLocaleDateString(),
     };
   });
-
-  saveOperationalSettings(): void {
-    const tenantId = this.session.tenantId();
-    if (!tenantId || !this.canManageOperations()) {
-      this.opsMsg.set('Solo admin del negocio puede cambiar esta opción.');
-      return;
-    }
-    const enabled = !!this.form.controls.manualBookingEnabled.getRawValue();
-    if (environment.useLiveAuth && this.session.accessToken()) {
-      this.apiAuth.patchTenantSettings({ manualBookingEnabled: enabled }).subscribe({
-        next: (ctx) => {
-          const row = ctx.tenant;
-          if (row) {
-            this.data.syncTenantsFromApi([
-              {
-                id: row.id,
-                name: row.name,
-                slug: row.slug,
-                status: row.status as 'ACTIVE' | 'PAUSED' | 'BLOCKED',
-                plan: row.plan,
-                storefrontEnabled: row.storefrontEnabled,
-                manualBookingEnabled: row.manualBookingEnabled,
-                modules: row.modules,
-              },
-            ]);
-            const t = this.data.tenantById(tenantId);
-            if (t) {
-              this.session.syncFromTenant(t);
-            }
-          }
-          this.opsMsg.set('Preferencias operativas guardadas en el API.');
-        },
-        error: () => {
-          this.opsMsg.set('No se pudo guardar en API. Verifica permisos y conexión.');
-        },
-      });
-      return;
-    }
-    this.data.setTenantManualBookingEnabled(tenantId, enabled);
-    const t = this.data.tenantById(tenantId);
-    if (t) {
-      this.session.syncFromTenant(t);
-    }
-    this.opsMsg.set('Preferencias operativas guardadas (modo demo).');
-  }
 
   whatsappHref(): string {
     const phone = this.form.controls.waPhone.getRawValue().replace(/\D/g, '');
@@ -547,16 +481,17 @@ export class TenantSettingsComponent {
     this.data.updateTenantBranding(tenantId, patch);
     if (environment.useLiveAuth && this.session.accessToken()) {
       this.apiCatalog.patchBranding(patch).subscribe({
-        next: () => {
-          this.opsMsg.set('Horario de reservas y WhatsApp guardados en API.');
+        next: (b) => {
+          this.data.applyBrandingFromApi(tenantId, b);
+          this.scheduleMsg.set('Horario de reservas y WhatsApp guardados.');
         },
         error: () => {
-          this.opsMsg.set('No se pudo guardar horario/WhatsApp en API.');
+          this.scheduleMsg.set('No se pudo guardar horario/WhatsApp en API.');
         },
       });
       return;
     }
-    this.opsMsg.set('Horario de reservas y WhatsApp guardados (modo demo).');
+    this.scheduleMsg.set('Horario de reservas y WhatsApp guardados (modo demo).');
   }
 
   private buildScheduleWhatsappPatch(): {

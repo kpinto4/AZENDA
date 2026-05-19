@@ -64,6 +64,13 @@ export class TenantSalesService {
       await this.sqlDb.updateTenantProduct(tenantId, product.id, {
         stock: nextStock,
       });
+      await this.sqlDb.insertStockMovement({
+        tenantId,
+        productId: product.id,
+        productName: product.name,
+        delta: -qty,
+        reason: `Venta · ${dto.method}`,
+      });
       stockNote = `Stock: −${qty} · ${product.name}`;
     }
 

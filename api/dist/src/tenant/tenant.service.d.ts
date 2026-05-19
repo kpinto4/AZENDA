@@ -8,6 +8,7 @@ import { UpsertTenantProductDto } from './dto/upsert-tenant-product.dto';
 import { UpsertTenantServiceDto } from './dto/upsert-tenant-service.dto';
 import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
 import { SimulateUpgradeDto } from './dto/simulate-upgrade.dto';
+import { ApplyStockMovementDto } from './dto/apply-stock-movement.dto';
 export declare class TenantService {
     private readonly sqlDbService;
     constructor(sqlDbService: SqlDbService);
@@ -91,5 +92,7 @@ export declare class TenantService {
     deleteEmployee(currentUser: AuthUser, userId: string): Promise<{
         ok: boolean;
     }>;
+    listStockMovements(currentUser: AuthUser): Promise<import("../infrastructure/sql-db/sql-db.types").TenantStockMovementEntity[]>;
+    applyStockMovement(currentUser: AuthUser, dto: ApplyStockMovementDto): Promise<import("../infrastructure/sql-db/sql-db.types").TenantStockMovementEntity>;
     private requireTenantId;
 }

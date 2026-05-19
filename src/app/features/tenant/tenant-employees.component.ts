@@ -43,6 +43,10 @@ export class TenantEmployeesComponent {
     return this.data.employees();
   });
 
+  readonly adminCount = computed(
+    () => this.employees().filter((e) => e.panelRole === 'ADMIN').length,
+  );
+
   constructor() {
     effect(() => {
       if (!environment.useLiveAuth || !this.session.accessToken()) {
