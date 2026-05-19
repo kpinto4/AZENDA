@@ -300,7 +300,9 @@ export class TenantSalesComponent {
       { date: today, total, method: method },
       { productId: product.id, stockQty: qty, tenantId: this.session.tenantId() },
     );
-    this.alerts.success(`Venta registrada. Se descontaron ${qty} unidad(es) del inventario.`);
+    this.alerts.success(
+      `Venta registrada en esta sesión (no se guardó en la base de datos). Se descontaron ${qty} unidad(es) del inventario demo.`,
+    );
     this.clearSelection();
     this.refreshCatalog();
   }

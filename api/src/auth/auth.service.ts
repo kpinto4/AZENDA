@@ -1,7 +1,12 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { AuthUser } from './auth.types';
+import { AppSystem, AuthUser, UserRole } from './auth.types';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
 import { PasswordService } from './password.service';
 
@@ -12,6 +17,41 @@ export class AuthService {
     private readonly sqlDbService: SqlDbService,
     private readonly passwordService: PasswordService,
   ) {}
+
+  async register(dto: RegisterDto) {
+    const email = dto.email.trim().toLowerCase();
+    const existing = await this.sqlDbService.findUserByEmailNormalized(email);
+    if (existing) {
+      throw new ConflictException('Ya existe una cuenta con ese correo');
+    }
+
+    const business = dto.business.trim();
+    const tenantId = `tenant_${Date.now()}`;
+    const slug = await this.uniqueTenantSlug(business, tenantId);
+
+    await this.sqlDbService.createTenant({
+      id: tenantId,
+      name: business,
+      slug,
+      status: 'ACTIVE',
+      plan: 'Trial',
+      storefrontEnabled: false,
+      modules: { citas: true, ventas: true, inventario: true },
+    });
+
+    const userId = `usr_${Date.now()}`;
+    await this.sqlDbService.createUser({
+      id: userId,
+      email,
+      password: dto.password,
+      role: UserRole.ADMIN,
+      tenantId,
+      systems: [AppSystem.TENANT, AppSystem.PUBLIC_BOOKING],
+      status: 'ACTIVE',
+    });
+
+    return this.login({ email, password: dto.password });
+  }
 
   async login(dto: LoginDto) {
     const email = dto.email.trim().toLowerCase();
@@ -75,5 +115,30 @@ export class AuthService {
     const safeUser = { ...user };
     delete safeUser.password;
     return safeUser;
+  }
+
+  private slugifyName(name: string): string {
+    const base = name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 36);
+    return base.length ? base : 'negocio';
+  }
+
+  private async uniqueTenantSlug(
+    businessName: string,
+    tenantId: string,
+  ): Promise<string> {
+    const suffix = tenantId.replace(/^tenant_/, '') || tenantId;
+    let candidate = `${this.slugifyName(businessName)}-${suffix}`;
+    let attempt = 0;
+    while (await this.sqlDbService.findTenantBySlug(candidate)) {
+      attempt += 1;
+      candidate = `${this.slugifyName(businessName)}-${suffix}-${attempt}`;
+    }
+    return candidate;
   }
 }

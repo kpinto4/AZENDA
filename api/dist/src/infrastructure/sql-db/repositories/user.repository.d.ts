@@ -15,5 +15,6 @@ export declare class UserRepository {
     update(userId: string, patch: Partial<Omit<UserEntity, 'id'>>): Promise<UserEntity | undefined>;
     delete(userId: string): Promise<boolean>;
     deleteByTenant(userId: string, tenantId: string): Promise<boolean>;
+    syncSeedPasswordIfInvalid(userId: string, plainPassword: string): Promise<void>;
     migrateLegacyPlaintextPasswords(): Promise<void>;
 }

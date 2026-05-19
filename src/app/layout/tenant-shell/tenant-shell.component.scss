@@ -265,6 +265,15 @@ nav a.sidebar-booking:hover {
   color: var(--az-text);
 }
 
+.tenant-demo-banner {
+  margin: 0;
+  padding: 0.7rem 1.25rem;
+  background: color-mix(in srgb, var(--az-accent) 12%, var(--az-surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--az-accent) 28%, var(--az-border));
+  font-size: 0.86rem;
+  color: var(--az-text);
+}
+
 .az-btn.small {
   padding: 0.35rem 0.65rem;
   font-size: 0.8rem;

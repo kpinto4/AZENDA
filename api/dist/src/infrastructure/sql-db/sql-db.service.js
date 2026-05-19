@@ -47,6 +47,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         await this.createSchema();
         await this.ensureSchemaMigrations();
         await this.users.migrateLegacyPlaintextPasswords();
+        await this.syncKnownSeedUsers();
         this.logger.log('PostgreSQL: tablas y migraciones ligeras verificadas en el arranque. ' +
             'Semilla (usuarios demo): npm run db:bootstrap en la raiz si la base esta vacia. ' +
             'DB_BOOTSTRAP_ON_START=1 fuerza bootstrap en cada arranque.');
@@ -77,6 +78,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             await this.createSchema();
             await this.ensureSchemaMigrations();
             await this.users.migrateLegacyPlaintextPasswords();
+            await this.syncKnownSeedUsers();
             await this.seedIfEmpty();
             this.logger.log(`PostgreSQL listo (${context}): esquema y semilla verificados`);
         }
@@ -455,6 +457,18 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             await this.pg.exec(`UPDATE tenants SET current_period_start = ?, current_period_end = ?, next_renewal_at = ? WHERE id = ?`, [start.toISOString(), end.toISOString(), nextRenewalAt, tenant.id]);
         }
     }
+    async syncKnownSeedUsers() {
+        const seedPassword = 'azenda123';
+        const seedUserIds = [
+            'usr_super_1',
+            'usr_admin_spa',
+            'usr_admin_clinica',
+            'usr_employee_1',
+        ];
+        for (const userId of seedUserIds) {
+            await this.users.syncSeedPasswordIfInvalid(userId, seedPassword);
+        }
+    }
     async seedIfEmpty() {
         const countRow = await this.pg.queryOne(`SELECT COUNT(*) AS cnt FROM users`);
         const count = Number(countRow?.cnt ?? 0);
@@ -547,10 +561,11 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
     }
     async ensureSeedUser(row) {
         const exists = await this.findUserById(row.id);
-        if (exists) {
+        if (!exists) {
+            await this.createUser(row);
             return;
         }
-        await this.createUser(row);
+        await this.users.syncSeedPasswordIfInvalid(row.id, row.password);
     }
     async getPlanCatalogPrices(planKey) {
         return this.tenants.getPlanCatalogPrices(planKey);

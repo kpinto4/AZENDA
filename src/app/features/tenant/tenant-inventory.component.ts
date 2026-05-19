@@ -552,7 +552,7 @@ export class TenantInventoryComponent {
       return;
     }
     this.data.applyStockMovement(tid, v.productId, delta, v.reason);
-    this.alerts.success('Movimiento de stock aplicado.');
+    this.alerts.success('Movimiento aplicado solo en esta sesión (no se guardó en la base de datos).');
     this.moveForm.patchValue({ delta: 1, reason: 'Ajuste demo' });
   }
 

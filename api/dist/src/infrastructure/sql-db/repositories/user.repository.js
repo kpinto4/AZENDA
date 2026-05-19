@@ -139,6 +139,18 @@ let UserRepository = UserRepository_1 = class UserRepository {
         ]);
         return true;
     }
+    async syncSeedPasswordIfInvalid(userId, plainPassword) {
+        const current = await this.findById(userId);
+        if (!current) {
+            return;
+        }
+        const valid = await this.passwordService.verify(plainPassword, current.password);
+        if (valid) {
+            return;
+        }
+        await this.update(userId, { password: plainPassword });
+        this.logger.log(`Clave seed restablecida para usuario ${userId}.`);
+    }
     async migrateLegacyPlaintextPasswords() {
         const rows = await this.pg.queryRows(`SELECT id, password FROM users WHERE password IS NOT NULL AND password NOT LIKE '$2%'`);
         for (const r of rows) {

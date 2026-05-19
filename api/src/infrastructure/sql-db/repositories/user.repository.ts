@@ -170,6 +170,26 @@ export class UserRepository {
     return true;
   }
 
+  /** Restablece la clave de usuarios seed si el hash almacenado ya no coincide. */
+  async syncSeedPasswordIfInvalid(
+    userId: string,
+    plainPassword: string,
+  ): Promise<void> {
+    const current = await this.findById(userId);
+    if (!current) {
+      return;
+    }
+    const valid = await this.passwordService.verify(
+      plainPassword,
+      current.password,
+    );
+    if (valid) {
+      return;
+    }
+    await this.update(userId, { password: plainPassword });
+    this.logger.log(`Clave seed restablecida para usuario ${userId}.`);
+  }
+
   async migrateLegacyPlaintextPasswords(): Promise<void> {
     const rows = await this.pg.queryRows(
       `SELECT id, password FROM users WHERE password IS NOT NULL AND password NOT LIKE '$2%'`,

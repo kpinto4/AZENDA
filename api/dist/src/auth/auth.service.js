@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
+const auth_types_1 = require("./auth.types");
 const sql_db_service_1 = require("../infrastructure/sql-db/sql-db.service");
 const password_service_1 = require("./password.service");
 let AuthService = class AuthService {
@@ -19,6 +20,36 @@ let AuthService = class AuthService {
         this.jwtService = jwtService;
         this.sqlDbService = sqlDbService;
         this.passwordService = passwordService;
+    }
+    async register(dto) {
+        const email = dto.email.trim().toLowerCase();
+        const existing = await this.sqlDbService.findUserByEmailNormalized(email);
+        if (existing) {
+            throw new common_1.ConflictException('Ya existe una cuenta con ese correo');
+        }
+        const business = dto.business.trim();
+        const tenantId = `tenant_${Date.now()}`;
+        const slug = await this.uniqueTenantSlug(business, tenantId);
+        await this.sqlDbService.createTenant({
+            id: tenantId,
+            name: business,
+            slug,
+            status: 'ACTIVE',
+            plan: 'Trial',
+            storefrontEnabled: false,
+            modules: { citas: true, ventas: true, inventario: true },
+        });
+        const userId = `usr_${Date.now()}`;
+        await this.sqlDbService.createUser({
+            id: userId,
+            email,
+            password: dto.password,
+            role: auth_types_1.UserRole.ADMIN,
+            tenantId,
+            systems: [auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING],
+            status: 'ACTIVE',
+        });
+        return this.login({ email, password: dto.password });
     }
     async login(dto) {
         const email = dto.email.trim().toLowerCase();
@@ -70,6 +101,26 @@ let AuthService = class AuthService {
         const safeUser = { ...user };
         delete safeUser.password;
         return safeUser;
+    }
+    slugifyName(name) {
+        const base = name
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 36);
+        return base.length ? base : 'negocio';
+    }
+    async uniqueTenantSlug(businessName, tenantId) {
+        const suffix = tenantId.replace(/^tenant_/, '') || tenantId;
+        let candidate = `${this.slugifyName(businessName)}-${suffix}`;
+        let attempt = 0;
+        while (await this.sqlDbService.findTenantBySlug(candidate)) {
+            attempt += 1;
+            candidate = `${this.slugifyName(businessName)}-${suffix}-${attempt}`;
+        }
+        return candidate;
     }
 };
 exports.AuthService = AuthService;

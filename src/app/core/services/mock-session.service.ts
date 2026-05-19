@@ -24,6 +24,7 @@ export interface TenantModulesState {
 export type TenantLifecycleStatus = 'ACTIVE' | 'PAUSED' | 'BLOCKED';
 
 const AUTH_STORAGE_KEY = 'azenda.auth.v1';
+const AUTH_SESSION_KEY = 'azenda.auth.session.v1';
 
 @Injectable({ providedIn: 'root' })
 export class MockSessionService {
@@ -70,6 +71,18 @@ export class MockSessionService {
     const status = this.tenantStatus();
     return status === 'PAUSED' || status === 'BLOCKED';
   });
+  /** Sesión tenant con JWT activo (datos van a PostgreSQL). */
+  readonly isLiveApiSession = computed(
+    () =>
+      environment.useLiveAuth &&
+      !!this.accessToken() &&
+      this.isTenantUser() &&
+      !this.isTenantRestricted(),
+  );
+  /** Sesión tenant sin JWT: solo memoria del navegador. */
+  readonly isDemoSession = computed(
+    () => environment.useLiveAuth && this.isTenantUser() && !this.accessToken(),
+  );
   readonly tenantRestrictionMessage = computed(() => {
     const status = this.tenantStatus();
     if (status === 'PAUSED') {
@@ -142,25 +155,18 @@ export class MockSessionService {
     return this.hydrateWithTokenAndUser(res.accessToken, res.user);
   }
 
-  /** Restaura sesión desde `localStorage` si el JWT sigue vigente. */
+  /** Restaura sesión desde `localStorage` o `sessionStorage` si el JWT sigue vigente. */
   restoreSessionFromStorage(): Observable<void> {
     if (typeof localStorage === 'undefined') {
       return of(undefined);
     }
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) {
+    const token =
+      this.readStoredToken(AUTH_STORAGE_KEY) ?? this.readStoredToken(AUTH_SESSION_KEY);
+    if (!token) {
       return of(undefined);
     }
-    let parsed: { accessToken?: string };
-    try {
-      parsed = JSON.parse(raw) as { accessToken?: string };
-    } catch {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      return of(undefined);
-    }
-    const token = parsed.accessToken;
-    if (!token || isJwtExpired(token)) {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
+    if (isJwtExpired(token)) {
+      this.clearStoredAuth();
       return of(undefined);
     }
     this.accessToken.set(token);
@@ -174,21 +180,44 @@ export class MockSessionService {
     );
   }
 
-  /** Guarda JWT para sobrevivir recargas. La caducidad la marca el propio JWT (`exp`). */
+  /** Guarda JWT: `localStorage` si «Mantener sesión»; si no, `sessionStorage` (sobrevive recargas en la pestaña). */
   persistAuthIfRequested(accessToken: string, rememberMe: boolean): void {
-    if (typeof localStorage === 'undefined') {
+    if (typeof localStorage === 'undefined' || typeof sessionStorage === 'undefined') {
       return;
     }
-    if (!rememberMe) {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_SESSION_KEY);
+    if (rememberMe) {
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ accessToken }));
       return;
     }
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ accessToken }));
+    sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ accessToken }));
+  }
+
+  private readStoredToken(key: string): string | null {
+    const storage =
+      key === AUTH_SESSION_KEY && typeof sessionStorage !== 'undefined'
+        ? sessionStorage
+        : localStorage;
+    const raw = storage.getItem(key);
+    if (!raw) {
+      return null;
+    }
+    try {
+      const parsed = JSON.parse(raw) as { accessToken?: string };
+      return parsed.accessToken ?? null;
+    } catch {
+      storage.removeItem(key);
+      return null;
+    }
   }
 
   private clearStoredAuth(): void {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(AUTH_STORAGE_KEY);
+    }
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(AUTH_SESSION_KEY);
     }
   }
 

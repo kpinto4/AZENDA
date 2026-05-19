@@ -58,6 +58,7 @@ export class SqlDbService implements OnModuleInit {
     await this.createSchema();
     await this.ensureSchemaMigrations();
     await this.users.migrateLegacyPlaintextPasswords();
+    await this.syncKnownSeedUsers();
     this.logger.log(
       'PostgreSQL: tablas y migraciones ligeras verificadas en el arranque. ' +
         'Semilla (usuarios demo): npm run db:bootstrap en la raiz si la base esta vacia. ' +
@@ -99,6 +100,7 @@ export class SqlDbService implements OnModuleInit {
       await this.createSchema();
       await this.ensureSchemaMigrations();
       await this.users.migrateLegacyPlaintextPasswords();
+      await this.syncKnownSeedUsers();
       await this.seedIfEmpty();
       this.logger.log(
         `PostgreSQL listo (${context}): esquema y semilla verificados`,
@@ -799,6 +801,19 @@ export class SqlDbService implements OnModuleInit {
     }
   }
 
+  private async syncKnownSeedUsers(): Promise<void> {
+    const seedPassword = 'azenda123';
+    const seedUserIds = [
+      'usr_super_1',
+      'usr_admin_spa',
+      'usr_admin_clinica',
+      'usr_employee_1',
+    ];
+    for (const userId of seedUserIds) {
+      await this.users.syncSeedPasswordIfInvalid(userId, seedPassword);
+    }
+  }
+
   private async seedIfEmpty(): Promise<void> {
     const countRow = await this.pg.queryOne(
       `SELECT COUNT(*) AS cnt FROM users`,
@@ -918,10 +933,11 @@ export class SqlDbService implements OnModuleInit {
 
   private async ensureSeedUser(row: UserEntity): Promise<void> {
     const exists = await this.findUserById(row.id);
-    if (exists) {
+    if (!exists) {
+      await this.createUser(row);
       return;
     }
-    await this.createUser(row);
+    await this.users.syncSeedPasswordIfInvalid(row.id, row.password);
   }
 
   async getPlanCatalogPrices(

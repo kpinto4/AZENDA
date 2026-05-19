@@ -68,6 +68,17 @@ export class ApiAuthService {
     );
   }
 
+  register(
+    business: string,
+    email: string,
+    password: string,
+  ): Observable<ApiLoginResponse> {
+    return this.http.post<ApiLoginResponse>(
+      `${environment.apiBaseUrl}/auth/register`,
+      { business, email, password },
+    );
+  }
+
   tenantContext(): Observable<ApiTenantContextResponse> {
     const url = `${environment.apiBaseUrl}/tenant/context`;
     return this.http.get<ApiTenantContextResponse>(url, {

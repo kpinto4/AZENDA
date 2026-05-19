@@ -103,6 +103,12 @@
         <strong>Estado del plan:</strong> {{ msg }}
       </div>
     }
+    @if (session.isDemoSession()) {
+      <div class="tenant-demo-banner" role="status">
+        <strong>Modo demo.</strong> Los cambios no se guardan en la base de datos. Inicia sesión con correo y contraseña
+        reales para persistir ventas, inventario y configuración.
+      </div>
+    }
     <div class="tenant-main-inner">
       <router-outlet />
     </div>

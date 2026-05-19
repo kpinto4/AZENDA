@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { AppSystem, AuthUser, UserRole } from '../auth/auth.types';
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
 import { CreateTenantEmployeeDto } from './dto/create-tenant-employee.dto';
