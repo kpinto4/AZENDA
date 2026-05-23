@@ -4,6 +4,7 @@ exports.defaultWeeklyBusinessHours = defaultWeeklyBusinessHours;
 exports.weeklyHoursToJson = weeklyHoursToJson;
 exports.parseWeeklyHoursJson = parseWeeklyHoursJson;
 exports.slotsForPublicBookingDate = slotsForPublicBookingDate;
+exports.latestClosingMinuteForDate = latestClosingMinuteForDate;
 const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 const JS_TO_DAY = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 function defaultWeeklyBusinessHours() {
@@ -130,6 +131,27 @@ function slotsForPublicBookingDate(weekly, dateYmd, now, stepMinutes = 30) {
         const sm = timeToMinutes(slot);
         return sm != null && sm > nowM;
     });
+}
+function latestClosingMinuteForDate(weekly, dateYmd) {
+    const effective = weekly && Object.keys(weekly).length
+        ? weekly
+        : defaultWeeklyBusinessHours();
+    const day = dayCodeForYmd(dateYmd);
+    if (!day) {
+        return null;
+    }
+    const ranges = effective[day];
+    if (!ranges?.length) {
+        return null;
+    }
+    let maxClose = null;
+    for (const { close } of ranges) {
+        const cMin = timeToMinutes(close);
+        if (cMin != null && (maxClose == null || cMin > maxClose)) {
+            maxClose = cMin;
+        }
+    }
+    return maxClose;
 }
 function ymdFromDate(d) {
     const y = d.getFullYear();

@@ -1,11 +1,22 @@
 <h1 class="panel-lead">3. Resumen y datos</h1>
 <p class="muted lead-caption">Revisa tu selección y confirma con tus datos.</p>
-@if (bookingError()) {
-  <p class="muted field-error">{{ bookingError() }}</p>
-}
 <form [formGroup]="confirmForm()" (ngSubmit)="submitConfirm.emit()">
   <div class="summary summary--pro">
-    <div><span>Servicio</span><strong>{{ selectedService() || '—' }}</strong></div>
+    <div class="summary-services">
+      <span>Servicio(s)</span>
+      @if (selectedServiceLines().length) {
+        <ul class="summary-service-list">
+          @for (line of selectedServiceLines(); track line) {
+            <li><strong>{{ line }}</strong></li>
+          }
+        </ul>
+        @if (totalDurationMinutes() > 0) {
+          <span class="muted small">Duración total: {{ totalDurationMinutes() }} min</span>
+        }
+      } @else {
+        <strong>—</strong>
+      }
+    </div>
     <div>
       <span>Fecha</span>
       <strong>{{ selectedDate() || '—' }} {{ selectedSlot() || '—' }}</strong>
@@ -48,28 +59,41 @@
     autocomplete="name"
     enterkeyhint="next"
   />
-  <label class="az-label" for="phone">Teléfono (móvil recomendado)</label>
+  <label class="az-label" for="phone">Teléfono móvil (Colombia)</label>
   <input
     id="phone"
     class="az-input wide"
     formControlName="phone"
     type="tel"
-    inputmode="tel"
+    inputmode="numeric"
     autocomplete="tel"
     enterkeyhint="done"
-    placeholder="Ej.: 600123456 o +34600123456"
+    placeholder="Ej.: 3001234567"
+    maxlength="13"
   />
+  @if (confirmForm().get('phone')?.invalid && confirmForm().get('phone')?.touched) {
+    <p class="muted field-error">Indica un móvil colombiano de 10 dígitos (empieza por 3).</p>
+  }
   <div class="wa-opt-in">
     <label class="wa-opt-in-label" for="wa-rem">
       <input id="wa-rem" type="checkbox" formControlName="waReminderConsent" />
       <span class="wa-opt-in-text">
-        <strong>Comparto móvil para WhatsApp con el negocio</strong>
+        <strong>Confirmo que este número tiene WhatsApp</strong>
         <span class="muted wa-opt-in-note">
-          El negocio podrá escribirte desde su WhatsApp (recordatorios manuales). Requiere un número válido.
+          Autorizo al negocio a contactarme por WhatsApp (cambios de hora, recordatorios u otra gestión de mi cita).
         </span>
       </span>
     </label>
   </div>
+  @if (confirmForm().get('waReminderConsent')?.invalid && confirmForm().get('waReminderConsent')?.touched) {
+    <p class="muted field-error">Debes marcar esta casilla para confirmar la reserva.</p>
+  }
+  @if (bookingError()) {
+    <div class="booking-alert booking-alert--error booking-alert--confirm" role="alert" tabindex="-1">
+      <strong>No se pudo confirmar</strong>
+      <p>{{ bookingError() }}</p>
+    </div>
+  }
   <div class="booking-bottom-bar" id="booking-confirm-anchor">
     <div class="booking-total">
       <span>Total</span>
@@ -80,7 +104,7 @@
       <button
         type="submit"
         class="az-btn az-btn-primary booking-confirm-btn"
-        [disabled]="bookingSubmitting() || !selectedService() || !selectedDate() || !selectedSlot() || !selectedEmployeeId()"
+        [disabled]="bookingSubmitting() || !hasServices() || !selectedDate() || !selectedSlot() || !selectedEmployeeId() || confirmForm().invalid"
       >
         {{ bookingSubmitting() ? 'Enviando…' : 'Confirmar reserva' }}
       </button>

@@ -348,6 +348,66 @@ h3 {
   overflow: hidden;
 }
 
+.payment-methods-card.compact-panel {
+  margin-top: var(--section-gap, 1rem);
+  padding: 0.85rem 1rem;
+}
+
+.payment-methods-card.compact-panel h3 {
+  margin-bottom: 0.25rem;
+  font-size: 1rem;
+}
+
+.payment-methods-compact {
+  list-style: none;
+  margin: 0.55rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.payment-method-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2rem;
+}
+
+.payment-method-item.has-detail {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, auto) 1fr;
+  gap: 0.45rem;
+}
+
+.payment-method-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.payment-detail-input {
+  max-width: none;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+.compact-save {
+  margin-top: 0.65rem;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.84rem;
+}
+
+@media (max-width: 640px) {
+  .payment-method-item.has-detail {
+    grid-template-columns: 1fr;
+  }
+}
+
 .schedule-table {
   margin-top: 0.65rem;
   border: 1px solid var(--az-border);

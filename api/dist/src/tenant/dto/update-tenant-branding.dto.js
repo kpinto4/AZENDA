@@ -70,6 +70,18 @@ __decorate([
 ], UpdateTenantBrandingDto.prototype, "publicBookingHoursJson", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(2000),
+    __metadata("design:type", Object)
+], UpdateTenantBrandingDto.prototype, "reviewsUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(8000),
+    __metadata("design:type", Object)
+], UpdateTenantBrandingDto.prototype, "posPaymentMethodsJson", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsIn)(['horizontal', 'grid']),
     __metadata("design:type", String)
 ], UpdateTenantBrandingDto.prototype, "catalogLayout", void 0);

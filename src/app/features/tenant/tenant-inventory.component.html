@@ -102,6 +102,7 @@
           <tr>
             <th>Servicio</th>
             <th>Descripción</th>
+            <th>Duración</th>
             <th>Precio base</th>
             <th>Precio promo</th>
             <th>Promoción</th>
@@ -115,6 +116,7 @@
             <tr>
               <td data-label="Servicio">{{ s.name }}</td>
               <td data-label="Descripción">{{ s.description || '—' }}</td>
+              <td data-label="Duración">{{ s.durationMinutes ?? 30 }} min</td>
               <td data-label="Precio">{{ s.price | formatCop }}</td>
               <td data-label="Promo">{{ s.promoPrice != null ? (s.promoPrice | formatCop) : '—' }}</td>
               <td data-label="Promoción">{{ s.promoLabel || '—' }}</td>
@@ -129,7 +131,7 @@
             </tr>
           } @empty {
             <tr>
-              <td [attr.colspan]="canManageCatalog() ? 6 : 5">Aún no hay servicios cargados.</td>
+              <td [attr.colspan]="canManageCatalog() ? 7 : 6">Aún no hay servicios cargados.</td>
             </tr>
           }
         </tbody>
@@ -226,6 +228,8 @@
         <input id="e-desc" class="az-input wide" type="text" formControlName="description" />
       </div>
 
+      <app-promo-schedule-editor />
+
       @if (isProductEditor()) {
         <div>
           <label class="az-label" for="e-sku">SKU</label>
@@ -234,10 +238,6 @@
         <div>
           <label class="az-label" for="e-stock">Stock</label>
           <input id="e-stock" class="az-input" type="number" min="0" formControlName="stock" />
-        </div>
-        <div>
-          <label class="az-label" for="e-prod-promo-price">Precio promo en COP (opcional)</label>
-          <input id="e-prod-promo-price" class="az-input" type="number" min="0" step="0.01" formControlName="promoPrice" />
         </div>
         <div class="full">
           <label class="az-label" for="e-img">Foto (opcional)</label>
@@ -254,12 +254,17 @@
         </div>
       } @else {
         <div>
-          <label class="az-label" for="e-promo-price">Precio promo en COP (opcional)</label>
-          <input id="e-promo-price" class="az-input" type="number" min="0" step="0.01" formControlName="promoPrice" />
-        </div>
-        <div class="full">
-          <label class="az-label" for="e-promo-label">Promoción (opcional)</label>
-          <input id="e-promo-label" class="az-input wide" type="text" formControlName="promoLabel" />
+          <label class="az-label" for="e-duration">Duración (minutos)</label>
+          <input
+            id="e-duration"
+            class="az-input"
+            type="number"
+            min="5"
+            max="480"
+            step="5"
+            formControlName="durationMinutes"
+          />
+          <p class="muted small">Tiempo que ocupa el servicio en agenda (ej. 30, 45, 60).</p>
         </div>
       }
 

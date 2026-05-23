@@ -12,9 +12,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppointmentRepository = void 0;
 const common_1 = require("@nestjs/common");
 const customer_name_match_util_1 = require("../../../common/customer-name-match.util");
-const phone_e164_util_1 = require("../../../common/phone-e164.util");
+const service_duration_util_1 = require("../../../common/service-duration.util");
+const phone_co_util_1 = require("../../../common/phone-co.util");
 const pg_client_service_1 = require("../pg-client.service");
 const tenant_repository_1 = require("./tenant.repository");
+const APPT_SELECT = `
+        SELECT id, tenant_id, customer, service, when_at, status, attendance,
+               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at, duration_minutes
+`;
 let AppointmentRepository = class AppointmentRepository {
     constructor(pg, tenants) {
         this.pg = pg;
@@ -38,6 +43,9 @@ let AppointmentRepository = class AppointmentRepository {
             when: String(row.when_at),
             status: row.status,
             attendance,
+            durationMinutes: row.duration_minutes == null
+                ? null
+                : (0, service_duration_util_1.normalizeServiceDurationMinutes)(row.duration_minutes),
             customerPhoneE164: phoneRaw == null || String(phoneRaw).trim() === ''
                 ? null
                 : String(phoneRaw).trim(),
@@ -48,9 +56,7 @@ let AppointmentRepository = class AppointmentRepository {
         };
     }
     async listByTenantId(tenantId) {
-        const rows = await this.pg.queryRows(`
-        SELECT id, tenant_id, customer, service, when_at, status, attendance,
-               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+        const rows = await this.pg.queryRows(`${APPT_SELECT}
         FROM appointments
         WHERE tenant_id = ?
         ORDER BY when_at ASC
@@ -63,12 +69,15 @@ let AppointmentRepository = class AppointmentRepository {
         const attendance = data.attendance ?? 'PENDIENTE';
         const phone = data.customerPhoneE164?.trim() || null;
         const waConsent = Boolean(data.waReminderConsent);
+        const durationMinutes = data.durationMinutes == null
+            ? null
+            : (0, service_duration_util_1.normalizeServiceDurationMinutes)(data.durationMinutes);
         await this.pg.exec(`
         INSERT INTO appointments (
           id, tenant_id, customer, service, when_at, status, attendance,
-          customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+          customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at, duration_minutes
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
       `, [
             id,
             data.tenantId,
@@ -79,6 +88,7 @@ let AppointmentRepository = class AppointmentRepository {
             attendance,
             phone,
             waConsent,
+            durationMinutes,
         ]);
         const created = await this.findById(id);
         if (!created) {
@@ -88,9 +98,7 @@ let AppointmentRepository = class AppointmentRepository {
     }
     async markReminderSentForTenant(appointmentId, tenantId) {
         await this.pg.exec(`UPDATE appointments SET wa_reminder_sent_at = ? WHERE id = ? AND tenant_id = ?`, [new Date().toISOString(), appointmentId, tenantId]);
-        const row = await this.pg.queryOne(`
-        SELECT id, tenant_id, customer, service, when_at, status, attendance,
-               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+        const row = await this.pg.queryOne(`${APPT_SELECT}
         FROM appointments
         WHERE id = ? AND tenant_id = ?
         LIMIT 1
@@ -100,9 +108,7 @@ let AppointmentRepository = class AppointmentRepository {
             : undefined;
     }
     async findByTenantAndWhen(tenantId, when) {
-        const row = await this.pg.queryOne(`
-        SELECT id, tenant_id, customer, service, when_at, status, attendance,
-               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+        const row = await this.pg.queryOne(`${APPT_SELECT}
         FROM appointments
         WHERE tenant_id = ? AND when_at = ?
         LIMIT 1
@@ -112,9 +118,7 @@ let AppointmentRepository = class AppointmentRepository {
             : undefined;
     }
     async findById(appointmentId) {
-        const row = await this.pg.queryOne(`
-        SELECT id, tenant_id, customer, service, when_at, status, attendance,
-               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+        const row = await this.pg.queryOne(`${APPT_SELECT}
         FROM appointments
         WHERE id = ?
       `, [appointmentId]);
@@ -176,9 +180,8 @@ let AppointmentRepository = class AppointmentRepository {
         }
         const customerName = (customerNameRaw ?? '').trim();
         const ref = appointmentIdRaw?.trim() ?? '';
-        const defaultCc = (process.env.PUBLIC_BOOKING_DEFAULT_COUNTRY_CODE ?? '34').trim() || '34';
         const phoneDigits = customerPhoneRaw?.trim()
-            ? (0, phone_e164_util_1.normalizePhoneToWaDigits)(customerPhoneRaw, defaultCc)
+            ? (0, phone_co_util_1.normalizeColombiaMobileDigits)(customerPhoneRaw)
             : null;
         if (!ref && !phoneDigits) {
             return [];
@@ -191,9 +194,7 @@ let AppointmentRepository = class AppointmentRepository {
             }
         }
         else if (phoneDigits) {
-            const rows = await this.pg.queryRows(`
-          SELECT id, tenant_id, customer, service, when_at, status, attendance,
-                 customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+            const rows = await this.pg.queryRows(`${APPT_SELECT}
           FROM appointments
           WHERE tenant_id = ? AND customer_phone_e164 = ?
             AND status != 'cancelada'

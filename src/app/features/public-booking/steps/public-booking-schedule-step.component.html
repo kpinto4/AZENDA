@@ -63,10 +63,63 @@
   </ul>
 </section>
 
+@if (!rescheduleMode() && cartRows().length) {
+  <section class="service-review-compact" aria-label="Servicios de tu cita">
+    <div class="service-review-compact-head">
+      <span class="service-review-compact-title">Tu selección</span>
+      <div class="service-review-compact-head-meta">
+        @if (serviceDurationMinutes(); as mins) {
+          <span class="muted small">{{ mins }} min</span>
+        }
+        @if (totalPriceLabel(); as total) {
+          <strong class="service-review-compact-total">{{ total }}</strong>
+        }
+      </div>
+    </div>
+    <ul class="service-review-compact-list">
+      @for (row of cartRows(); track row.id) {
+        <li class="service-review-compact-row">
+          <div class="service-review-compact-row-text">
+            <span class="service-review-compact-name">{{ row.name }}</span>
+            <span class="muted small">
+              {{ row.durationMinutes }} min@if (row.priceLabel) { · {{ row.priceLabel }} }
+            </span>
+          </div>
+          <button
+            type="button"
+            class="service-review-compact-remove"
+            (click)="removeService.emit(row.fullValue)"
+          >
+            Quitar
+          </button>
+        </li>
+      }
+    </ul>
+    @if (canAddMoreServices()) {
+      <button
+        type="button"
+        class="az-btn az-btn-secondary service-review-compact-add"
+        (click)="addAnotherService.emit()"
+      >
+        + Agregar otro servicio
+      </button>
+    }
+  </section>
+}
+
 <section class="booking-section">
   <header class="booking-section-head">
     <h2>Hora</h2>
+    @if (serviceDurationMinutes(); as mins) {
+      <p class="muted small booking-duration-hint">Duración del servicio: {{ mins }} min</p>
+    }
   </header>
+  @if (bookingError()) {
+    <div class="booking-alert booking-alert--error" role="alert" tabindex="-1">
+      <strong>Horario no disponible</strong>
+      <p>{{ bookingError() }}</p>
+    </div>
+  }
   <div class="period-tabs">
     <button type="button" class="period-tab" [class.on]="selectedPeriod() === 'manana'" (click)="setPeriod.emit('manana')">Mañana</button>
     <button type="button" class="period-tab" [class.on]="selectedPeriod() === 'tarde'" (click)="setPeriod.emit('tarde')">Tarde</button>
@@ -76,6 +129,8 @@
     <p class="muted field-error">Selecciona antes una fecha para ver horarios.</p>
   } @else if (!selectedEmployeeId()) {
     <p class="muted field-error">Selecciona un profesional para cargar disponibilidad.</p>
+  } @else if (availabilityLoading()) {
+    <p class="muted booking-slots-loading">Cargando horarios según la duración del servicio…</p>
   } @else if (availableSlotsForSelection().length === 0) {
     <p class="muted field-error">No hay horas en esta franja para ese profesional. Cambia franja o profesional.</p>
   } @else {
@@ -89,9 +144,6 @@
   }
 </section>
 
-@if (bookingError()) {
-  <p class="muted field-error">{{ bookingError() }}</p>
-}
 <div class="row-btns">
   <button type="button" class="az-btn az-btn-ghost" (click)="back.emit()">
     {{ rescheduleMode() ? 'Cancelar' : 'Atrás' }}

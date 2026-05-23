@@ -14,6 +14,14 @@ import { MockSessionService } from '../../core/services/mock-session.service';
 import { formatCop } from '../../core/format-currency';
 import { FormatCopPipe } from '../../core/format-cop.pipe';
 import { UiAlertService } from '../../core/services/ui-alert.service';
+import {
+  createPromoScheduleFormGroup,
+  defaultPromoScheduleFormValue,
+  promoFormValueFromCatalog,
+  promoPayloadFromFormValue,
+  type PromoScheduleFormValue,
+} from '../../core/promo-form.util';
+import { PromoScheduleEditorComponent } from '../../shared/promo/promo-schedule-editor.component';
 
 const MAX_IMAGE_BYTES = 600 * 1024;
 type InventoryEntityType = 'product' | 'service';
@@ -37,7 +45,7 @@ type InventoryServiceRow = MockBusinessService | ApiTenantServiceDto;
 
 @Component({
   selector: 'app-tenant-inventory',
-  imports: [ReactiveFormsModule, FormatCopPipe],
+  imports: [ReactiveFormsModule, FormatCopPipe, PromoScheduleEditorComponent],
   templateUrl: './tenant-inventory.component.html',
   styleUrl: './tenant-inventory.component.scss',
 })
@@ -97,8 +105,8 @@ export class TenantInventoryComponent {
     price: [0, [Validators.required, Validators.min(0)]],
     sku: [''],
     stock: [0, [Validators.required, Validators.min(0)]],
-    promoPrice: [null as number | null],
-    promoLabel: [''],
+    durationMinutes: [30, [Validators.required, Validators.min(5), Validators.max(480)]],
+    promo: createPromoScheduleFormGroup(this.fb),
   });
 
   editorImageDataUrl = signal<string | null>(null);
@@ -117,7 +125,13 @@ export class TenantInventoryComponent {
           description: s.description,
           price: s.price,
           promoPrice: s.promoPrice,
+          promoEnabled: s.promoEnabled,
+          promoScheduleType: s.promoScheduleType,
+          promoDays: s.promoDays,
+          promoStartDate: s.promoStartDate,
+          promoEndDate: s.promoEndDate,
           promoLabel: s.promoLabel,
+          durationMinutes: s.durationMinutes ?? 30,
         }))
       : this.data.listBusinessServicesForSlug(this.session.publicBookingSlug()),
   );
@@ -229,8 +243,8 @@ export class TenantInventoryComponent {
       price: 0,
       sku: '',
       stock: 0,
-      promoPrice: null,
-      promoLabel: '',
+      durationMinutes: 30,
+      promo: defaultPromoScheduleFormValue(),
     });
     this.editorImageDataUrl.set(null);
     this.imageHint.set(null);
@@ -251,8 +265,8 @@ export class TenantInventoryComponent {
       price: 0,
       sku: '',
       stock: 0,
-      promoPrice: null,
-      promoLabel: '',
+      durationMinutes: 30,
+      promo: defaultPromoScheduleFormValue(),
     });
     this.editorImageDataUrl.set(null);
     this.imageHint.set(null);
@@ -273,8 +287,8 @@ export class TenantInventoryComponent {
       price: row.price,
       sku: row.sku,
       stock: row.stock,
-      promoPrice: row.promoPrice ?? null,
-      promoLabel: '',
+      durationMinutes: 30,
+      promo: promoFormValueFromCatalog(row),
     });
     this.editorImageDataUrl.set(row.imageUrl ?? null);
     this.imageHint.set(null);
@@ -295,8 +309,8 @@ export class TenantInventoryComponent {
       price: row.price,
       sku: '',
       stock: 0,
-      promoPrice: row.promoPrice ?? null,
-      promoLabel: row.promoLabel ?? '',
+      durationMinutes: row.durationMinutes ?? 30,
+      promo: promoFormValueFromCatalog(row),
     });
     this.editorImageDataUrl.set(null);
     this.imageHint.set(null);
@@ -409,24 +423,17 @@ export class TenantInventoryComponent {
 
   private saveProduct(
     tenantId: string,
-    v: {
-      name: string;
-      description: string;
-      price: number;
-      sku: string;
-      stock: number;
-      promoPrice: number | null;
-      promoLabel: string;
-    },
+    v: ReturnType<typeof this.editorForm.getRawValue>,
   ): void {
+    const promo = promoPayloadFromFormValue(v.promo as PromoScheduleFormValue);
     const payload = {
       name: v.name,
       description: v.description,
       price: Number(v.price),
-      promoPrice: v.promoPrice == null ? null : Number(v.promoPrice),
       sku: v.sku,
       stock: Number(v.stock) || 0,
       imageUrl: this.editorImageDataUrl(),
+      ...promo,
     };
     const editing = this.editingId();
     if (this.isInventoryLiveApi()) {
@@ -459,21 +466,14 @@ export class TenantInventoryComponent {
     this.closeEditor();
   }
 
-  private saveService(v: {
-    name: string;
-    description: string;
-    price: number;
-    sku: string;
-    stock: number;
-    promoPrice: number | null;
-    promoLabel: string;
-  }): void {
+  private saveService(v: ReturnType<typeof this.editorForm.getRawValue>): void {
+    const promo = promoPayloadFromFormValue(v.promo as PromoScheduleFormValue);
     const payload = {
       name: v.name,
       description: v.description,
       price: Number(v.price),
-      promoPrice: v.promoPrice == null ? null : Number(v.promoPrice),
-      promoLabel: v.promoLabel,
+      durationMinutes: Number(v.durationMinutes) || 30,
+      ...promo,
     };
     const editing = this.editingId();
     if (this.isInventoryLiveApi()) {

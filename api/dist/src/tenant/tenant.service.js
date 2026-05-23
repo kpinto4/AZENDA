@@ -13,9 +13,21 @@ exports.TenantService = void 0;
 const common_1 = require("@nestjs/common");
 const auth_types_1 = require("../auth/auth.types");
 const sql_db_service_1 = require("../infrastructure/sql-db/sql-db.service");
+const promo_schedule_util_1 = require("../common/promo-schedule.util");
 let TenantService = class TenantService {
     constructor(sqlDbService) {
         this.sqlDbService = sqlDbService;
+    }
+    promoPayloadFromDto(dto) {
+        return (0, promo_schedule_util_1.normalizePromoFields)({
+            promoEnabled: dto.promoEnabled,
+            promoPrice: dto.promoPrice,
+            promoScheduleType: dto.promoScheduleType,
+            promoDays: dto.promoDays,
+            promoStartDate: dto.promoStartDate,
+            promoEndDate: dto.promoEndDate,
+            promoLabel: dto.promoLabel,
+        });
     }
     async getTenantContext(currentUser) {
         if (currentUser.role === auth_types_1.UserRole.SUPER_ADMIN) {
@@ -91,10 +103,10 @@ let TenantService = class TenantService {
             name: dto.name,
             description: dto.description ?? null,
             price: dto.price,
-            promoPrice: dto.promoPrice ?? null,
             sku: dto.sku,
             stock: dto.stock,
             imageUrl: dto.imageUrl ?? null,
+            ...this.promoPayloadFromDto(dto),
         });
     }
     async updateProduct(currentUser, productId, dto) {
@@ -103,10 +115,10 @@ let TenantService = class TenantService {
             name: dto.name,
             description: dto.description,
             price: dto.price,
-            promoPrice: dto.promoPrice,
             sku: dto.sku,
             stock: dto.stock,
             imageUrl: dto.imageUrl,
+            ...this.promoPayloadFromDto(dto),
         });
         if (!row) {
             throw new common_1.NotFoundException('Producto no encontrado');
@@ -132,8 +144,8 @@ let TenantService = class TenantService {
             name: dto.name,
             description: dto.description ?? null,
             price: dto.price,
-            promoPrice: dto.promoPrice ?? null,
-            promoLabel: dto.promoLabel ?? null,
+            durationMinutes: dto.durationMinutes,
+            ...this.promoPayloadFromDto(dto),
         });
     }
     async updateService(currentUser, serviceId, dto) {
@@ -142,8 +154,8 @@ let TenantService = class TenantService {
             name: dto.name,
             description: dto.description,
             price: dto.price,
-            promoPrice: dto.promoPrice,
-            promoLabel: dto.promoLabel,
+            durationMinutes: dto.durationMinutes,
+            ...this.promoPayloadFromDto(dto),
         });
         if (!row) {
             throw new common_1.NotFoundException('Servicio no encontrado');
@@ -165,7 +177,13 @@ let TenantService = class TenantService {
     }
     async updateBranding(currentUser, dto) {
         const tenantId = this.requireTenantId(currentUser);
-        return this.sqlDbService.updateTenantBranding(tenantId, dto);
+        const patch = {
+            ...dto,
+            posPaymentMethodsJson: dto.posPaymentMethodsJson === null || dto.posPaymentMethodsJson === undefined
+                ? undefined
+                : dto.posPaymentMethodsJson,
+        };
+        return this.sqlDbService.updateTenantBranding(tenantId, patch);
     }
     async listEmployees(currentUser) {
         const tenantId = this.requireTenantId(currentUser);

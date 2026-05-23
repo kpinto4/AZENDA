@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { AppSystem, AuthUser, UserRole } from '../auth/auth.types';
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
+import { TenantBrandingEntity } from '../infrastructure/sql-db/sql-db.types';
 import { CreateTenantEmployeeDto } from './dto/create-tenant-employee.dto';
 import { MoveCatalogItemDto } from './dto/move-catalog-item.dto';
 import { UpdateTenantBrandingDto } from './dto/update-tenant-branding.dto';
@@ -14,10 +15,24 @@ import { UpsertTenantServiceDto } from './dto/upsert-tenant-service.dto';
 import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
 import { SimulateUpgradeDto } from './dto/simulate-upgrade.dto';
 import { ApplyStockMovementDto } from './dto/apply-stock-movement.dto';
+import { normalizePromoFields } from '../common/promo-schedule.util';
+import { CatalogPromoFieldsDto } from './dto/catalog-promo-fields.dto';
 
 @Injectable()
 export class TenantService {
   constructor(private readonly sqlDbService: SqlDbService) {}
+
+  private promoPayloadFromDto(dto: CatalogPromoFieldsDto) {
+    return normalizePromoFields({
+      promoEnabled: dto.promoEnabled,
+      promoPrice: dto.promoPrice,
+      promoScheduleType: dto.promoScheduleType,
+      promoDays: dto.promoDays,
+      promoStartDate: dto.promoStartDate,
+      promoEndDate: dto.promoEndDate,
+      promoLabel: dto.promoLabel,
+    });
+  }
 
   async getTenantContext(currentUser: AuthUser) {
     if (currentUser.role === UserRole.SUPER_ADMIN) {
@@ -104,10 +119,10 @@ export class TenantService {
       name: dto.name,
       description: dto.description ?? null,
       price: dto.price,
-      promoPrice: dto.promoPrice ?? null,
       sku: dto.sku,
       stock: dto.stock,
       imageUrl: dto.imageUrl ?? null,
+      ...this.promoPayloadFromDto(dto),
     });
   }
 
@@ -124,10 +139,10 @@ export class TenantService {
         name: dto.name,
         description: dto.description,
         price: dto.price,
-        promoPrice: dto.promoPrice,
         sku: dto.sku,
         stock: dto.stock,
         imageUrl: dto.imageUrl,
+        ...this.promoPayloadFromDto(dto),
       },
     );
     if (!row) {
@@ -165,8 +180,8 @@ export class TenantService {
       name: dto.name,
       description: dto.description ?? null,
       price: dto.price,
-      promoPrice: dto.promoPrice ?? null,
-      promoLabel: dto.promoLabel ?? null,
+      durationMinutes: dto.durationMinutes,
+      ...this.promoPayloadFromDto(dto),
     });
   }
 
@@ -183,8 +198,8 @@ export class TenantService {
         name: dto.name,
         description: dto.description,
         price: dto.price,
-        promoPrice: dto.promoPrice,
-        promoLabel: dto.promoLabel,
+        durationMinutes: dto.durationMinutes,
+        ...this.promoPayloadFromDto(dto),
       },
     );
     if (!row) {
@@ -218,7 +233,14 @@ export class TenantService {
 
   async updateBranding(currentUser: AuthUser, dto: UpdateTenantBrandingDto) {
     const tenantId = this.requireTenantId(currentUser);
-    return this.sqlDbService.updateTenantBranding(tenantId, dto);
+    const patch: Partial<Omit<TenantBrandingEntity, 'tenantId'>> = {
+      ...dto,
+      posPaymentMethodsJson:
+        dto.posPaymentMethodsJson === null || dto.posPaymentMethodsJson === undefined
+          ? undefined
+          : dto.posPaymentMethodsJson,
+    };
+    return this.sqlDbService.updateTenantBranding(tenantId, patch);
   }
 
   async listEmployees(currentUser: AuthUser) {

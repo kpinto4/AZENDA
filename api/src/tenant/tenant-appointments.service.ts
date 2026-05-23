@@ -1,29 +1,29 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { AuthUser, UserRole } from '../auth/auth.types';
+import {
+  activeEmployeeIds,
+  appendEmployeeToServiceLabel,
+  assertSlotWithinBusinessHours,
+  dayAppointmentIntervals,
+  pickEmployeeForBookingSlot,
+  resolveBookingDurationMinutes,
+} from '../common/appointment-booking-validation.util';
+import {
+  latestClosingMinuteForDate,
+  parseWeeklyHoursJson,
+} from '../common/public-booking-hours.util';
+import { readEmployeeIdFromServiceText } from '../common/appointment-scheduling.util';
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
 import { AppointmentEntity } from '../infrastructure/sql-db/sql-db.types';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { PatchAppointmentAttendanceDto } from './dto/patch-appointment-attendance.dto';
 import { PatchAppointmentStatusDto } from './dto/patch-appointment-status.dto';
-
-function parseWhenLocal(when: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})/.exec(when.trim());
-  if (!m) {
-    return null;
-  }
-  const y = Number(m[1]);
-  const mo = Number(m[2]);
-  const d = Number(m[3]);
-  const hh = Number(m[4]);
-  const mm = Number(m[5]);
-  const dt = new Date(y, mo - 1, d, hh, mm, 0, 0);
-  return Number.isNaN(dt.getTime()) ? null : dt;
-}
 
 @Injectable()
 export class TenantAppointmentsService {
@@ -31,27 +31,7 @@ export class TenantAppointmentsService {
 
   async listForUser(user: AuthUser): Promise<AppointmentEntity[]> {
     this.requireTenantUser(user);
-    const tenantId = user.tenantId!;
-    const nowMs = Date.now();
-    const thresholdMs = 5 * 60 * 1000;
-    const currentRows = await this.sqlDb.listAppointmentsByTenantId(tenantId);
-    for (const row of currentRows) {
-      if (row.status !== 'pendiente' || row.attendance !== 'PENDIENTE') {
-        continue;
-      }
-      const at = parseWhenLocal(row.when);
-      if (!at) {
-        continue;
-      }
-      if (nowMs - at.getTime() > thresholdMs) {
-        await this.sqlDb.updateAppointmentAttendance(
-          row.id,
-          tenantId,
-          'NO_ASISTIO',
-        );
-      }
-    }
-    return this.sqlDb.listAppointmentsByTenantId(tenantId);
+    return this.sqlDb.listAppointmentsByTenantId(user.tenantId!);
   }
 
   async createForUser(
@@ -73,21 +53,79 @@ export class TenantAppointmentsService {
         'La creacion manual de citas esta desactivada en configuracion del negocio',
       );
     }
-    const conflict = await this.sqlDb.findAppointmentByTenantAndWhen(
-      user.tenantId!,
-      dto.when,
-    );
-    if (conflict) {
-      throw new ConflictException(
-        'Ya existe una cita en ese mismo dia y hora. Elige otro horario.',
+    const [services, users, appointments, branding] = await Promise.all([
+      this.sqlDb.listServicesByTenantId(user.tenantId!),
+      this.sqlDb.listUsersByTenantId(user.tenantId!),
+      this.sqlDb.listAppointmentsByTenantId(user.tenantId!),
+      this.sqlDb.getTenantBranding(user.tenantId!),
+    ]);
+    const employeeIds = activeEmployeeIds(users);
+    if (!employeeIds.length) {
+      throw new ForbiddenException(
+        'No hay profesionales activos para asignar la cita',
       );
     }
+    const datePart = dto.when.slice(0, 10);
+    const timePart = dto.when.slice(11, 16);
+    const durationMinutes = resolveBookingDurationMinutes(
+      dto.service,
+      services,
+    );
+    try {
+      assertSlotWithinBusinessHours(
+        datePart,
+        timePart,
+        durationMinutes,
+        branding.publicBookingHoursJson,
+      );
+    } catch (e) {
+      const code = e instanceof Error ? e.message : '';
+      if (code === 'SLOT_CLOSED') {
+        throw new ForbiddenException(
+          'Horario fuera de disponibilidad para ese dia',
+        );
+      }
+      if (code === 'SLOT_PAST_CLOSING') {
+        throw new ForbiddenException(
+          'El servicio no cabe antes del cierre de ese dia. Elige otro horario.',
+        );
+      }
+      throw new BadRequestException('Horario invalido.');
+    }
+    const weekly = parseWeeklyHoursJson(branding.publicBookingHoursJson);
+    const latestClose = latestClosingMinuteForDate(weekly, datePart);
+    const intervals = dayAppointmentIntervals(appointments, services, datePart);
+    let employeeId =
+      dto.employeeId?.trim() ||
+      readEmployeeIdFromServiceText(dto.service) ||
+      (user.role === UserRole.EMPLEADO ? user.id : '');
+    if (employeeId && !employeeIds.includes(employeeId)) {
+      throw new ForbiddenException(
+        'Empleado invalido o no disponible para este negocio',
+      );
+    }
+    const picked = pickEmployeeForBookingSlot(
+      datePart,
+      timePart,
+      durationMinutes,
+      employeeId,
+      employeeIds,
+      intervals,
+      latestClose,
+    );
+    if (!picked) {
+      throw new ConflictException(
+        'Ese horario ya esta ocupado para el profesional elegido. Elige otro horario.',
+      );
+    }
+    const service = appendEmployeeToServiceLabel(dto.service, picked);
     return this.sqlDb.createAppointment({
       tenantId: user.tenantId!,
       customer: dto.customer,
-      service: dto.service,
+      service,
       when: dto.when,
       status: 'pendiente',
+      durationMinutes,
     });
   }
 
@@ -100,8 +138,31 @@ export class TenantAppointmentsService {
     void appointmentId;
     void dto;
     throw new ForbiddenException(
-      'El estado se calcula automaticamente segun la asistencia',
+      'Usa cancelar cita o actualizar asistencia; el estado se deriva de la asistencia',
     );
+  }
+
+  async cancelForUser(
+    user: AuthUser,
+    appointmentId: string,
+  ): Promise<AppointmentEntity> {
+    this.requireTenantUser(user);
+    const current = await this.sqlDb.findAppointmentById(appointmentId);
+    if (!current || current.tenantId !== user.tenantId) {
+      throw new NotFoundException('Cita no encontrada');
+    }
+    if (current.status === 'cancelada') {
+      throw new BadRequestException('La cita ya estaba cancelada');
+    }
+    const updated = await this.sqlDb.updateAppointmentStatus(
+      appointmentId,
+      user.tenantId!,
+      'cancelada',
+    );
+    if (!updated) {
+      throw new NotFoundException('Cita no encontrada');
+    }
+    return updated;
   }
 
   async patchAttendance(

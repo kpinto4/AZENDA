@@ -1,4 +1,5 @@
 import type { MockAppointment } from '../../core/services/mock-data.service';
+import { formatServiceForClientMessage } from '../../core/service-label-display.util';
 import type { AgendaCalendarDay, AgendaCalendarEvent, AgendaEventTone } from './agenda-calendar.types';
 
 export const MESES_CORT = [
@@ -80,7 +81,15 @@ export function readEmployeeIdFromService(service: string): string | null {
 }
 
 export function cleanServiceLabel(service: string): string {
-  return service.replace(/\s*·\s*EmpleadoId:[A-Za-z0-9_-]+/g, '').trim();
+  const withoutEmp = service.replace(/\s*·\s*EmpleadoId:[A-Za-z0-9_-]+/g, '').trim();
+  if (!withoutEmp.includes(' || ')) {
+    return withoutEmp;
+  }
+  return withoutEmp
+    .split(' || ')
+    .map((part) => part.split(' · ')[0]?.trim() || part.trim())
+    .filter(Boolean)
+    .join(' + ');
 }
 
 export function weekRangeLabel(weekStart: Date): string {
@@ -100,6 +109,35 @@ function statusTone(status: MockAppointment['status']): AgendaEventTone {
     return 'accent';
   }
   return 'neutral';
+}
+
+export function appointmentStartMs(when: string): number | null {
+  const p = parseWhenLocal(when);
+  if (!p || p.time === '—') {
+    return null;
+  }
+  const [y, mo, d] = p.ymd.split('-').map(Number);
+  const [hh, mm] = p.time.split(':').map(Number);
+  const dt = new Date(y, (mo ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0, 0, 0);
+  return Number.isNaN(dt.getTime()) ? null : dt.getTime();
+}
+
+/** Cita activa en agenda: no cancelada y hora de inicio aún no pasó. */
+export function isCalendarVisibleAppointment(a: MockAppointment, nowMs = Date.now()): boolean {
+  if (a.status === 'cancelada') {
+    return false;
+  }
+  const ms = appointmentStartMs(a.when);
+  return ms != null && ms > nowMs;
+}
+
+/** Pasó la hora y falta cerrar asistencia. */
+export function isPendingAttendanceClosure(a: MockAppointment, nowMs = Date.now()): boolean {
+  if (a.status === 'cancelada' || (a.attendance ?? 'PENDIENTE') !== 'PENDIENTE') {
+    return false;
+  }
+  const ms = appointmentStartMs(a.when);
+  return ms != null && ms <= nowMs;
 }
 
 export function eventTone(a: MockAppointment): AgendaEventTone {
@@ -209,4 +247,117 @@ export function monthHasSixRows(days: AgendaCalendarDay[]): boolean {
 
 export function visibleMonthDays(days: AgendaCalendarDay[]): AgendaCalendarDay[] {
   return monthHasSixRows(days) ? days : days.slice(0, 35);
+}
+
+export interface WaReminderMessageInput {
+  customerName: string;
+  service: string;
+  when: string;
+  businessName: string;
+  employeeName?: string | null;
+}
+
+function firstNameFromCustomer(full: string): string {
+  const trimmed = full.trim();
+  if (!trimmed) {
+    return '';
+  }
+  return trimmed.split(/\s+/)[0] ?? trimmed;
+}
+
+/** Omite ids técnicos (p. ej. EmpleadoId en API) del texto al cliente. */
+export function isTechnicalEmployeeLabel(value: string): boolean {
+  const v = value.trim();
+  if (!v || v === 'Sin asignar') {
+    return true;
+  }
+  return /^[A-Za-z0-9_-]{12,}$/.test(v) && !/\s/.test(v);
+}
+
+/** Fecha y hora legibles para WhatsApp; usa «hoy» / «mañana» cuando aplica. */
+export function formatWhenForWaReminder(when: string, now = new Date()): string {
+  const p = parseWhenLocal(when);
+  if (!p) {
+    return when;
+  }
+  if (p.time === '—') {
+    return formatWhenDisplay(when);
+  }
+  const [y, mo, d] = p.ymd.split('-').map(Number);
+  const date = new Date(y, (mo ?? 1) - 1, d ?? 1);
+  const todayY = toYmdLocal(now);
+  const tomorrowY = toYmdLocal(addDays(startOfDay(now), 1));
+  const month = MESES_LARGOS[(mo ?? 1) - 1]?.toLowerCase() ?? '';
+  const dow = DOW_LABELS[date.getDay()]?.toLowerCase() ?? '';
+  const datePart = `${dow} ${d} de ${month}`;
+
+  if (p.ymd === todayY) {
+    return `hoy, ${datePart} a las ${p.time}`;
+  }
+  if (p.ymd === tomorrowY) {
+    return `mañana, ${datePart} a las ${p.time}`;
+  }
+  return `${datePart} de ${y} a las ${p.time}`;
+}
+
+/** Texto del recordatorio manual al cliente (wa.me desde el panel). */
+export function buildWaReminderMessage(input: WaReminderMessageInput): string {
+  const biz = input.businessName.trim() || 'Tu negocio';
+  const name = firstNameFromCustomer(input.customerName);
+  const greeting = name ? `¡Hola, ${name}!` : '¡Hola!';
+  const whenLine = formatWhenForWaReminder(input.when);
+  const serviceLine = formatServiceForClientMessage(input.service, input.when);
+
+  const lines = [
+    greeting,
+    '',
+    `Te escribimos desde ${biz} para recordarte tu cita:`,
+    '',
+    `Cuándo: ${whenLine}`,
+    `Servicio: ${serviceLine}`,
+  ];
+
+  const employee = input.employeeName?.trim();
+  if (employee && !isTechnicalEmployeeLabel(employee)) {
+    lines.push(`Profesional: ${employee}`);
+  }
+
+  lines.push(
+    '',
+    'Si necesitas cambiar la hora o cancelar, responde a este mensaje y con gusto te ayudamos.',
+    '',
+    '¡Te esperamos!',
+    biz,
+  );
+
+  return lines.join('\n');
+}
+
+/** Mensaje del cliente al negocio tras reservar (enlace wa.me en pantalla de éxito). */
+export function buildWaClientBookingFollowUpMessage(input: {
+  businessName: string;
+  customerName: string;
+  service: string;
+  when: string;
+  baseMessage?: string | null;
+}): string {
+  const biz = input.businessName.trim() || 'el negocio';
+  const intro = (
+    input.baseMessage?.trim() || `Hola, acabo de reservar en la web de ${biz}.`
+  ).trim();
+  const whenLine = formatWhenForWaReminder(input.when);
+  const serviceLine = formatServiceForClientMessage(input.service, input.when);
+  const name = input.customerName.trim();
+
+  const lines = [intro, '', `Cuándo: ${whenLine}`, `Servicio: ${serviceLine}`];
+  if (name) {
+    lines.push(`Nombre: ${name}`);
+  }
+  lines.push('', 'Quedo atento/a a cualquier confirmación. ¡Gracias!');
+  return lines.join('\n');
+}
+
+export function buildWaMeLink(phoneDigits: string, message: string): string {
+  const digits = phoneDigits.replace(/\D/g, '');
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }

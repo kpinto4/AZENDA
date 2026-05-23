@@ -11,6 +11,7 @@ import {
   ApiPlanCatalogEntry,
   ApiPlanCatalogService,
 } from '../../../../core/services/api-plan-catalog.service';
+import { formatCop } from '../../../../core/format-currency';
 import { MockSessionService } from '../../../../core/services/mock-session.service';
 import { environment } from '../../../../../environments/environment';
 
@@ -29,6 +30,7 @@ export class SuperPlansPageComponent {
   readonly saving = signal(false);
   readonly error = signal('');
   readonly okMsg = signal('');
+  readonly copyMsg = signal('');
 
   readonly form = this.fb.group({
     rows: this.fb.array<FormGroup>([]),
@@ -51,6 +53,7 @@ export class SuperPlansPageComponent {
     this.loading.set(true);
     this.error.set('');
     this.okMsg.set('');
+    this.copyMsg.set('');
     this.api.list().subscribe({
       next: (entries) => {
         this.rows.clear();
@@ -75,6 +78,7 @@ export class SuperPlansPageComponent {
       planKey: String(r['planKey']),
       priceMonthly: Number(r['priceMonthly']),
       priceYearly: Number(r['priceYearly']),
+      operatingCostApprox: Number(r['operatingCostApprox'] ?? 0),
     }));
     this.saving.set(true);
     this.error.set('');
@@ -86,7 +90,9 @@ export class SuperPlansPageComponent {
           this.rows.push(this.rowGroup(e));
         }
         this.saving.set(false);
-        this.okMsg.set('Precios globales guardados. Los tenants con cada plan se actualizan automáticamente.');
+        this.okMsg.set(
+          'Precios globales guardados. La landing pública usará estos valores al recargar.',
+        );
       },
       error: () => {
         this.saving.set(false);
@@ -95,9 +101,36 @@ export class SuperPlansPageComponent {
     });
   }
 
+  copySaleValues(): void {
+    const lines = this.rows.controls
+      .filter((row) => row.value.planKey !== 'Trial')
+      .map((row) => {
+        const plan = String(row.value.planKey);
+        const value = Number(row.value.priceMonthly ?? 0);
+        return `${plan}: ${formatCop(value)}`;
+      });
+    if (!lines.length) {
+      return;
+    }
+    const text = lines.join('\n');
+    void navigator.clipboard?.writeText(text).then(
+      () => {
+        this.copyMsg.set('Valores de venta copiados al portapapeles.');
+        window.setTimeout(() => this.copyMsg.set(''), 2500);
+      },
+      () => {
+        this.copyMsg.set('No se pudo copiar. Selecciona y copia manualmente.');
+      },
+    );
+  }
+
   private rowGroup(e: ApiPlanCatalogEntry): FormGroup {
     return this.fb.nonNullable.group({
       planKey: [e.planKey],
+      operatingCostApprox: [
+        e.operatingCostApprox ?? 0,
+        [Validators.required, Validators.min(0)],
+      ],
       priceMonthly: [e.priceMonthly, [Validators.required, Validators.min(0)]],
       priceYearly: [e.priceYearly, [Validators.required, Validators.min(0)]],
     });

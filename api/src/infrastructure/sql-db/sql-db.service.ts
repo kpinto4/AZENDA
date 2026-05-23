@@ -18,6 +18,7 @@ import {
   TenantStockMovementEntity,
   UserEntity,
 } from './sql-db.types';
+import { applyPlanCatalogPricesToSiteConfig } from './plan-catalog-site-config';
 import { AppointmentRepository } from './repositories/appointment.repository';
 import { PlatformSiteConfigRepository } from './repositories/platform-site-config.repository';
 import { TenantBrandingRepository } from './repositories/tenant-branding.repository';
@@ -256,6 +257,7 @@ export class SqlDbService implements OnModuleInit {
     attendance?: AppointmentAttendance;
     customerPhoneE164?: string | null;
     waReminderConsent?: boolean;
+    durationMinutes?: number | null;
   }): Promise<AppointmentEntity> {
     return this.appointments.create(data);
   }
@@ -446,7 +448,9 @@ export class SqlDbService implements OnModuleInit {
 
   async createTenantService(
     tenantId: string,
-    data: Omit<TenantServiceEntity, 'id' | 'tenantId' | 'catalogOrder'>,
+    data: Omit<TenantServiceEntity, 'id' | 'tenantId' | 'catalogOrder' | 'durationMinutes'> & {
+      durationMinutes?: number;
+    },
   ): Promise<TenantServiceEntity> {
     return this.catalog.createTenantService(tenantId, data);
   }
@@ -585,6 +589,11 @@ export class SqlDbService implements OnModuleInit {
         `ALTER TABLE appointments ADD COLUMN wa_reminder_sent_at TEXT NULL`,
       );
     }
+    if (!(await this.columnExists('appointments', 'duration_minutes'))) {
+      await this.pg.execScript(
+        `ALTER TABLE appointments ADD COLUMN duration_minutes INT NULL`,
+      );
+    }
 
     const tenantRows = await this.pg.queryRows(`SELECT id, name FROM tenants`);
     for (const t of tenantRows) {
@@ -645,6 +654,7 @@ export class SqlDbService implements OnModuleInit {
         customer_phone_e164 TEXT NULL,
         wa_reminder_consent BOOLEAN NOT NULL DEFAULT false,
         wa_reminder_sent_at TEXT NULL,
+        duration_minutes INT NULL,
         CONSTRAINT fk_appt_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
       )
     `);
@@ -714,6 +724,16 @@ export class SqlDbService implements OnModuleInit {
         `ALTER TABLE tenant_branding ADD COLUMN public_booking_hours_json TEXT NULL`,
       );
     }
+    if (!(await this.columnExists('tenant_branding', 'reviews_url'))) {
+      await this.pg.execScript(
+        `ALTER TABLE tenant_branding ADD COLUMN reviews_url TEXT NULL`,
+      );
+    }
+    if (!(await this.columnExists('tenant_branding', 'pos_payment_methods_json'))) {
+      await this.pg.execScript(
+        `ALTER TABLE tenant_branding ADD COLUMN pos_payment_methods_json TEXT NULL`,
+      );
+    }
 
     await this.pg.execScript(`
       CREATE TABLE IF NOT EXISTS tenant_products (
@@ -744,6 +764,7 @@ export class SqlDbService implements OnModuleInit {
         price NUMERIC(12,2) NOT NULL DEFAULT 0,
         promo_price NUMERIC(12,2) NULL,
         promo_label TEXT NULL,
+        duration_minutes INT NOT NULL DEFAULT 30,
         catalog_order INT NOT NULL DEFAULT 0,
         CONSTRAINT fk_service_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
       )
@@ -753,9 +774,86 @@ export class SqlDbService implements OnModuleInit {
       `CREATE INDEX idx_tenant_services_tenant_order ON tenant_services (tenant_id, catalog_order)`,
     );
 
+    if (!(await this.columnExists('tenant_services', 'duration_minutes'))) {
+      await this.pg.execScript(
+        `ALTER TABLE tenant_services ADD COLUMN duration_minutes INT NOT NULL DEFAULT 30`,
+      );
+    }
+
+    await this.ensureCatalogPromoScheduleColumns();
+
     await this.retail.ensureSalesTable();
 
     await this.platformSite.ensureTableAndDefaultRow();
+  }
+
+  private async ensureCatalogPromoScheduleColumns(): Promise<void> {
+    const promoColumns: { name: string; ddl: string }[] = [
+      { name: 'promo_enabled', ddl: 'BOOLEAN NOT NULL DEFAULT false' },
+      { name: 'promo_schedule_type', ddl: 'TEXT NULL' },
+      { name: 'promo_days_json', ddl: 'TEXT NULL' },
+      { name: 'promo_start_date', ddl: 'TEXT NULL' },
+      { name: 'promo_end_date', ddl: 'TEXT NULL' },
+    ];
+    for (const table of ['tenant_services', 'tenant_products'] as const) {
+      for (const col of promoColumns) {
+        if (!(await this.columnExists(table, col.name))) {
+          await this.pg.execScript(
+            `ALTER TABLE ${table} ADD COLUMN ${col.name} ${col.ddl}`,
+          );
+        }
+      }
+      if (
+        table === 'tenant_products' &&
+        !(await this.columnExists(table, 'promo_label'))
+      ) {
+        await this.pg.execScript(
+          `ALTER TABLE tenant_products ADD COLUMN promo_label TEXT NULL`,
+        );
+      }
+    }
+
+    const legacyServices = await this.pg.queryRows(
+      `SELECT id, promo_price, promo_label FROM tenant_services WHERE promo_price IS NOT NULL AND promo_enabled = false`,
+    );
+    for (const row of legacyServices) {
+      const promoPrice = Math.max(0, Number(row.promo_price) || 0);
+      const promoLabel =
+        row.promo_label == null ? null : String(row.promo_label).trim();
+      const labelNorm = (promoLabel ?? '').toLowerCase();
+      const isWeekdays =
+        !!promoLabel &&
+        /\b(lunes|lun|martes|mar|miercoles|mie|jueves|jue|viernes|vie|sabado|sab|domingo|dom)\s+a\s+/i.test(
+          labelNorm,
+        );
+      let promoDaysJson: string | null = null;
+      if (isWeekdays && /lunes.*jueves/i.test(labelNorm)) {
+        promoDaysJson = '[1,2,3,4]';
+      } else if (isWeekdays && /lunes.*viernes/i.test(labelNorm)) {
+        promoDaysJson = '[1,2,3,4,5]';
+      } else if (isWeekdays) {
+        promoDaysJson = '[1,2,3,4,5,6,0]';
+      }
+      await this.pg.exec(
+        `UPDATE tenant_services SET promo_enabled = ?, promo_schedule_type = ?, promo_days_json = ? WHERE id = ?`,
+        [
+          true,
+          isWeekdays ? 'weekdays' : 'always',
+          promoDaysJson,
+          String(row.id),
+        ],
+      );
+    }
+
+    const legacyProducts = await this.pg.queryRows(
+      `SELECT id, promo_price FROM tenant_products WHERE promo_price IS NOT NULL AND promo_enabled = false`,
+    );
+    for (const row of legacyProducts) {
+      await this.pg.exec(
+        `UPDATE tenant_products SET promo_enabled = ?, promo_schedule_type = ? WHERE id = ?`,
+        [true, 'always', String(row.id)],
+      );
+    }
   }
 
   private async normalizeTenantBillingPeriods(): Promise<void> {
@@ -958,6 +1056,15 @@ export class SqlDbService implements OnModuleInit {
 
   async getPlatformSiteConfig(): Promise<PlatformSiteConfig> {
     return this.platformSite.get();
+  }
+
+  /** Precios de planes desde catálogo global (fuente para la landing pública). */
+  async getPlatformSiteConfigForPublic(): Promise<PlatformSiteConfig> {
+    const [config, catalog] = await Promise.all([
+      this.platformSite.get(),
+      this.tenants.listPlanCatalog(),
+    ]);
+    return applyPlanCatalogPricesToSiteConfig(config, catalog);
   }
 
   async patchPlatformSiteConfig(

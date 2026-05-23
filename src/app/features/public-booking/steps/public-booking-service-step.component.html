@@ -1,29 +1,65 @@
 <h1 class="panel-lead">1. Servicio</h1>
-<p class="muted lead-caption">Elige el servicio. Al seleccionarlo pasas a configurar profesional, fecha y hora.</p>
+<p class="muted lead-caption">
+  Elige los servicios que necesitas. Luego podrás confirmar la lista antes de elegir la hora.
+</p>
+
 @if (serviceRows().length === 0) {
   <p class="muted">Este negocio aún no tiene servicios en el catálogo para reservar.</p>
 } @else {
-  <ul class="service-row-list">
-    @for (row of serviceRows(); track row.id) {
-      <li class="service-row" [class.service-row--pick]="selectedService() === row.fullValue">
-        <div class="service-row-main">
-          <span class="service-card-name">{{ row.name }}</span>
-          @if (row.description) {
-            <span class="service-card-desc">{{ row.description }}</span>
+  <section class="booking-section">
+    <header class="booking-section-head">
+      <h2>{{ selectedServices().length ? 'Agregar otro servicio' : 'Catálogo' }}</h2>
+      @if (selectedServices().length) {
+        <span class="muted small">{{ selectedServices().length }} en tu cita</span>
+      }
+    </header>
+    <ul class="service-row-list">
+      @for (row of serviceRows(); track row.id) {
+        <li class="service-row" [class.service-row--pick]="isInCart(row.fullValue)">
+          <div class="service-row-main">
+            <span class="service-card-name">{{ row.name }}</span>
+            @if (row.description) {
+              <span class="service-card-desc">{{ row.description }}</span>
+            }
+            <span class="muted small service-card-duration">{{ row.durationMinutes }} min</span>
+          </div>
+          <div class="service-row-price">
+            @if (row.priceLabel) {
+              <span class="service-card-price">{{ row.priceLabel }}</span>
+            }
+            @if (row.promoLabel) {
+              <span class="service-card-promo">{{ row.promoLabel }}</span>
+            }
+          </div>
+          @if (isInCart(row.fullValue)) {
+            <span class="service-added-badge" aria-label="Ya agregado">Agregado</span>
+          } @else if (canAddMore()) {
+            <button
+              type="button"
+              class="az-btn az-btn-primary service-book-btn"
+              (click)="pickService.emit(row.fullValue)"
+            >
+              Agregar
+            </button>
+          } @else {
+            <span class="muted small">Máximo {{ maxServices }} servicios</span>
           }
-        </div>
-        <div class="service-row-price">
-          @if (row.priceLabel) {
-            <span class="service-card-price">{{ row.priceLabel }}</span>
-          }
-          @if (row.promoLabel) {
-            <span class="service-card-promo">{{ row.promoLabel }}</span>
-          }
-        </div>
-        <button type="button" class="az-btn az-btn-primary service-book-btn" (click)="pickService.emit(row.fullValue)">
-          Reservar
-        </button>
-      </li>
-    }
-  </ul>
+        </li>
+      }
+    </ul>
+  </section>
+
+  @if (selectedServices().length) {
+    <div class="service-step-footer">
+      <p class="muted small service-step-footer-meta">
+        {{ selectedServices().length }} servicio(s) · {{ totalDurationMinutes() }} min
+        @if (totalPriceLabel(); as total) {
+          · {{ total }}
+        }
+      </p>
+      <button type="button" class="az-btn az-btn-primary service-step-continue" (click)="continueToSchedule.emit()">
+        Continuar al horario
+      </button>
+    </div>
+  }
 }

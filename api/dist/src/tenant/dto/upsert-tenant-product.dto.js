@@ -12,7 +12,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UpsertTenantProductDto = void 0;
 const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
-class UpsertTenantProductDto {
+const catalog_promo_fields_dto_1 = require("./catalog-promo-fields.dto");
+class UpsertTenantProductDto extends catalog_promo_fields_dto_1.CatalogPromoFieldsDto {
 }
 exports.UpsertTenantProductDto = UpsertTenantProductDto;
 __decorate([
@@ -32,13 +33,6 @@ __decorate([
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], UpsertTenantProductDto.prototype, "price", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_transformer_1.Type)(() => Number),
-    (0, class_validator_1.IsNumber)(),
-    (0, class_validator_1.Min)(0),
-    __metadata("design:type", Object)
-], UpsertTenantProductDto.prototype, "promoPrice", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.MaxLength)(80),

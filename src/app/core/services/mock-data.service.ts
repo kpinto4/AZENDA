@@ -2,6 +2,7 @@ import { DestroyRef, Injectable, NgZone, inject, signal } from '@angular/core';
 import { formatCop } from '../format-currency';
 import { publicCustomerNameMatches } from '../customer-name-match';
 import { tenantBrandingCssVars as brandingCssVarsFromUtil } from '../tenant-branding-css';
+import type { PromoScheduleType } from '../promo-schedule.util';
 import type { ApiTenantDto } from './api-tenants-admin.service';
 
 const PRODUCTS_LS_KEY = 'azenda.mock.products.v1';
@@ -17,6 +18,8 @@ export interface TenantBranding {
   whatsappPhoneE164: string | null;
   whatsappDefaultMessage: string | null;
   publicBookingHoursJson: string | null;
+  reviewsUrl: string | null;
+  posPaymentMethodsJson: string;
   catalogLayout: 'horizontal' | 'grid';
   primaryColor: string;
   accentColor: string;
@@ -113,7 +116,13 @@ export interface MockBusinessService {
   description?: string | null;
   price: number;
   promoPrice?: number | null;
+  promoEnabled?: boolean;
+  promoScheduleType?: PromoScheduleType | null;
+  promoDays?: number[];
+  promoStartDate?: string | null;
+  promoEndDate?: string | null;
   promoLabel?: string | null;
+  durationMinutes?: number;
 }
 
 export interface MockTenant {
@@ -275,6 +284,14 @@ function defaultTenantBranding(name: string): TenantBranding {
     whatsappPhoneE164: null,
     whatsappDefaultMessage: null,
     publicBookingHoursJson: null,
+    reviewsUrl: null,
+    posPaymentMethodsJson: JSON.stringify([
+      { id: 'efectivo', label: 'Efectivo', enabled: true, detail: '' },
+      { id: 'tarjeta', label: 'Tarjeta / datáfono', enabled: true, detail: '' },
+      { id: 'transferencia', label: 'Transferencia', enabled: false, detail: '' },
+      { id: 'nequi', label: 'Nequi', enabled: false, detail: '' },
+      { id: 'daviplata', label: 'Daviplata', enabled: false, detail: '' },
+    ]),
     catalogLayout: 'horizontal',
     primaryColor: '#4f46e5',
     accentColor: '#06b6d4',
@@ -499,27 +516,56 @@ function initialCatalog(): MockCatalogModule[] {
 }
 
 /** Catálogo inicial de servicios por slug de reserva (cada negocio distinto). */
+function inferMockServiceDurationMinutes(name: string): number {
+  const m = /(\d{2,3})\s*min/i.exec(name.trim());
+  if (m) {
+    const n = Number(m[1]);
+    if (n >= 5 && n <= 480) {
+      return n;
+    }
+  }
+  return 30;
+}
+
+function svc(name: string, extra: Omit<MockBusinessService, 'id' | 'name' | 'durationMinutes'> & { id: string }): MockBusinessService {
+  return {
+    ...extra,
+    name,
+    durationMinutes: inferMockServiceDurationMinutes(name),
+  };
+}
+
+/** Catálogo inicial de servicios por slug de reserva (cada negocio distinto). */
 function initialTenantServiceCatalogs(): Record<string, MockBusinessService[]> {
   return {
     'barberia-centro': [
-      { id: 'svc-b-1', name: 'Corte clásico', description: 'Corte tradicional con acabado limpio.', price: 15, promoPrice: null, promoLabel: null },
-      { id: 'svc-b-2', name: 'Corte degradado / fade', description: 'Degradado progresivo personalizado.', price: 18, promoPrice: 16, promoLabel: 'Promo tarde' },
-      { id: 'svc-b-3', name: 'Corte + barba', price: 24, promoPrice: null, promoLabel: null },
-      { id: 'svc-b-4', name: 'Arreglo de barba', price: 12, promoPrice: null, promoLabel: null },
-      { id: 'svc-b-5', name: 'Peinado evento', price: 20, promoPrice: null, promoLabel: null },
+      svc('Corte clásico', { id: 'svc-b-1', description: 'Corte tradicional con acabado limpio.', price: 15, promoPrice: null, promoLabel: null }),
+      svc('Corte degradado / fade', { id: 'svc-b-2', description: 'Degradado progresivo personalizado.', price: 18, promoPrice: 16, promoLabel: 'Promo tarde' }),
+      svc('Corte + barba', { id: 'svc-b-3', price: 24, promoPrice: null, promoLabel: null }),
+      svc('Arreglo de barba', { id: 'svc-b-4', price: 12, promoPrice: null, promoLabel: null }),
+      svc('Peinado evento', { id: 'svc-b-5', price: 20, promoPrice: null, promoLabel: null }),
     ],
     'spa-relax': [
-      { id: 'svc-s-1', name: 'Masaje relajante 60 min', description: 'Sesión de relajación corporal integral.', price: 45, promoPrice: 39, promoLabel: 'Lunes a jueves' },
-      { id: 'svc-s-2', name: 'Masaje descontracturante', price: 50, promoPrice: null, promoLabel: null },
-      { id: 'svc-s-3', name: 'Facial hidratante', description: 'Limpieza e hidratación profunda facial.', price: 38, promoPrice: null, promoLabel: null },
-      { id: 'svc-s-4', name: 'Circuito spa 90 min', price: 65, promoPrice: 58, promoLabel: 'Pack bienestar' },
-      { id: 'svc-s-5', name: 'Envoltura corporal', price: 42, promoPrice: null, promoLabel: null },
+      svc('Masaje relajante 60 min', {
+        id: 'svc-s-1',
+        description: 'Sesión de relajación corporal integral.',
+        price: 45,
+        promoEnabled: true,
+        promoPrice: 39,
+        promoScheduleType: 'weekdays',
+        promoDays: [1, 2, 3, 4],
+        promoLabel: 'Lun, Mar, Mié, Jue',
+      }),
+      svc('Masaje descontracturante', { id: 'svc-s-2', price: 50, promoPrice: null, promoLabel: null }),
+      svc('Facial hidratante', { id: 'svc-s-3', description: 'Limpieza e hidratación profunda facial.', price: 38, promoPrice: null, promoLabel: null }),
+      svc('Circuito spa 90 min', { id: 'svc-s-4', price: 65, promoPrice: 58, promoLabel: 'Pack bienestar' }),
+      svc('Envoltura corporal', { id: 'svc-s-5', price: 42, promoPrice: null, promoLabel: null }),
     ],
     'clinica-demo': [
-      { id: 'svc-c-1', name: 'Consulta primera visita', description: 'Evaluación inicial del caso y plan.', price: 55, promoPrice: null, promoLabel: null },
-      { id: 'svc-c-2', name: 'Control / seguimiento', price: 40, promoPrice: null, promoLabel: null },
-      { id: 'svc-c-3', name: 'Teleconsulta', price: 35, promoPrice: 30, promoLabel: 'Campaña digital' },
-      { id: 'svc-c-4', name: 'Informe o certificado', price: 25, promoPrice: null, promoLabel: null },
+      svc('Consulta primera visita', { id: 'svc-c-1', description: 'Evaluación inicial del caso y plan.', price: 55, promoPrice: null, promoLabel: null }),
+      svc('Control / seguimiento', { id: 'svc-c-2', price: 40, promoPrice: null, promoLabel: null }),
+      svc('Teleconsulta', { id: 'svc-c-3', price: 35, promoPrice: 30, promoLabel: 'Campaña digital' }),
+      svc('Informe o certificado', { id: 'svc-c-4', price: 25, promoPrice: null, promoLabel: null }),
     ],
   };
 }
@@ -743,6 +789,8 @@ export class MockDataService {
       whatsappPhoneE164?: string | null;
       whatsappDefaultMessage?: string | null;
       publicBookingHoursJson?: string | null;
+      reviewsUrl?: string | null;
+      posPaymentMethodsJson?: string;
       catalogLayout?: 'horizontal' | 'grid';
       primaryColor: string;
       accentColor: string;
@@ -766,6 +814,8 @@ export class MockDataService {
       whatsappPhoneE164: b.whatsappPhoneE164 ?? null,
       whatsappDefaultMessage: b.whatsappDefaultMessage ?? null,
       publicBookingHoursJson: b.publicBookingHoursJson ?? null,
+      reviewsUrl: b.reviewsUrl ?? null,
+      posPaymentMethodsJson: b.posPaymentMethodsJson,
       catalogLayout: b.catalogLayout,
       primaryColor: b.primaryColor,
       accentColor: b.accentColor,
@@ -932,7 +982,14 @@ export class MockDataService {
 
   createBusinessService(
     slug: string,
-    data: { name: string; description?: string | null; price: number; promoPrice?: number | null; promoLabel?: string | null },
+    data: {
+      name: string;
+      description?: string | null;
+      price: number;
+      promoPrice?: number | null;
+      promoLabel?: string | null;
+      durationMinutes?: number;
+    },
   ): void {
     const name = data.name.trim();
     if (!name) {
@@ -949,6 +1006,7 @@ export class MockDataService {
       price,
       promoPrice,
       promoLabel,
+      durationMinutes: Math.max(5, Math.min(480, Number(data.durationMinutes) || inferMockServiceDurationMinutes(name))),
     };
     this.tenantServiceCatalogs.update((m) => ({ ...m, [slug]: [...(m[slug] ?? []), row] }));
   }
@@ -956,7 +1014,14 @@ export class MockDataService {
   updateBusinessService(
     slug: string,
     serviceId: string,
-    patch: { name: string; description?: string | null; price: number; promoPrice?: number | null; promoLabel?: string | null },
+    patch: {
+      name: string;
+      description?: string | null;
+      price: number;
+      promoPrice?: number | null;
+      promoLabel?: string | null;
+      durationMinutes?: number;
+    },
   ): void {
     this.tenantServiceCatalogs.update((m) => ({
       ...m,
@@ -972,6 +1037,13 @@ export class MockDataService {
                   ? null
                   : Math.max(0, Number(patch.promoPrice) || 0),
               promoLabel: patch.promoLabel?.trim() || null,
+              durationMinutes: Math.max(
+                5,
+                Math.min(
+                  480,
+                  Number(patch.durationMinutes) || inferMockServiceDurationMinutes(patch.name),
+                ),
+              ),
             }
           : s,
       ),
@@ -1197,7 +1269,7 @@ export class MockDataService {
     return Number.isNaN(d.getTime()) ? null : d.getTime();
   }
 
-  /** Aproximación demo al E.164 en dígitos (alineada con la API para España por defecto). */
+  /** Aproximación demo al E.164 en dígitos (Colombia: 57 + 10 dígitos). */
   private normalizePhoneDigitsForBookingMock(raw: string): string | null {
     let d = raw.replace(/\D/g, '');
     if (!d) {
@@ -1206,16 +1278,13 @@ export class MockDataService {
     if (d.startsWith('00')) {
       d = d.slice(2);
     }
-    if (d.startsWith('0') && d.length >= 9) {
-      d = `34${d.replace(/^0+/, '')}`;
+    if (d.startsWith('57') && d.length === 12) {
+      d = d.slice(2);
     }
-    if (d.length === 9 && /^\d{9}$/.test(d)) {
-      d = `34${d}`;
-    }
-    if (d.length < 10 || d.length > 15) {
+    if (!/^3\d{9}$/.test(d)) {
       return null;
     }
-    return d;
+    return `57${d}`;
   }
 
   publicStoreVisitsForSlug(slug: string | null): MockPublicStoreVisit[] {
@@ -1264,7 +1333,12 @@ export class MockDataService {
   ): boolean {
     const occupied = this
       .appointments()
-      .some((a) => a.tenantSlug === bookingSlug && a.when.trim() === when.trim());
+      .some(
+        (a) =>
+          a.tenantSlug === bookingSlug &&
+          a.when.trim() === when.trim() &&
+          a.status !== 'cancelada',
+      );
     if (occupied) {
       return false;
     }
@@ -1279,6 +1353,7 @@ export class MockDataService {
       attendance: 'PENDIENTE',
       tenantSlug: bookingSlug,
       customerPhoneE164: phoneDigits,
+      waReminderConsent: !!phoneDigits,
     });
     return true;
   }

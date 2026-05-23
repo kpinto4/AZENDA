@@ -2,10 +2,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { NgStyle } from '@angular/common';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators, type AbstractControl, type ValidationErrors, type ValidatorFn } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { normalizeExternalUrl } from '../../core/pos-payment-methods';
 import {
   ApiAppointmentsService,
   PublicLookupAppointmentDto,
@@ -19,12 +20,20 @@ import {
 import { MockDataService } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
 import { formatCop } from '../../core/format-currency';
+import {
+  effectiveCatalogServicePrice,
+  formatCatalogServicePriceLabel,
+  formatServiceForClientMessage,
+} from '../../core/service-label-display.util';
+import { buildPromoSummaryLabel } from '../../core/promo-schedule.util';
 import { FormatCopPipe } from '../../core/format-cop.pipe';
 import { UiAlertService } from '../../core/services/ui-alert.service';
 import {
   tabFromQuery,
   canClientRescheduleLookupAppointment,
   splitLookupYmdHhmm,
+  isValidColombiaMobileInput,
+  normalizeColombiaMobileDigits,
 } from './public-booking-page.utils';
 import type {
   PublicBookingDayChip,
@@ -32,10 +41,23 @@ import type {
   PublicBookingPeriod,
   PublicBookingServiceRow,
 } from './public-booking.types';
+import {
+  MAX_SERVICES_PER_BOOKING,
+  PUBLIC_MULTI_SERVICE_SEPARATOR,
+} from './public-booking.types';
 import { PublicBookingConfirmStepComponent } from './steps/public-booking-confirm-step.component';
 import { PublicBookingScheduleStepComponent } from './steps/public-booking-schedule-step.component';
 import { PublicBookingServiceStepComponent } from './steps/public-booking-service-step.component';
 import { tenantBrandingCssVars } from '../../core/tenant-branding-css';
+import {
+  buildWaClientBookingFollowUpMessage,
+  buildWaMeLink,
+} from '../../shared/agenda/agenda-calendar.utils';
+
+function colombiaMobileValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null =>
+    isValidColombiaMobileInput(String(control.value ?? '')) ? null : { colombiaMobile: true };
+}
 
 @Component({
   selector: 'app-public-booking-page',
@@ -66,6 +88,7 @@ export class PublicBookingPageComponent {
   readonly publicMeta = signal<PublicTenantMetaDto | null>(null);
   readonly publicCatalog = signal<PublicCatalogDto | null>(null);
   readonly publicAvailability = signal<PublicAvailabilityDto | null>(null);
+  readonly publicAvailabilityLoading = signal(false);
   readonly blockedAlertShownForSlug = signal<string | null>(null);
 
   readonly slug = toSignal(
@@ -89,11 +112,10 @@ export class PublicBookingPageComponent {
       if (services.length) {
         return services.map((s) => {
           const base = `${s.name} · ${formatCop(Number(s.price))}`;
-          if (s.promoPrice != null) {
-            const promo = formatCop(Number(s.promoPrice));
-            return `${base} · Promo ${promo}${s.promoLabel ? ` (${s.promoLabel})` : ''}`;
-          }
-          return base;
+          const summary = s.promoEnabled
+            ? buildPromoSummaryLabel(s)
+            : null;
+          return summary ? `${base} · Promo ${summary}` : base;
         });
       }
       // Fallback defensivo: evita bloquear la reserva pública si el catálogo API aún no trae servicios.
@@ -113,20 +135,25 @@ export class PublicBookingPageComponent {
       if (services.length) {
         return services.map((s) => {
           const priceLabel = formatCop(Number(s.price));
-          let promoLabel: string | null = null;
-          let full = `${s.name} · ${priceLabel}`;
-          if (s.promoPrice != null) {
-            const promo = formatCop(Number(s.promoPrice));
-            promoLabel = s.promoLabel ? `${s.promoLabel} · ${promo}` : `Promo ${promo}`;
-            full += ` · Promo ${promo}${s.promoLabel ? ` (${s.promoLabel})` : ''}`;
-          }
+          const full = `${s.name} · ${priceLabel}`;
+          const promoSummary =
+            s.promoEnabled && s.promoPrice != null
+              ? buildPromoSummaryLabel(s)
+              : null;
           return {
             id: s.id,
             name: s.name,
             description: s.description?.trim() ? s.description.trim() : null,
             priceLabel,
-            promoLabel,
+            promoLabel: promoSummary,
+            durationMinutes: s.durationMinutes ?? 30,
             fullValue: full,
+            promoEnabled: s.promoEnabled,
+            promoPrice: s.promoPrice,
+            promoScheduleType: s.promoScheduleType,
+            promoDays: s.promoDays ?? [],
+            promoStartDate: s.promoStartDate,
+            promoEndDate: s.promoEndDate,
           };
         });
       }
@@ -160,31 +187,16 @@ export class PublicBookingPageComponent {
         description: null,
         priceLabel,
         promoLabel,
+        durationMinutes: 30,
         fullValue: line,
       };
     });
   });
 
-  /** Mini galería bajo la cabecera (logo + fotos de producto). */
+  /** Imagen de portada del negocio (logo / branding). Las fotos de producto van solo en la pestaña Catálogo. */
   readonly heroGalleryUrls = computed(() => {
-    const out: string[] = [];
-    const seen = new Set<string>();
-    const push = (u: string | null | undefined) => {
-      const v = u?.trim();
-      if (!v || seen.has(v)) {
-        return;
-      }
-      seen.add(v);
-      out.push(v);
-    };
-    push(this.branding().logoUrl);
-    for (const p of this.catalogProducts()) {
-      push(p.imageUrl);
-      if (out.length >= 10) {
-        break;
-      }
-    }
-    return out;
+    const logo = this.branding().logoUrl?.trim();
+    return logo ? [logo] : [];
   });
 
   readonly heroCoverUrl = computed(() => this.heroGalleryUrls()[0] ?? null);
@@ -233,6 +245,8 @@ export class PublicBookingPageComponent {
           whatsappPhoneE164: b.whatsappPhoneE164 ?? null,
           whatsappDefaultMessage: b.whatsappDefaultMessage ?? null,
           publicBookingHoursJson: b.publicBookingHoursJson ?? null,
+          reviewsUrl: b.reviewsUrl ?? null,
+          posPaymentMethodsJson: b.posPaymentMethodsJson ?? '[]',
           catalogLayout: b.catalogLayout,
           primaryColor: b.primaryColor,
           accentColor: b.accentColor,
@@ -250,6 +264,30 @@ export class PublicBookingPageComponent {
     return this.data.brandingForBookingSlug(this.slug());
   });
 
+  readonly reviewsActionHref = computed((): string | null => {
+    const b = this.branding();
+    const direct = normalizeExternalUrl(b.reviewsUrl);
+    if (direct) {
+      return direct;
+    }
+    const maps = normalizeExternalUrl(b.publicMapsUrl);
+    if (maps) {
+      return maps;
+    }
+    const digits = (b.whatsappPhoneE164 ?? '').replace(/\D/g, '');
+    if (!digits) {
+      return null;
+    }
+    const msg = encodeURIComponent('Hola, me gustaría dejar una reseña sobre mi experiencia.');
+    return `https://wa.me/${digits}?text=${msg}`;
+  });
+
+  onReviewsClick(ev: MouseEvent): void {
+    if (!this.reviewsActionHref()) {
+      ev.preventDefault();
+    }
+  }
+
   /**
    * Tras reservar: enlace wa.me al negocio si tiene WhatsApp en branding.
    * Incluye en el texto lo que haya disponible (fecha y/o referencia).
@@ -263,18 +301,20 @@ export class PublicBookingPageComponent {
     if (!digits) {
       return null;
     }
-    const baseMsg =
-      (b.whatsappDefaultMessage ?? '').trim() || 'Hola, escribo desde la web de reservas.';
     const when = this.lastBookingWhen()?.trim();
-    const ref = this.lastBookingId()?.trim();
-    const lines = [baseMsg];
-    if (when) {
-      lines.push(`Cita: ${when}`);
+    if (!when) {
+      const baseMsg =
+        (b.whatsappDefaultMessage ?? '').trim() || 'Hola, acabo de reservar en la web de reservas.';
+      return buildWaMeLink(digits, baseMsg);
     }
-    if (ref) {
-      lines.push(`Ref: ${ref}`);
-    }
-    return `https://wa.me/${digits}?text=${encodeURIComponent(lines.join('\n\n'))}`;
+    const message = buildWaClientBookingFollowUpMessage({
+      businessName: b.displayName ?? '',
+      customerName: this.confirmForm.getRawValue().name,
+      service: this.combinedServiceForApi(),
+      when,
+      baseMessage: b.whatsappDefaultMessage,
+    });
+    return buildWaMeLink(digits, message);
   });
 
   /** Enlace WhatsApp genérico al negocio (p. ej. pestaña Mis citas), sin depender de una reserva recién creada. */
@@ -300,7 +340,7 @@ export class PublicBookingPageComponent {
     const cancelDefault =
       'Para cancelar o reprogramar, contacta directamente al negocio (indica tu referencia cuando la tengas). Las condiciones pueden variar según el establecimiento.';
     const reminderDefault =
-      'Tras confirmar verás una referencia: consérvala. Si compartes móvil y marcas WhatsApp, el negocio podrá enviarte recordatorios desde su propia app de WhatsApp (sin coste Meta en Azenda). El negocio también puede contactarte por teléfono.';
+      'Indica un móvil colombiano de 10 dígitos (empieza por 3). Al marcar la casilla confirmas que ese número tiene WhatsApp y autorizas al negocio a contactarte (cambios de hora, recordatorios u otra gestión de tu cita).';
     return {
       address: b.publicAddress?.trim() || null,
       mapsUrl: b.publicMapsUrl?.trim() || null,
@@ -354,18 +394,106 @@ export class PublicBookingPageComponent {
       this.employeeOptions().find((e) => e.id === this.selectedEmployeeId())?.name ?? 'Sin seleccionar',
   );
   readonly selectedServicePriceLabel = computed(() => {
-    const selected = this.selectedService();
-    if (!selected) {
+    const rows = this.selectedServiceRows();
+    if (!rows.length) {
       return null;
     }
-    return this.serviceRows().find((s) => s.fullValue === selected)?.priceLabel ?? null;
+    const when = this.selectedDate().trim();
+    const whenForPromo = when ? `${when}T12:00:00` : '';
+    if (environment.useLiveAuth) {
+      const catalog = this.publicCatalog()?.services ?? [];
+      let total = 0;
+      for (const row of rows) {
+        const cat = catalog.find((s) => s.id === row.id);
+        if (cat) {
+          total += whenForPromo
+            ? effectiveCatalogServicePrice(cat, whenForPromo)
+            : Number(cat.price);
+        }
+      }
+      if (total > 0) {
+        return formatCop(total);
+      }
+    }
+    if (whenForPromo && rows.length === 1) {
+      return (
+        formatServiceForClientMessage(rows[0].fullValue, whenForPromo).match(/ · (\$\s*[\d.,]+)$/)?.[1] ??
+        rows[0].priceLabel
+      );
+    }
+    return rows.length === 1 ? (rows[0].priceLabel ?? null) : `${rows.length} servicios`;
+  });
+  readonly cartServiceRows = computed((): PublicBookingServiceRow[] => {
+    const when = this.selectedDate().trim();
+    const whenForPromo = when ? `${when}T12:00:00` : '';
+    return this.selectedServiceRows().map((row) => {
+      if (!whenForPromo) {
+        return row;
+      }
+      if (environment.useLiveAuth) {
+        const cat = this.publicCatalog()?.services.find((s) => s.id === row.id);
+        if (cat) {
+          return { ...row, priceLabel: formatCatalogServicePriceLabel(cat, whenForPromo) };
+        }
+      }
+      const formatted = formatServiceForClientMessage(row.fullValue, whenForPromo);
+      const priceMatch = / · (\$\s*[\d.,]+)$/.exec(formatted);
+      return priceMatch ? { ...row, priceLabel: priceMatch[1] } : row;
+    });
+  });
+  readonly selectedServiceRows = computed((): PublicBookingServiceRow[] => {
+    const selected = this.selectedServices();
+    return selected
+      .map((fv) => this.serviceRows().find((r) => r.fullValue === fv))
+      .filter((r): r is PublicBookingServiceRow => r != null);
+  });
+  readonly combinedServiceForApi = computed(() =>
+    this.selectedServices().join(PUBLIC_MULTI_SERVICE_SEPARATOR),
+  );
+  readonly selectedServiceSummaryLines = computed(() =>
+    this.selectedServiceRows().map((r) => r.name),
+  );
+  readonly selectedServiceDurationMinutes = computed(() => {
+    const rows = this.selectedServiceRows();
+    if (!rows.length) {
+      return undefined;
+    }
+    return rows.reduce((sum, r) => sum + (r.durationMinutes ?? 30), 0);
+  });
+  readonly lookupRescheduleDurationMinutes = computed(() => {
+    const sel = this.attendanceSelectedAppointment();
+    if (!sel?.serviceLabel?.trim()) {
+      return undefined;
+    }
+    const label = sel.serviceLabel.trim();
+    const fromCatalog = this.publicCatalog()?.services.find(
+      (s) => label === s.name || label.includes(s.name),
+    );
+    return fromCatalog?.durationMinutes ?? 30;
   });
   readonly selectedPeriod = signal<PublicBookingPeriod>('manana');
+  readonly publicAvailabilityReady = computed(() => {
+    if (this.publicAvailabilityLoading()) {
+      return false;
+    }
+    const avail = this.publicAvailability();
+    const date = this.selectedDate().trim();
+    const duration = this.selectedServiceDurationMinutes();
+    if (!avail || !date || duration == null || avail.date !== date) {
+      return false;
+    }
+    return avail.durationMinutes == null || avail.durationMinutes === duration;
+  });
   readonly availableSlotsForSelection = computed(() => {
     const period = this.selectedPeriod();
     const date = this.selectedDate().trim();
+    if (environment.useLiveAuth) {
+      if (!date || !this.selectedEmployeeId().trim() || !this.publicAvailabilityReady()) {
+        return [] as string[];
+      }
+    }
     let sourceSlots = this.slots;
-    if (environment.useLiveAuth && date && this.publicAvailability()?.date === date) {
+    if (environment.useLiveAuth && date && this.publicAvailabilityReady()) {
       const data = this.publicAvailability()!;
       const emp = this.selectedEmployeeId().trim();
       sourceSlots =
@@ -455,17 +583,15 @@ export class PublicBookingPageComponent {
   readonly catalogRequestErr = signal<string | null>(null);
   readonly catalogRequestSubmitting = signal(false);
 
-  readonly selectedService = signal('');
+  readonly selectedServices = signal<string[]>([]);
   readonly selectedDate = signal('');
   readonly selectedSlot = signal('');
   readonly selectedEmployeeId = signal('');
 
   readonly confirmForm = this.fb.nonNullable.group({
     name: ['', Validators.required],
-    /** Móvil para que el negocio te contacte o envíe recordatorio desde su WhatsApp. */
-    phone: [''],
-    /** Comparto mi móvil para recordatorio/contacto por WhatsApp (desde el negocio, no automático de Azenda). */
-    waReminderConsent: [false],
+    phone: ['', [Validators.required, colombiaMobileValidator()]],
+    waReminderConsent: [false, Validators.requiredTrue],
   });
 
   readonly attendanceForm = this.fb.nonNullable.group({
@@ -506,16 +632,50 @@ export class PublicBookingPageComponent {
     effect(() => {
       const slug = this.slug();
       const date = this.selectedDate().trim();
-      if (!environment.useLiveAuth || !date) {
-        this.publicAvailability.set(null);
+      const service = this.selectedServices().length;
+      const durationMinutes = this.selectedServiceDurationMinutes();
+      if (
+        !environment.useLiveAuth ||
+        !date ||
+        !service ||
+        durationMinutes == null
+      ) {
+        untracked(() => {
+          this.publicAvailability.set(null);
+          this.publicAvailabilityLoading.set(false);
+        });
         return;
       }
       untracked(() => {
-        this.apiPublic.getAvailability(slug, date).subscribe({
-          next: (rows) => this.publicAvailability.set(rows),
-          error: () => this.publicAvailability.set(null),
+        this.publicAvailabilityLoading.set(true);
+        this.apiPublic.getAvailability(slug, date, durationMinutes).subscribe({
+          next: (rows) => {
+            this.publicAvailability.set(rows);
+            this.publicAvailabilityLoading.set(false);
+          },
+          error: () => {
+            this.publicAvailability.set(null);
+            this.publicAvailabilityLoading.set(false);
+          },
         });
       });
+    });
+    effect(() => {
+      const slot = this.selectedSlot().trim();
+      const available = this.availableSlotsForSelection();
+      if (!slot || !available.length) {
+        return;
+      }
+      if (!available.includes(slot)) {
+        untracked(() => {
+          this.selectedSlot.set('');
+          if (this.step() === 2) {
+            this.bookingError.set(
+              'Ese horario ya no encaja con la duración del servicio. Elige otra hora.',
+            );
+          }
+        });
+      }
     });
     effect(() => {
       const slug = this.slug();
@@ -540,6 +700,7 @@ export class PublicBookingPageComponent {
       const editorOpen = this.lookupRescheduleEditorOpen();
       const slug = this.slug();
       const date = this.lookupRescheduleDate().trim();
+      const durationMinutes = this.lookupRescheduleDurationMinutes();
       const asist = this.clientTab() === 'asistencia';
       const sel = this.attendanceSelectedAppointment();
       if (
@@ -557,7 +718,7 @@ export class PublicBookingPageComponent {
       }
       untracked(() => {
         this.lookupRescheduleAvailLoading.set(true);
-        this.apiPublic.getAvailability(slug, date).subscribe({
+        this.apiPublic.getAvailability(slug, date, durationMinutes).subscribe({
           next: (r) => {
             this.lookupRescheduleAvailability.set(r);
             this.lookupRescheduleAvailLoading.set(false);
@@ -638,12 +799,52 @@ export class PublicBookingPageComponent {
     this.sendPublicCatalogRequest(v.customer.trim(), detail);
   }
 
-  pickService(s: string): void {
+  addServiceToCart(fullValue: string): void {
     if (this.publicBookingBlockedMessage()) {
       this.alerts.warning(this.publicBookingBlockedMessage()!, 'Acceso restringido');
       return;
     }
-    this.selectedService.set(s);
+    if (this.selectedServices().includes(fullValue)) {
+      return;
+    }
+    if (this.selectedServices().length >= MAX_SERVICES_PER_BOOKING) {
+      this.alerts.info(`Puedes agregar hasta ${MAX_SERVICES_PER_BOOKING} servicios por cita.`);
+      return;
+    }
+    const wasEmpty = this.selectedServices().length === 0;
+    this.selectedServices.update((list) => [...list, fullValue]);
+    this.selectedSlot.set('');
+    this.bookingError.set(null);
+    if (wasEmpty && this.step() === 1) {
+      this.goToScheduleStep();
+    }
+  }
+
+  removeServiceFromCart(fullValue: string): void {
+    this.selectedServices.update((list) => list.filter((v) => v !== fullValue));
+    this.selectedSlot.set('');
+    this.bookingError.set(null);
+    if (!this.selectedServices().length) {
+      this.step.set(1);
+    }
+  }
+
+  goToAddAnotherService(): void {
+    this.bookingError.set(null);
+    this.step.set(1);
+  }
+
+  goToScheduleStep(): void {
+    if (this.publicBookingBlockedMessage()) {
+      this.alerts.warning(this.publicBookingBlockedMessage()!, 'Acceso restringido');
+      return;
+    }
+    if (!this.selectedServices().length) {
+      this.bookingError.set('Agrega al menos un servicio para continuar.');
+      return;
+    }
+    this.bookingError.set(null);
+    this.selectedSlot.set('');
     this.step.set(2);
   }
 
@@ -665,6 +866,7 @@ export class PublicBookingPageComponent {
       this.alerts.warning(this.publicBookingBlockedMessage()!, 'Acceso restringido');
       return;
     }
+    this.bookingError.set(null);
     this.selectedSlot.set(s);
   }
 
@@ -694,6 +896,24 @@ export class PublicBookingPageComponent {
       this.bookingError.set('Selecciona un horario.');
       return;
     }
+    const slot = this.selectedSlot().trim();
+    if (
+      environment.useLiveAuth &&
+      !this.publicAvailabilityReady()
+    ) {
+      this.bookingError.set('Espera a que carguen los horarios disponibles.');
+      return;
+    }
+    if (
+      environment.useLiveAuth &&
+      !this.availableSlotsForSelection().includes(slot)
+    ) {
+      this.bookingError.set(
+        'Ese horario no está disponible para la duración de tu servicio. Elige otra hora.',
+      );
+      this.selectedSlot.set('');
+      return;
+    }
     this.dateStepError.set(null);
     this.bookingError.set(null);
     this.step.set(3);
@@ -708,8 +928,8 @@ export class PublicBookingPageComponent {
       this.confirmForm.markAllAsTouched();
       return;
     }
-    if (!this.selectedService()) {
-      this.bookingError.set('Elige un servicio.');
+    if (!this.selectedServices().length) {
+      this.bookingError.set('Elige al menos un servicio.');
       return;
     }
     if (!this.selectedSlot()) {
@@ -724,10 +944,19 @@ export class PublicBookingPageComponent {
       this.confirmForm.markAllAsTouched();
       return;
     }
-    if (waConsent && !phone) {
-      this.bookingError.set('Para el contacto por WhatsApp indica tu número de móvil.');
+    if (!isValidColombiaMobileInput(phone)) {
+      this.bookingError.set('Indica un móvil colombiano válido (10 dígitos, empieza por 3).');
+      this.confirmForm.get('phone')?.markAsTouched();
       return;
     }
+    if (!waConsent) {
+      this.bookingError.set(
+        'Debes confirmar que tu número tiene WhatsApp y autorizar el contacto del negocio.',
+      );
+      this.confirmForm.get('waReminderConsent')?.markAsTouched();
+      return;
+    }
+    const phoneDigits = normalizeColombiaMobileDigits(phone)!;
     const when = `${this.selectedDate()} ${this.selectedSlot()}`;
     this.bookingError.set(null);
     if (environment.useLiveAuth) {
@@ -735,11 +964,12 @@ export class PublicBookingPageComponent {
       this.apiAppointments
         .createPublic(this.slug(), {
           customer: name,
-          service: this.selectedService(),
+          service: this.combinedServiceForApi(),
           when,
+          durationMinutes: this.selectedServiceDurationMinutes(),
           employeeId: this.selectedEmployeeId() === 'any' ? undefined : this.selectedEmployeeId(),
-          customerPhone: phone || undefined,
-          whatsappReminderConsent: waConsent,
+          customerPhone: phone,
+          whatsappReminderConsent: true,
         })
         .subscribe({
           next: (row) => {
@@ -752,22 +982,19 @@ export class PublicBookingPageComponent {
             this.lastBookingRescheduleNote.set(null);
             this.done.set(true);
           },
-          error: (err: unknown) => {
-            this.bookingSubmitting.set(false);
-            this.bookingError.set(this.formatHttpError(err));
-          },
+          error: (err: unknown) => this.handleBookingConflictError(err),
         });
       return;
     }
     this.bookedWithLiveApi.set(false);
-    this.lastBookingWaReminder.set(waConsent && !!phone);
+    this.lastBookingWaReminder.set(true);
     this.lastBookingWhen.set(when);
     const wasCreated = this.data.recordBooking(
       name,
-      `${this.selectedService()} · Empleado: ${this.selectedEmployeeLabel()}`,
+      `${this.combinedServiceForApi()} · Empleado: ${this.selectedEmployeeLabel()}`,
       when,
       this.slug(),
-      waConsent && phone ? phone : null,
+      phoneDigits,
     );
     if (!wasCreated) {
       this.bookingError.set('Ese horario ya está ocupado. Elige otra hora.');
@@ -917,7 +1144,7 @@ export class PublicBookingPageComponent {
       this.lookupRescheduleEditorOpen.set(false);
       this.lookupRescheduleAvailability.set(null);
       this.lookupRescheduleAvailLoading.set(false);
-      this.attendanceMsg.set('Horario actualizado (demo). El cambio queda en esta sesión del navegador.');
+      this.attendanceMsg.set('Horario actualizado correctamente.');
       if (typeof document !== 'undefined') {
         setTimeout(() => {
           document.getElementById('attendance-feedback-anchor')?.scrollIntoView({
@@ -1072,11 +1299,11 @@ export class PublicBookingPageComponent {
     }
     const t = this.data.tenantByBookingSlug(this.slug());
     if (!t?.modules.includes('ventas')) {
-      this.catalogRequestErr.set('Este negocio no tiene activado el módulo de ventas en la demo.');
+      this.catalogRequestErr.set('El catálogo no está disponible en este momento.');
       return;
     }
     this.data.addPublicStoreVisitMock(this.slug(), customer, detail);
-    this.catalogRequestMsg.set('Solicitud guardada en esta demo del navegador.');
+    this.catalogRequestMsg.set('Solicitud enviada. El negocio te contactará pronto.');
     this.catalogRequestForm.reset({ customer: '', note: '' });
     this.catalogRequestTarget.set(null);
   }
@@ -1167,18 +1394,15 @@ export class PublicBookingPageComponent {
             );
             this.done.set(true);
           },
-          error: (err: unknown) => {
-            this.bookingSubmitting.set(false);
-            this.bookingError.set(this.formatHttpError(err));
-          },
+          error: (err: unknown) => this.handleBookingConflictError(err, true),
         });
       return;
     }
-    const serviceStr = `${this.selectedService()} · Empleado: ${this.selectedEmployeeLabel()}`;
+    const serviceStr = `${this.combinedServiceForApi()} · Empleado: ${this.selectedEmployeeLabel()}`;
     const ok = this.data.reschedulePublicBookingMock(this.slug(), id, name, when, serviceStr);
     if (!ok) {
       this.bookingError.set(
-        'Ese horario ya está ocupado o no pudimos aplicar el cambio. Prueba otro hueco.',
+        'Ese horario ya está ocupado o no pudimos aplicar el cambio. Elige otra fecha u hora.',
       );
       return;
     }
@@ -1269,7 +1493,7 @@ export class PublicBookingPageComponent {
     this.rescheduleMode.set(false);
     this.lastBookingRescheduleNote.set(null);
     this.step.set(1);
-    this.selectedService.set('');
+    this.selectedServices.set([]);
     this.selectedDate.set('');
     this.selectedSlot.set('');
     this.selectedEmployeeId.set('');
@@ -1286,6 +1510,21 @@ export class PublicBookingPageComponent {
     this.lookupRescheduleAvailability.set(null);
     this.lookupRescheduleAvailLoading.set(false);
     this.lookupRescheduleEditorOpen.set(false);
+  }
+
+  private handleBookingConflictError(err: unknown, _reschedule = false): void {
+    this.bookingSubmitting.set(false);
+    const msg = this.formatHttpError(err);
+    this.bookingError.set(msg);
+    const conflict =
+      err instanceof HttpErrorResponse &&
+      (err.status === 409 ||
+        (err.status === 403 && msg.toLowerCase().includes('horario')));
+    if (conflict) {
+      this.selectedSlot.set('');
+      this.step.set(2);
+      this.alerts.warning(msg, 'Horario no disponible');
+    }
   }
 
   private formatHttpError(err: unknown): string {
@@ -1318,7 +1557,7 @@ export class PublicBookingPageComponent {
       return 'Demasiados intentos. Espera un momento y prueba de nuevo.';
     }
     if (err.status === 502 || err.status === 503 || err.status === 504) {
-      return 'El servidor de reservas no responde (suele ser el API apagado o el proxy). En local: deja corriendo el proyecto «api» en el puerto 3000 junto con «ng serve».';
+      return 'El servicio de reservas no está disponible ahora. Inténtalo de nuevo en unos minutos.';
     }
     if (err.status >= 500) {
       return 'El servicio tiene una incidencia temporal. Inténtalo de nuevo en unos minutos.';

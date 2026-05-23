@@ -40,8 +40,13 @@ export class PublicController {
   getPublicAvailability(
     @Param('slug') slug: string,
     @Query('date') date: string,
+    @Query('durationMinutes') durationMinutes?: string,
   ) {
-    return this.booking.getPublicAvailability(slug, date);
+    const parsed =
+      durationMinutes != null && durationMinutes.trim() !== ''
+        ? Number(durationMinutes)
+        : undefined;
+    return this.booking.getPublicAvailability(slug, date, parsed);
   }
 
   @Post(':slug/appointments')

@@ -12,9 +12,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PublicBookingService = void 0;
 const common_1 = require("@nestjs/common");
 const auth_types_1 = require("../auth/auth.types");
+const appointment_scheduling_util_1 = require("../common/appointment-scheduling.util");
 const customer_name_match_util_1 = require("../common/customer-name-match.util");
-const phone_e164_util_1 = require("../common/phone-e164.util");
+const phone_co_util_1 = require("../common/phone-co.util");
 const public_booking_hours_util_1 = require("../common/public-booking-hours.util");
+const service_duration_util_1 = require("../common/service-duration.util");
 const sql_db_service_1 = require("../infrastructure/sql-db/sql-db.service");
 const booking_notification_service_1 = require("./booking-notification.service");
 function catalogoPublicoActivo(t) {
@@ -62,19 +64,6 @@ function ymd(date) {
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 }
-function readEmployeeIdFromService(value) {
-    const m = /\bEmpleadoId:([A-Za-z0-9_-]+)\b/.exec(value);
-    return m?.[1] ?? null;
-}
-function publicAppointmentStartMs(when) {
-    const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{1,2}):(\d{2})/.exec(when.trim());
-    if (!m) {
-        return null;
-    }
-    const hh = m[2].padStart(2, '0');
-    const d = new Date(`${m[1]}T${hh}:${m[3]}:00`);
-    return Number.isNaN(d.getTime()) ? null : d.getTime();
-}
 const PUBLIC_RESCHEDULE_MIN_LEAD_MS = 90 * 60 * 1000;
 function publicServiceLabelForLookup(service) {
     const s = service == null ? '' : String(service);
@@ -84,24 +73,6 @@ function publicServiceLabelForLookup(service) {
         return s.slice(0, idx).trim();
     }
     return s.trim();
-}
-function applyUnknownOccupancy(employeeIds, knownTaken, unknownCount) {
-    if (unknownCount <= 0 || employeeIds.length === 0) {
-        return knownTaken;
-    }
-    const out = new Set(knownTaken);
-    let pending = unknownCount;
-    for (const id of employeeIds) {
-        if (pending <= 0) {
-            break;
-        }
-        if (out.has(id)) {
-            continue;
-        }
-        out.add(id);
-        pending -= 1;
-    }
-    return out;
 }
 let PublicBookingService = class PublicBookingService {
     constructor(sqlDb, bookingNotifications) {
@@ -131,8 +102,42 @@ let PublicBookingService = class PublicBookingService {
         const weekly = (0, public_booking_hours_util_1.parseWeeklyHoursJson)(publicBookingHoursJson);
         return (0, public_booking_hours_util_1.slotsForPublicBookingDate)(weekly, dateYmd, now);
     }
+    dayIntervals(appointments, catalog, dateYmd, excludeId) {
+        return appointments
+            .filter((a) => a.status !== 'cancelada' &&
+            a.when.startsWith(`${dateYmd} `) &&
+            (excludeId == null || a.id !== excludeId))
+            .map((a) => (0, appointment_scheduling_util_1.appointmentInterval)(a, catalog))
+            .filter((x) => x != null);
+    }
+    assertSlotFitsBusinessHours(dateYmd, timePart, durationMinutes, publicBookingHoursJson) {
+        const weekly = (0, public_booking_hours_util_1.parseWeeklyHoursJson)(publicBookingHoursJson);
+        const latestClose = (0, public_booking_hours_util_1.latestClosingMinuteForDate)(weekly, dateYmd);
+        const startMin = (0, appointment_scheduling_util_1.parseSlotMinutes)(timePart);
+        if (startMin == null) {
+            throw new common_1.BadRequestException('Horario invalido.');
+        }
+        if (latestClose != null && startMin + durationMinutes > latestClose) {
+            throw new common_1.ForbiddenException('El servicio no cabe antes del cierre de ese dia. Elige otro horario.');
+        }
+    }
+    pickEmployeeForSlot(dateYmd, timePart, durationMinutes, requestedEmployeeId, employees, intervals, latestClose) {
+        const employeeIds = employees.map((e) => e.id);
+        if (requestedEmployeeId) {
+            const available = (0, appointment_scheduling_util_1.isSlotAvailableForEmployee)(dateYmd, timePart, durationMinutes, requestedEmployeeId, employeeIds, intervals, latestClose);
+            if (!available) {
+                throw new common_1.ConflictException('Ese horario ya fue tomado por ese profesional. Elige otro horario.');
+            }
+            return requestedEmployeeId;
+        }
+        const free = employees.find((e) => (0, appointment_scheduling_util_1.isSlotAvailableForEmployee)(dateYmd, timePart, durationMinutes, e.id, employeeIds, intervals, latestClose));
+        if (!free) {
+            throw new common_1.ConflictException('No quedan profesionales disponibles en ese horario. Elige otro horario.');
+        }
+        return free.id;
+    }
     getSiteConfig() {
-        return this.sqlDb.getPlatformSiteConfig();
+        return this.sqlDb.getPlatformSiteConfigForPublic();
     }
     async getPublicMeta(slug) {
         const tenant = await this.sqlDb.findTenantBySlug(slug);
@@ -171,7 +176,7 @@ let PublicBookingService = class PublicBookingService {
             employees,
         };
     }
-    async getPublicAvailability(slug, date) {
+    async getPublicAvailability(slug, date, durationMinutesRaw) {
         const tenant = await this.sqlDb.findTenantBySlug(slug);
         if (!tenant) {
             throw new common_1.NotFoundException('Negocio no encontrado');
@@ -181,50 +186,29 @@ let PublicBookingService = class PublicBookingService {
         if (!selected) {
             throw new common_1.ForbiddenException('Fecha invalida. Usa formato YYYY-MM-DD');
         }
-        const [users, appointments, branding] = await Promise.all([
+        const durationMinutes = durationMinutesRaw != null && Number.isFinite(durationMinutesRaw)
+            ? (0, service_duration_util_1.normalizeServiceDurationMinutes)(durationMinutesRaw)
+            : appointment_scheduling_util_1.BOOKING_SLOT_STEP_MINUTES;
+        const [users, appointments, branding, services] = await Promise.all([
             this.sqlDb.listUsersByTenantId(tenant.id),
             this.sqlDb.listAppointmentsByTenantId(tenant.id),
             this.sqlDb.getTenantBranding(tenant.id),
+            this.sqlDb.listServicesByTenantId(tenant.id),
         ]);
         const employees = this.listActivePublicEmployees(users);
         const openSlots = this.computeOpenSlotsForDate(normalizedDate, branding.publicBookingHoursJson);
-        const appointmentsBySlot = new Map();
-        for (const appt of appointments) {
-            if (!appt.when.startsWith(`${normalizedDate} `) ||
-                appt.status === 'cancelada') {
-                continue;
-            }
-            const slot = appt.when.slice(11, 16);
-            const list = appointmentsBySlot.get(slot) ?? [];
-            list.push(appt);
-            appointmentsBySlot.set(slot, list);
-        }
+        const weekly = (0, public_booking_hours_util_1.parseWeeklyHoursJson)(branding.publicBookingHoursJson);
+        const latestClose = (0, public_booking_hours_util_1.latestClosingMinuteForDate)(weekly, normalizedDate);
+        const intervals = this.dayIntervals(appointments, services, normalizedDate);
         const employeeIds = employees.map((e) => e.id);
         const slotsByEmployee = {};
         for (const e of employees) {
-            slotsByEmployee[e.id] = openSlots.filter((slot) => {
-                const rows = appointmentsBySlot.get(slot) ?? [];
-                const knownTaken = new Set();
-                let unknownCount = 0;
-                for (const row of rows) {
-                    const emp = readEmployeeIdFromService(row.service);
-                    if (emp) {
-                        knownTaken.add(emp);
-                    }
-                    else {
-                        unknownCount += 1;
-                    }
-                }
-                const effectiveTaken = applyUnknownOccupancy(employeeIds, knownTaken, unknownCount);
-                return !effectiveTaken.has(e.id);
-            });
+            slotsByEmployee[e.id] = openSlots.filter((slot) => (0, appointment_scheduling_util_1.isSlotAvailableForEmployee)(normalizedDate, slot, durationMinutes, e.id, employeeIds, intervals, latestClose));
         }
-        const allSlots = openSlots.filter((slot) => {
-            const rows = appointmentsBySlot.get(slot) ?? [];
-            return rows.length < Math.max(1, employees.length);
-        });
+        const allSlots = openSlots.filter((slot) => employees.some((e) => (0, appointment_scheduling_util_1.isSlotAvailableForEmployee)(normalizedDate, slot, durationMinutes, e.id, employeeIds, intervals, latestClose)));
         return {
             date: normalizedDate,
+            durationMinutes,
             slotsByEmployee,
             allSlots,
             employees,
@@ -241,9 +225,10 @@ let PublicBookingService = class PublicBookingService {
         if (!tenant.modules.citas) {
             throw new common_1.ForbiddenException('Reservas no disponibles para este negocio');
         }
-        const [users, branding] = await Promise.all([
+        const [users, branding, services] = await Promise.all([
             this.sqlDb.listUsersByTenantId(tenant.id),
             this.sqlDb.getTenantBranding(tenant.id),
+            this.sqlDb.listServicesByTenantId(tenant.id),
         ]);
         const employees = this.listActivePublicEmployees(users);
         const requestedEmployeeId = dto.employeeId?.trim() || '';
@@ -253,36 +238,26 @@ let PublicBookingService = class PublicBookingService {
         }
         const datePart = dto.when.slice(0, 10);
         const timePart = dto.when.slice(11, 16);
+        const durationMinutes = dto.durationMinutes != null && Number.isFinite(Number(dto.durationMinutes))
+            ? (0, service_duration_util_1.normalizeTotalBookingDurationMinutes)(Number(dto.durationMinutes))
+            : (0, appointment_scheduling_util_1.resolveDurationForServiceLabel)(dto.service, services);
         const openSlots = this.computeOpenSlotsForDate(datePart, branding.publicBookingHoursJson);
         if (!openSlots.includes(timePart)) {
             throw new common_1.ForbiddenException('Horario fuera de disponibilidad para ese dia');
         }
+        this.assertSlotFitsBusinessHours(datePart, timePart, durationMinutes, branding.publicBookingHoursJson);
         const appointments = await this.sqlDb.listAppointmentsByTenantId(tenant.id);
-        const sameMoment = appointments.filter((a) => a.when === dto.when && a.status !== 'cancelada');
-        let employeeId = requestedEmployeeId;
-        if (requestedEmployeeId) {
-            const conflict = sameMoment.some((a) => readEmployeeIdFromService(a.service) === requestedEmployeeId);
-            if (conflict) {
-                throw new common_1.ConflictException('Ese horario ya fue tomado por ese profesional. Elige otro horario.');
-            }
-        }
-        else {
-            const knownOccupied = new Set(sameMoment
-                .map((a) => readEmployeeIdFromService(a.service))
-                .filter(Boolean));
-            const unknownCount = sameMoment.filter((a) => !readEmployeeIdFromService(a.service)).length;
-            const occupied = applyUnknownOccupancy(employees.map((e) => e.id), knownOccupied, unknownCount);
-            const freeEmployee = employees.find((e) => !occupied.has(e.id));
-            if (!freeEmployee) {
-                throw new common_1.ConflictException('No quedan profesionales disponibles en ese horario. Elige otro horario.');
-            }
-            employeeId = freeEmployee.id;
-        }
+        const weekly = (0, public_booking_hours_util_1.parseWeeklyHoursJson)(branding.publicBookingHoursJson);
+        const latestClose = (0, public_booking_hours_util_1.latestClosingMinuteForDate)(weekly, datePart);
+        const intervals = this.dayIntervals(appointments, services, datePart);
+        const employeeId = this.pickEmployeeForSlot(datePart, timePart, durationMinutes, requestedEmployeeId, employees, intervals, latestClose);
         const consent = dto.whatsappReminderConsent === true;
-        const defaultCc = (process.env.PUBLIC_BOOKING_DEFAULT_COUNTRY_CODE ?? '34').trim() || '34';
-        const phoneDigits = (0, phone_e164_util_1.normalizePhoneToWaDigits)(dto.customerPhone, defaultCc);
-        if (consent && !phoneDigits) {
-            throw new common_1.BadRequestException('Para facilitar el contacto por WhatsApp indica un telefono valido (prefijo internacional o 9 cifras en España).');
+        const phoneDigits = (0, phone_co_util_1.normalizeColombiaMobileDigits)(dto.customerPhone);
+        if (!phoneDigits) {
+            throw new common_1.BadRequestException('Indica un movil colombiano valido (10 digitos, empieza por 3).');
+        }
+        if (!consent) {
+            throw new common_1.BadRequestException('Debes confirmar que tu numero tiene WhatsApp y autorizar el contacto del negocio.');
         }
         const appointment = await this.sqlDb.createAppointment({
             tenantId: tenant.id,
@@ -290,8 +265,9 @@ let PublicBookingService = class PublicBookingService {
             service: `${dto.service} · EmpleadoId:${employeeId || 'any'}`,
             when: dto.when,
             status: 'pendiente',
-            customerPhoneE164: consent ? phoneDigits : null,
-            waReminderConsent: consent,
+            customerPhoneE164: phoneDigits,
+            waReminderConsent: true,
+            durationMinutes,
         });
         void this.bookingNotifications
             .onBookingCreated({
@@ -327,16 +303,17 @@ let PublicBookingService = class PublicBookingService {
         if (appt.status === 'cancelada' || appt.attendance !== 'PENDIENTE') {
             throw new common_1.ForbiddenException('Esta cita no se puede reprogramar desde aqui.');
         }
-        const startMs = publicAppointmentStartMs(appt.when);
+        const startMs = (0, appointment_scheduling_util_1.appointmentStartMs)(appt.when);
         if (startMs == null) {
             throw new common_1.BadRequestException('La cita no tiene una fecha valida.');
         }
         if (startMs - Date.now() < PUBLIC_RESCHEDULE_MIN_LEAD_MS) {
             throw new common_1.ForbiddenException('Solo puedes cambiar el horario con al menos 90 minutos de antelacion sobre el inicio de la cita.');
         }
-        const [users, branding] = await Promise.all([
+        const [users, branding, services] = await Promise.all([
             this.sqlDb.listUsersByTenantId(tenant.id),
             this.sqlDb.getTenantBranding(tenant.id),
+            this.sqlDb.listServicesByTenantId(tenant.id),
         ]);
         const employees = this.listActivePublicEmployees(users);
         const rawEmp = (dto.employeeId ?? '').trim();
@@ -347,42 +324,25 @@ let PublicBookingService = class PublicBookingService {
         }
         const datePart = dto.when.slice(0, 10);
         const timePart = dto.when.slice(11, 16);
+        const baseService = publicServiceLabelForLookup(appt.service);
+        const durationMinutes = (0, appointment_scheduling_util_1.resolveAppointmentDurationMinutes)(appt, services);
         const openSlots = this.computeOpenSlotsForDate(datePart, branding.publicBookingHoursJson);
         if (!openSlots.includes(timePart)) {
             throw new common_1.ForbiddenException('Horario fuera de disponibilidad para ese dia');
         }
+        this.assertSlotFitsBusinessHours(datePart, timePart, durationMinutes, branding.publicBookingHoursJson);
         const appointments = await this.sqlDb.listAppointmentsByTenantId(tenant.id);
-        const sameMoment = appointments.filter((a) => a.when === dto.when && a.status !== 'cancelada' && a.id !== appt.id);
-        const baseService = publicServiceLabelForLookup(appt.service);
+        const weekly = (0, public_booking_hours_util_1.parseWeeklyHoursJson)(branding.publicBookingHoursJson);
+        const latestClose = (0, public_booking_hours_util_1.latestClosingMinuteForDate)(weekly, datePart);
+        const intervals = this.dayIntervals(appointments, services, datePart, appt.id);
         let employeeId = requestedEmployeeId;
-        if (requestedEmployeeId) {
-            const conflict = sameMoment.some((a) => readEmployeeIdFromService(a.service) === requestedEmployeeId);
-            if (conflict) {
-                throw new common_1.ConflictException('Ese horario ya fue tomado por ese profesional. Elige otro horario.');
-            }
-        }
-        else {
-            const existingEmp = readEmployeeIdFromService(appt.service);
+        if (!employeeId) {
+            const existingEmp = (0, appointment_scheduling_util_1.readEmployeeIdFromServiceText)(appt.service);
             if (existingEmp && existingEmp !== 'any') {
                 employeeId = existingEmp;
-                const conflict = sameMoment.some((a) => readEmployeeIdFromService(a.service) === employeeId);
-                if (conflict) {
-                    throw new common_1.ConflictException('Ese horario ya fue tomado por ese profesional. Elige otro horario.');
-                }
-            }
-            else {
-                const knownOccupied = new Set(sameMoment
-                    .map((a) => readEmployeeIdFromService(a.service))
-                    .filter(Boolean));
-                const unknownCount = sameMoment.filter((a) => !readEmployeeIdFromService(a.service)).length;
-                const occupied = applyUnknownOccupancy(employees.map((e) => e.id), knownOccupied, unknownCount);
-                const freeEmployee = employees.find((e) => !occupied.has(e.id));
-                if (!freeEmployee) {
-                    throw new common_1.ConflictException('No quedan profesionales disponibles en ese horario. Elige otro horario.');
-                }
-                employeeId = freeEmployee.id;
             }
         }
+        employeeId = this.pickEmployeeForSlot(datePart, timePart, durationMinutes, employeeId, employees, intervals, latestClose);
         const newService = `${baseService} · EmpleadoId:${employeeId || 'any'}`;
         const updated = await this.sqlDb.updateAppointmentWhenAndService(tenant.id, appt.id, dto.when.trim(), newService);
         if (!updated) {
@@ -403,11 +363,10 @@ let PublicBookingService = class PublicBookingService {
         if (!ref && !phone) {
             throw new common_1.BadRequestException('Indica la referencia de tu cita o el movil que usaste al reservar (con consentimiento de contacto).');
         }
-        const defaultCc = (process.env.PUBLIC_BOOKING_DEFAULT_COUNTRY_CODE ?? '34').trim() || '34';
         if (phone && !ref) {
-            const digits = (0, phone_e164_util_1.normalizePhoneToWaDigits)(phone, defaultCc);
+            const digits = (0, phone_co_util_1.normalizeColombiaMobileDigits)(phone);
             if (!digits) {
-                throw new common_1.BadRequestException('El telefono no es valido. Incluye prefijo internacional (ej. +57 304…) o el mismo formato que al reservar.');
+                throw new common_1.BadRequestException('El telefono no es valido. Usa un movil colombiano de 10 digitos (empieza por 3).');
             }
         }
         const rows = await this.sqlDb.lookupPublicAppointmentsForClient(slug, dto.customer?.trim() || undefined, ref || undefined, phone || undefined);
@@ -417,7 +376,7 @@ let PublicBookingService = class PublicBookingService {
                 when: a.when,
                 serviceLabel: publicServiceLabelForLookup(a.service),
                 customer: a.customer,
-                employeeId: readEmployeeIdFromService(a.service),
+                employeeId: (0, appointment_scheduling_util_1.readEmployeeIdFromServiceText)(a.service),
                 status: a.status,
                 attendance: a.attendance,
             })),

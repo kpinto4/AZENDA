@@ -3,6 +3,8 @@ import {
   canClientRescheduleLookupAppointment,
   splitLookupYmdHhmm,
   LOOKUP_RESCHEDULE_MIN_LEAD_MS,
+  normalizeColombiaMobileDigits,
+  isValidColombiaMobileInput,
 } from './public-booking-page.utils';
 
 describe('public-booking-page.utils', () => {
@@ -47,6 +49,17 @@ describe('public-booking-page.utils', () => {
       const h = String(soon.getHours()).padStart(2, '0');
       const min = String(soon.getMinutes()).padStart(2, '0');
       expect(canClientRescheduleLookupAppointment(`${y}-${m}-${d} ${h}:${min}`)).toBe(false);
+    });
+  });
+
+  describe('normalizeColombiaMobileDigits', () => {
+    it('acepta movil nacional', () => {
+      expect(normalizeColombiaMobileDigits('3001234567')).toBe('573001234567');
+      expect(isValidColombiaMobileInput('+57 300 123 4567')).toBe(true);
+    });
+
+    it('rechaza numeros invalidos', () => {
+      expect(normalizeColombiaMobileDigits('2001234567')).toBeNull();
     });
   });
 });

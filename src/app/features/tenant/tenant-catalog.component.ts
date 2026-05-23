@@ -16,6 +16,14 @@ import {
 import { MockSessionService } from '../../core/services/mock-session.service';
 import { FormatCopPipe } from '../../core/format-cop.pipe';
 import { UiAlertService } from '../../core/services/ui-alert.service';
+import {
+  createPromoScheduleFormGroup,
+  defaultPromoScheduleFormValue,
+  promoFormValueFromCatalog,
+  promoPayloadFromFormValue,
+  type PromoScheduleFormValue,
+} from '../../core/promo-form.util';
+import { PromoScheduleEditorComponent } from '../../shared/promo/promo-schedule-editor.component';
 
 const MAX_IMAGE_BYTES = 600 * 1024;
 
@@ -24,7 +32,7 @@ type CatalogServiceRow = MockBusinessService | ApiTenantServiceDto;
 
 @Component({
   selector: 'app-tenant-catalog',
-  imports: [RouterLink, ReactiveFormsModule, FormatCopPipe],
+  imports: [RouterLink, ReactiveFormsModule, FormatCopPipe, PromoScheduleEditorComponent],
   templateUrl: './tenant-catalog.component.html',
   styleUrl: './tenant-catalog.component.scss',
 })
@@ -45,8 +53,8 @@ export class TenantCatalogComponent {
     name: ['', Validators.required],
     description: [''],
     price: [0, [Validators.required, Validators.min(0)]],
-    promoPrice: [null as number | null],
-    promoLabel: [''],
+    durationMinutes: [30, [Validators.required, Validators.min(5), Validators.max(480)]],
+    promo: createPromoScheduleFormGroup(this.fb),
   });
 
   readonly isCatalogLiveApi = computed(
@@ -241,12 +249,13 @@ export class TenantCatalogComponent {
       return;
     }
     const v = this.servicesForm.getRawValue();
+    const promo = promoPayloadFromFormValue(v.promo as PromoScheduleFormValue);
     const payload = {
       name: v.name.trim(),
       description: v.description?.trim() || null,
       price: Number(v.price),
-      promoPrice: v.promoPrice == null ? null : Number(v.promoPrice),
-      promoLabel: v.promoLabel?.trim() || null,
+      durationMinutes: Number(v.durationMinutes) || 30,
+      ...promo,
     };
     const editing = this.editingServiceId();
 
@@ -312,8 +321,8 @@ export class TenantCatalogComponent {
       name: row.name,
       description: row.description ?? '',
       price: row.price,
-      promoPrice: row.promoPrice ?? null,
-      promoLabel: row.promoLabel ?? '',
+      durationMinutes: 'durationMinutes' in row ? (row.durationMinutes ?? 30) : 30,
+      promo: promoFormValueFromCatalog(row),
     });
     this.servicesMsg.set('');
   }
@@ -324,8 +333,8 @@ export class TenantCatalogComponent {
       name: '',
       description: '',
       price: 0,
-      promoPrice: null,
-      promoLabel: '',
+      durationMinutes: 30,
+      promo: defaultPromoScheduleFormValue(),
     });
   }
 

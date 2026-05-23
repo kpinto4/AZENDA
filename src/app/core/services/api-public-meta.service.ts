@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import type { CatalogPromoFields } from '../promo-schedule.util';
 
 export interface PublicTenantMetaDto {
   slug: string;
@@ -21,6 +22,8 @@ export interface PublicTenantMetaDto {
     whatsappPhoneE164?: string | null;
     whatsappDefaultMessage?: string | null;
     publicBookingHoursJson?: string | null;
+    reviewsUrl?: string | null;
+    posPaymentMethodsJson?: string;
     catalogLayout: 'horizontal' | 'grid';
     primaryColor: string;
     accentColor: string;
@@ -42,22 +45,20 @@ export interface PublicCatalogDto {
     name: string;
     description: string | null;
     price: number;
-    promoPrice: number | null;
     sku: string;
     stock: number;
     catalogOrder: number;
     imageUrl: string | null;
-  }>;
+  } & CatalogPromoFields>;
   services: Array<{
     id: string;
     tenantId: string;
     name: string;
     description: string | null;
     price: number;
-    promoPrice: number | null;
-    promoLabel: string | null;
+    durationMinutes: number;
     catalogOrder: number;
-  }>;
+  } & CatalogPromoFields>;
   employees: Array<{
     id: string;
     name: string;
@@ -68,6 +69,7 @@ export interface PublicCatalogDto {
 
 export interface PublicAvailabilityDto {
   date: string;
+  durationMinutes?: number;
   slotsByEmployee: Record<string, string[]>;
   allSlots: string[];
   employees: Array<{
@@ -93,9 +95,15 @@ export class ApiPublicMetaService {
     );
   }
 
-  getAvailability(slug: string, date: string): Observable<PublicAvailabilityDto> {
-    return this.http.get<PublicAvailabilityDto>(
-      `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/availability?date=${encodeURIComponent(date)}`,
-    );
+  getAvailability(
+    slug: string,
+    date: string,
+    durationMinutes?: number,
+  ): Observable<PublicAvailabilityDto> {
+    let url = `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/availability?date=${encodeURIComponent(date)}`;
+    if (durationMinutes != null && durationMinutes > 0) {
+      url += `&durationMinutes=${encodeURIComponent(String(durationMinutes))}`;
+    }
+    return this.http.get<PublicAvailabilityDto>(url);
   }
 }

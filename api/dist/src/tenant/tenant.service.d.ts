@@ -1,5 +1,6 @@
 import { AuthUser } from '../auth/auth.types';
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
+import { TenantBrandingEntity } from '../infrastructure/sql-db/sql-db.types';
 import { CreateTenantEmployeeDto } from './dto/create-tenant-employee.dto';
 import { MoveCatalogItemDto } from './dto/move-catalog-item.dto';
 import { UpdateTenantBrandingDto } from './dto/update-tenant-branding.dto';
@@ -12,6 +13,7 @@ import { ApplyStockMovementDto } from './dto/apply-stock-movement.dto';
 export declare class TenantService {
     private readonly sqlDbService;
     constructor(sqlDbService: SqlDbService);
+    private promoPayloadFromDto;
     getTenantContext(currentUser: AuthUser): Promise<{
         tenant: null;
         message: string;
@@ -25,7 +27,7 @@ export declare class TenantService {
     listCatalog(currentUser: AuthUser): Promise<{
         products: import("../infrastructure/sql-db/sql-db.types").TenantProductEntity[];
         services: import("../infrastructure/sql-db/sql-db.types").TenantServiceEntity[];
-        branding: import("../infrastructure/sql-db/sql-db.types").TenantBrandingEntity;
+        branding: TenantBrandingEntity;
     }>;
     getBillingStatus(currentUser: AuthUser): Promise<{
         tenantId: string;
@@ -67,7 +69,7 @@ export declare class TenantService {
     moveService(currentUser: AuthUser, serviceId: string, dto: MoveCatalogItemDto): Promise<{
         ok: boolean;
     }>;
-    updateBranding(currentUser: AuthUser, dto: UpdateTenantBrandingDto): Promise<import("../infrastructure/sql-db/sql-db.types").TenantBrandingEntity>;
+    updateBranding(currentUser: AuthUser, dto: UpdateTenantBrandingDto): Promise<TenantBrandingEntity>;
     listEmployees(currentUser: AuthUser): Promise<{
         id: string;
         name: string;

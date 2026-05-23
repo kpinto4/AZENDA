@@ -106,6 +106,16 @@
       }
 
       <footer class="appt-sheet-foot">
+        @if (canCancel() && appointment(); as ap) {
+          <button
+            type="button"
+            class="az-btn appt-sheet-cancel"
+            [disabled]="restricted()"
+            (click)="cancelRequested.emit(ap.id)"
+          >
+            Cancelar cita
+          </button>
+        }
         <button type="button" class="az-btn az-btn-secondary appt-sheet-close" (click)="closed.emit()">Cerrar</button>
       </footer>
     </div>

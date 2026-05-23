@@ -38,18 +38,15 @@
           <label class="az-label" for="svc-price">Precio base (COP)</label>
           <input id="svc-price" class="az-input" type="number" min="0" step="0.01" formControlName="price" />
         </div>
+        <div>
+          <label class="az-label" for="svc-duration">Duración (minutos)</label>
+          <input id="svc-duration" class="az-input" type="number" min="5" max="480" step="5" formControlName="durationMinutes" />
+        </div>
         <div class="grow">
           <label class="az-label" for="svc-desc">Descripción corta (opcional)</label>
           <input id="svc-desc" class="az-input wide" formControlName="description" placeholder="Ej. Incluye lavado y peinado básico" />
         </div>
-        <div>
-          <label class="az-label" for="svc-promo-price">Precio promo en COP (opcional)</label>
-          <input id="svc-promo-price" class="az-input" type="number" min="0" step="0.01" formControlName="promoPrice" />
-        </div>
-        <div class="grow">
-          <label class="az-label" for="svc-promo-label">Promoción (opcional)</label>
-          <input id="svc-promo-label" class="az-input wide" formControlName="promoLabel" placeholder="Ej. Promo lunes a jueves" />
-        </div>
+        <app-promo-schedule-editor />
         <div class="actions">
           <button type="submit" class="az-btn az-btn-primary" [disabled]="!canEditCatalog()">
             {{ editingServiceId() ? 'Actualizar servicio' : 'Agregar servicio' }}
@@ -65,6 +62,7 @@
             <tr>
               <th>Servicio</th>
               <th>Descripción</th>
+              <th>Duración</th>
               <th>Precio base</th>
               <th>Precio promo</th>
               <th>Promoción</th>
@@ -76,6 +74,7 @@
               <tr>
                 <td>{{ s.name }}</td>
                 <td>{{ s.description || '—' }}</td>
+                <td>{{ ('durationMinutes' in s ? s.durationMinutes : 30) ?? 30 }} min</td>
                 <td>{{ s.price | formatCop }}</td>
                 <td>{{ s.promoPrice != null ? (s.promoPrice | formatCop) : '—' }}</td>
                 <td>{{ s.promoLabel || '—' }}</td>
@@ -86,7 +85,7 @@
               </tr>
             } @empty {
               <tr>
-                <td colspan="6">Aún no hay servicios cargados.</td>
+                <td colspan="7">Aún no hay servicios cargados.</td>
               </tr>
             }
           </tbody>

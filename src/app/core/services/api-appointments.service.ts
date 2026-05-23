@@ -112,6 +112,7 @@ export class ApiAppointmentsService {
       customer: string;
       service: string;
       when: string;
+      durationMinutes?: number;
       employeeId?: string;
       customerPhone?: string;
       whatsappReminderConsent?: boolean;
@@ -192,6 +193,19 @@ export class ApiAppointmentsService {
     return this.http
       .patch<ApiAppointmentDto>(
         `${environment.apiBaseUrl}/tenant/appointments/${encodeURIComponent(id)}/reminder-sent`,
+        {},
+      )
+      .pipe(
+        tap((updated) =>
+          this.rows.update((cur) => cur.map((a) => (a.id === id ? updated : a))),
+        ),
+      );
+  }
+
+  cancel(id: string): Observable<ApiAppointmentDto> {
+    return this.http
+      .patch<ApiAppointmentDto>(
+        `${environment.apiBaseUrl}/tenant/appointments/${encodeURIComponent(id)}/cancel`,
         {},
       )
       .pipe(

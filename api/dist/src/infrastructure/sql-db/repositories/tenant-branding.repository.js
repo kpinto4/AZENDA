@@ -14,20 +14,23 @@ const common_1 = require("@nestjs/common");
 const pg_client_service_1 = require("../pg-client.service");
 const tenant_branding_row_mapper_1 = require("../tenant-branding-row.mapper");
 const tenant_repository_1 = require("./tenant.repository");
+const default_pos_payment_methods_1 = require("../../../tenant/default-pos-payment-methods");
+const BRANDING_SELECT = `
+  SELECT tenant_id, display_name, logo_url, public_address, public_maps_url, cancellation_policy, reminder_notice,
+         whatsapp_phone_e164, whatsapp_default_message, public_booking_hours_json, reviews_url, pos_payment_methods_json,
+         catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
+         border_radius_px, use_gradient, gradient_from, gradient_to, gradient_angle_deg
+  FROM tenant_branding
+`;
 let TenantBrandingRepository = class TenantBrandingRepository {
     constructor(pg, tenants) {
         this.pg = pg;
         this.tenants = tenants;
     }
     async get(tenantId) {
-        const row = await this.pg.queryOne(`
-        SELECT tenant_id, display_name, logo_url, public_address, public_maps_url, cancellation_policy, reminder_notice,
-               whatsapp_phone_e164, whatsapp_default_message, public_booking_hours_json,
-               catalog_layout, primary_color, accent_color, bg_color, surface_color, text_color,
-               border_radius_px, use_gradient, gradient_from, gradient_to, gradient_angle_deg
-        FROM tenant_branding
-        WHERE tenant_id = ?
-      `, [tenantId]);
+        const row = await this.pg.queryOne(`${BRANDING_SELECT} WHERE tenant_id = ?`, [
+            tenantId,
+        ]);
         if (row) {
             return (0, tenant_branding_row_mapper_1.mapTenantBrandingRow)(row);
         }
@@ -76,6 +79,16 @@ let TenantBrandingRepository = class TenantBrandingRepository {
                     String(patch.publicBookingHoursJson).trim() === ''
                     ? null
                     : String(patch.publicBookingHoursJson).trim(),
+            reviewsUrl: strOrNull(patch.reviewsUrl, current.reviewsUrl),
+            posPaymentMethodsJson: patch.posPaymentMethodsJson === undefined
+                ? current.posPaymentMethodsJson
+                : (() => {
+                    const raw = String(patch.posPaymentMethodsJson ?? '').trim();
+                    if (!raw) {
+                        return (0, default_pos_payment_methods_1.defaultPosPaymentMethodsJson)();
+                    }
+                    return JSON.stringify((0, default_pos_payment_methods_1.parsePosPaymentMethodsJson)(raw));
+                })(),
             catalogLayout: patch.catalogLayout === 'grid' || patch.catalogLayout === 'horizontal'
                 ? patch.catalogLayout
                 : current.catalogLayout,
@@ -84,6 +97,7 @@ let TenantBrandingRepository = class TenantBrandingRepository {
         UPDATE tenant_branding
         SET display_name = ?, logo_url = ?, public_address = ?, public_maps_url = ?, cancellation_policy = ?, reminder_notice = ?,
             whatsapp_phone_e164 = ?, whatsapp_default_message = ?, public_booking_hours_json = ?,
+            reviews_url = ?, pos_payment_methods_json = ?,
             catalog_layout = ?, primary_color = ?, accent_color = ?, bg_color = ?, surface_color = ?, text_color = ?,
             border_radius_px = ?, use_gradient = ?, gradient_from = ?, gradient_to = ?, gradient_angle_deg = ?
         WHERE tenant_id = ?
@@ -97,6 +111,8 @@ let TenantBrandingRepository = class TenantBrandingRepository {
             next.whatsappPhoneE164,
             next.whatsappDefaultMessage,
             next.publicBookingHoursJson,
+            next.reviewsUrl,
+            next.posPaymentMethodsJson,
             next.catalogLayout,
             next.primaryColor,
             next.accentColor,

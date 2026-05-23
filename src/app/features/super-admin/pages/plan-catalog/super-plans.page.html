@@ -9,8 +9,8 @@
         <span class="super-ui-badge super-ui-badge--neutral">Facturación</span>
       </div>
       <p class="super-ui-lead">
-        Un mismo <strong>precio mensual y anual</strong> por plan comercial para todos los negocios. El ciclo (mensual/anual)
-        se asigna en <strong>Plan y facturación</strong> de cada tenant.
+        Referencia interna de costos y precios de venta. El ciclo (mensual/anual) se asigna en
+        <strong>Plan y facturación</strong> de cada tenant.
       </p>
     </div>
   </header>
@@ -21,37 +21,57 @@
   @if (okMsg()) {
     <div class="super-ui-alert super-ui-alert--success" role="status">{{ okMsg() }}</div>
   }
+  @if (copyMsg()) {
+    <div class="super-ui-alert super-ui-alert--success" role="status">{{ copyMsg() }}</div>
+  }
 
   @if (loading()) {
     <div class="super-ui-skeleton" aria-busy="true">
       <div class="super-ui-sk-line super-ui-sk-line--40"></div>
       <div class="super-ui-sk-line super-ui-sk-line--100"></div>
       <div class="super-ui-sk-line super-ui-sk-line--80"></div>
-      <div class="super-ui-sk-grid">
-        <div class="super-ui-sk-card"></div>
-        <div class="super-ui-sk-card"></div>
-      </div>
     </div>
   } @else if (rows.length) {
     <form [formGroup]="form" (ngSubmit)="save()" class="super-ui-surface super-ui-plans-form">
-      <h3 class="super-ui-surface-title">Planes comerciales</h3>
-      <table class="az-table plans-table">
+      <h3 class="super-ui-surface-title">Valores de venta recomendados</h3>
+      <table class="az-table plans-table sale-ref-table">
         <thead>
           <tr>
             <th>Plan</th>
-            <th>Precio mensual COP (lista)</th>
-            <th>Precio anual COP (lista)</th>
+            <th>Costo operación aprox</th>
+            <th>
+              <span class="th-copy-wrap">
+                Valor venta
+                <button
+                  type="button"
+                  class="copy-col-btn"
+                  title="Copiar valores de venta"
+                  aria-label="Copiar valores de venta"
+                  (click)="copySaleValues()"
+                >
+                  ⧉
+                </button>
+              </span>
+            </th>
+            <th>Precio anual COP</th>
           </tr>
         </thead>
         <tbody formArrayName="rows">
           @for (row of rows.controls; track $index; let i = $index) {
-            <tr [formGroupName]="i">
+            <tr [formGroupName]="i" [class.is-trial]="row.value.planKey === 'Trial'">
               <td><strong>{{ row.value.planKey }}</strong></td>
               <td>
-                <input class="az-input" type="number" min="0" step="0.01" formControlName="priceMonthly" />
+                @if (row.value.planKey === 'Trial') {
+                  <span class="muted">—</span>
+                } @else {
+                  <input class="az-input compact-num" type="number" min="0" step="1" formControlName="operatingCostApprox" />
+                }
               </td>
               <td>
-                <input class="az-input" type="number" min="0" step="0.01" formControlName="priceYearly" />
+                <input class="az-input compact-num" type="number" min="0" step="1" formControlName="priceMonthly" />
+              </td>
+              <td>
+                <input class="az-input compact-num" type="number" min="0" step="1" formControlName="priceYearly" />
               </td>
             </tr>
           }

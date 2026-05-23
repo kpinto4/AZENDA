@@ -1,0 +1,92 @@
+.promo-editor {
+  grid-column: 1 / -1;
+  margin-top: 0.25rem;
+}
+
+.promo-editor-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 700;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.promo-editor-toggle input {
+  width: 1rem;
+  height: 1rem;
+}
+
+.promo-editor-panel {
+  margin-top: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.promo-editor-fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.promo-editor-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  margin-top: 0.35rem;
+}
+
+.promo-editor-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.promo-editor-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.promo-day-chip {
+  min-width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.promo-day-chip--on {
+  border-color: #2563eb;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.promo-editor-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.promo-editor-dates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+}
+
+.promo-editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}

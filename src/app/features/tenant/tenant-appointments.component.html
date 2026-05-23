@@ -17,16 +17,55 @@
   <div class="az-card az-section op-note">
     <h3>Gestión operativa</h3>
     <p class="muted small">
-      Las citas se crean desde el enlace público de reservas. Aquí puedes consultar la agenda y actualizar asistencia:
-      <strong>asistió → confirmada</strong>, <strong>no asistió → cancelada</strong>,
-      <strong>pendiente → pendiente</strong>.
+      El calendario muestra solo citas <strong>futuras</strong>. Cuando pasa la hora, la cita pasa a
+      <strong>Pendientes de cerrar</strong> para marcar asistencia. Puedes <strong>cancelar</strong> una cita futura
+      desde su detalle (libera el horario al instante).
     </p>
   </div>
+
+  @if (pendingClosureAppointments().length) {
+    <div class="az-card az-section closure-card">
+      <h3>Pendientes de cerrar</h3>
+      <p class="muted small">
+        Citas cuya hora ya pasó. Marca si el cliente <strong>asistió</strong> o <strong>no asistió</strong>.
+      </p>
+      <ul class="closure-list">
+        @for (a of pendingClosureAppointments(); track a.id) {
+          <li class="closure-row">
+            <div class="closure-meta">
+              <strong>{{ a.customer }}</strong>
+              <span class="muted small">{{ a.when }}</span>
+              <span class="muted small">{{ displayServiceLabel(a.service) }}</span>
+            </div>
+            <div class="closure-actions">
+              <div class="attendance-chips" role="group" [attr.aria-label]="'Asistencia de ' + a.customer">
+                @for (opt of attendanceQuickOptions; track opt.value) {
+                  @if (opt.value !== 'PENDIENTE') {
+                    <button
+                      type="button"
+                      class="att-chip"
+                      [disabled]="session.isTenantRestricted()"
+                      (click)="setAttendance(a.id, opt.value)"
+                    >
+                      {{ opt.label }}
+                    </button>
+                  }
+                }
+              </div>
+              <button type="button" class="az-btn az-btn-ghost closure-detail-btn" (click)="openPendingClosure(a)">
+                Ver detalle
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+    </div>
+  }
 
   <div class="az-card az-section agenda-card">
     <app-agenda-calendar
       title="Agenda"
-      [appointments]="tenantAppointments()"
+      [appointments]="calendarAppointments()"
       [employeeColorMap]="employeeColorMap()"
       [employeeResolver]="employeeResolver"
       [showCreateButton]="showManualCreateCard()"
@@ -47,9 +86,11 @@
     [restricted]="session.isTenantRestricted()"
     [waLink]="sheetWaLink()"
     [attendanceOptions]="attendanceQuickOptions"
+    [canCancel]="canCancelAppointment(sheetAppointment())"
     (closed)="closeSheet()"
     (attendanceChange)="setAttendance($event.id, $event.value)"
     (markReminderDone)="markManualReminderDone($event)"
+    (cancelRequested)="cancelAppointment($event)"
     (eventSelected)="onSheetEventSelected($event)"
   />
 

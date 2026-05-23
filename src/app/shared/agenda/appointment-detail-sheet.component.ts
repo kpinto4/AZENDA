@@ -21,10 +21,12 @@ export class AppointmentDetailSheetComponent {
   readonly restricted = input(false);
   readonly waLink = input<string | null>(null);
   readonly attendanceOptions = input<{ value: MockAppointmentAttendance; label: string }[]>([]);
+  readonly canCancel = input(false);
 
   readonly closed = output<void>();
   readonly attendanceChange = output<{ id: string; value: MockAppointmentAttendance }>();
   readonly markReminderDone = output<string>();
+  readonly cancelRequested = output<string>();
   readonly eventSelected = output<AgendaCalendarEvent>();
 
   readonly serviceLabel = computed(() => {

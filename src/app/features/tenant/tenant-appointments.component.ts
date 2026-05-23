@@ -17,7 +17,11 @@ import type { AgendaCalendarEvent } from '../../shared/agenda/agenda-calendar.ty
 import {
   DOW_LABELS,
   MESES_CORT,
+  buildWaMeLink,
+  buildWaReminderMessage,
   cleanServiceLabel,
+  isCalendarVisibleAppointment,
+  isPendingAttendanceClosure,
   parseWhenLocal,
   readEmployeeIdFromService,
 } from '../../shared/agenda/agenda-calendar.utils';
@@ -101,10 +105,21 @@ export class TenantAppointmentsComponent {
     return this.data.appointmentsForBookingSlug(this.session.publicBookingSlug());
   });
 
+  readonly calendarAppointments = computed(() =>
+    this.tenantAppointments().filter((a) => isCalendarVisibleAppointment(a)),
+  );
+
+  readonly pendingClosureAppointments = computed(() =>
+    this
+      .tenantAppointments()
+      .filter((a) => isPendingAttendanceClosure(a))
+      .sort((a, b) => b.when.localeCompare(a.when)),
+  );
+
   readonly employeeColorMap = computed(() => {
     const map = new Map<string, string>();
     const names = new Set<string>();
-    for (const a of this.tenantAppointments()) {
+    for (const a of this.calendarAppointments()) {
       names.add(this.employeeForAppointment(a));
     }
     [...names].forEach((name, idx) => map.set(name, EMPLOYEE_COLORS[idx % EMPLOYEE_COLORS.length]));
@@ -125,8 +140,16 @@ export class TenantAppointmentsComponent {
     const branding = tid ? this.data.brandingForTenant(tid) : null;
     const biz = (branding?.displayName ?? '').trim() || 'Tu negocio';
     const phoneDigits = a.customerPhoneE164.replace(/\D/g, '');
-    const text = `Hola, te recordamos tu cita el ${a.when} en ${biz}. Ref: ${a.id}`;
-    return `https://wa.me/${phoneDigits}?text=${encodeURIComponent(text)}`;
+    return buildWaMeLink(
+      phoneDigits,
+      buildWaReminderMessage({
+        customerName: a.customer,
+        service: a.service,
+        when: a.when,
+        businessName: biz,
+        employeeName: this.employeeForAppointment(a),
+      }),
+    );
   });
 
   /** Citas hoy o mañana con móvil y sin marcar recordatorio manual enviado. */
@@ -198,8 +221,16 @@ export class TenantAppointmentsComponent {
     businessDisplay: string,
     phoneDigits: string,
   ): string {
-    const text = `Hola, te recordamos tu cita el ${a.when} en ${businessDisplay}. Ref: ${a.id}`;
-    return `https://wa.me/${phoneDigits}?text=${encodeURIComponent(text)}`;
+    return buildWaMeLink(
+      phoneDigits,
+      buildWaReminderMessage({
+        customerName: a.customer,
+        service: a.service,
+        when: a.when,
+        businessName: businessDisplay,
+        employeeName: this.employeeForAppointment(a),
+      }),
+    );
   }
 
   markManualReminderDone(id: string): void {
@@ -255,10 +286,14 @@ export class TenantAppointmentsComponent {
     const attendance = raw as MockAppointmentAttendance;
     if (this.apiAppointments.useRemote()) {
       this.apiAppointments.patchAttendance(id, attendance).subscribe({
-        next: () => {
+        next: (updated) => {
           const current = this.sheetAppointment();
           if (current?.id === id) {
-            this.sheetAppointment.set({ ...current, attendance });
+            this.sheetAppointment.set({
+              ...current,
+              attendance: updated.attendance,
+              status: updated.status,
+            });
           }
         },
         error: () => {},
@@ -270,6 +305,44 @@ export class TenantAppointmentsComponent {
         this.sheetAppointment.set({ ...current, attendance });
       }
     }
+  }
+
+  cancelAppointment(id: string): void {
+    if (this.session.isTenantRestricted()) {
+      this.alerts.warning(this.session.tenantRestrictionMessage() ?? 'Operacion no permitida.');
+      return;
+    }
+    const appt = this.tenantAppointments().find((a) => a.id === id);
+    if (!appt) {
+      return;
+    }
+    if (!isCalendarVisibleAppointment(appt)) {
+      this.alerts.info('Solo puedes cancelar citas futuras que sigan activas.');
+      return;
+    }
+    if (!this.apiAppointments.useRemote()) {
+      this.data.setAppointmentStatus(id, 'cancelada');
+      this.alerts.success('Cita cancelada (modo demo).');
+      this.closeSheet();
+      return;
+    }
+    this.apiAppointments.cancel(id).subscribe({
+      next: () => {
+        this.alerts.success('Cita cancelada. El horario quedó libre.');
+        this.closeSheet();
+      },
+      error: () => this.alerts.warning('No se pudo cancelar la cita.'),
+    });
+  }
+
+  openPendingClosure(appt: MockAppointment): void {
+    this.sheetMode.set('detail');
+    this.sheetAppointment.set(appt);
+    this.sheetOpen.set(true);
+  }
+
+  canCancelAppointment(appt: MockAppointment | null): boolean {
+    return !!appt && isCalendarVisibleAppointment(appt);
   }
 
   onAppointmentSelected(ev: AgendaCalendarEvent): void {

@@ -16,6 +16,7 @@ export declare class AppointmentRepository {
         attendance?: AppointmentAttendance;
         customerPhoneE164?: string | null;
         waReminderConsent?: boolean;
+        durationMinutes?: number | null;
     }): Promise<AppointmentEntity>;
     markReminderSentForTenant(appointmentId: string, tenantId: string): Promise<AppointmentEntity | undefined>;
     findByTenantAndWhen(tenantId: string, when: string): Promise<AppointmentEntity | undefined>;

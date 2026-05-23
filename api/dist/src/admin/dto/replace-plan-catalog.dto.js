@@ -30,6 +30,11 @@ __decorate([
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], PlanCatalogRowDto.prototype, "priceYearly", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], PlanCatalogRowDto.prototype, "operatingCostApprox", void 0);
 class ReplacePlanCatalogDto {
 }
 exports.ReplacePlanCatalogDto = ReplacePlanCatalogDto;

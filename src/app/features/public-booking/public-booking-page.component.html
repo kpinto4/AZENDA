@@ -14,13 +14,15 @@
 
   <section class="booksy-hero az-fluid-shell">
     <div class="hero-cover" [ngStyle]="heroCoverStyle()"></div>
-    <div class="hero-gallery-strip" aria-label="Imágenes del negocio">
-      <div class="hero-gallery-inner">
-        @for (src of heroThumbUrls(); track src) {
-          <img class="hero-gallery-thumb" [src]="src" alt="" loading="lazy" />
-        }
+    @if (heroThumbUrls().length > 1) {
+      <div class="hero-gallery-strip" aria-label="Imágenes del negocio">
+        <div class="hero-gallery-inner">
+          @for (src of heroThumbUrls(); track src) {
+            <img class="hero-gallery-thumb" [src]="src" alt="" loading="lazy" />
+          }
+        </div>
       </div>
-    </div>
+    }
     <div class="hero-body">
       <div class="hero-ident">
         @if (branding().logoUrl; as logo) {
@@ -32,28 +34,27 @@
           <p class="hero-kicker">Reserva en línea</p>
           <h1 class="hero-title">{{ branding().displayName || slug() }}</h1>
           <p class="hero-sub">
-            Elige horario, consulta tus citas o confirma asistencia y, si lo permite el negocio, solicita productos sin fricción.
+            Reserva en línea, consulta tus citas o solicita productos del catálogo.
           </p>
+          <a
+            class="az-btn az-btn-secondary hero-reviews-btn hero-reviews-btn--inline"
+            [href]="reviewsActionHref() ?? '#'"
+            [attr.aria-disabled]="!reviewsActionHref()"
+            target="_blank"
+            rel="noopener noreferrer"
+            (click)="onReviewsClick($event)"
+          >
+            Dejar una reseña
+          </a>
         </div>
       </div>
-      <div class="hero-trust" role="presentation">
-        <div class="hero-stars-row" aria-label="Valoraciones de ejemplo">
-          <span class="hero-stars" aria-hidden="true">
-            @for (_ of [1, 2, 3, 4, 5]; track _) {
-              <span class="star on"></span>
-            }
-          </span>
-          <span class="hero-rating-score">4,9</span>
-          <span class="hero-rating-muted">excelente</span>
-        </div>
-        <div class="hero-trust-chips">
-          <span class="metric-chip subtle">Sin registro para reservar</span>
-          <span class="metric-chip subtle">Confirmación instantánea</span>
-          <span class="metric-chip subtle">Catálogo bajo solicitud</span>
-        </div>
-        <p class="hero-demo-note">
-          Las estrellas y reseñas de ejemplo son solo ilustrativas (no valoraciones reales del negocio).
-        </p>
+      <div class="hero-trust">
+        @if (branding().publicAddress; as addr) {
+          <p class="hero-address">{{ addr }}</p>
+        }
+        @if (branding().publicMapsUrl; as maps) {
+          <a class="hero-map-link" [href]="maps" target="_blank" rel="noopener noreferrer">Ver ubicación</a>
+        }
       </div>
     </div>
   </section>
@@ -89,9 +90,7 @@
     <div class="az-card panel tab-panel catalog-panel">
       <h1>Catálogo del negocio</h1>
       <p class="muted">
-        Elige lo que te interesa y pulsa <strong>Solicitar</strong>. El negocio recibirá tu petición por este canal y os
-        podréis coordinar fuera de Azenda para pago u entrega. No hace falta describir aquí datos de cobro ni “registrar
-        compra”.
+        Selecciona un producto y pulsa <strong>Solicitar</strong>. El negocio te contactará para coordinar entrega y pago.
       </p>
       @if (environment.useLiveAuth && publicMeta() && !publicMeta()!.active) {
         <p class="muted field-error">Este negocio no está activo; el catálogo no está disponible.</p>
@@ -306,9 +305,9 @@
                     } @else if (environment.useLiveAuth && lookupRescheduleAvailLoading()) {
                       <p class="muted small">Cargando horarios…</p>
                     } @else if (environment.useLiveAuth && !lookupRescheduleAvailability()) {
-                      <p class="muted small field-error">No se pudieron cargar los huecos. Prueba otra fecha.</p>
+                      <p class="muted small field-error">No se pudieron cargar los horarios. Elige otra fecha.</p>
                     } @else if (lookupRescheduleSlotOptions().length === 0) {
-                      <p class="muted small field-error">No hay huecos para esa fecha con tu profesional. Prueba otro día.</p>
+                      <p class="muted small field-error">No hay huecos para esa fecha. Elige otro día.</p>
                     } @else {
                       <div class="slots att-reschedule-slots">
                         @for (t of lookupRescheduleSlotOptions(); track t) {
@@ -356,7 +355,7 @@
       @if (bookedWithLiveApi()) {
         <p class="success-lead">Reserva guardada. El negocio la verá en su panel interno; tú no necesitas iniciar sesión.</p>
       } @else {
-        <p class="success-lead">Reserva de demostración guardada solo en el navegador (modo sin API).</p>
+        <p class="success-lead">Tu reserva quedó registrada. Guarda la referencia que aparece abajo.</p>
       }
 
       @if (businessWhatsAfterBookingHref(); as waBus) {
@@ -441,8 +440,12 @@
       @if (step() === 1) {
         <app-public-booking-service-step
           [serviceRows]="serviceRows()"
-          [selectedService]="selectedService()"
-          (pickService)="pickService($event)"
+          [selectedServices]="selectedServices()"
+          [totalDurationMinutes]="selectedServiceDurationMinutes() ?? 0"
+          [totalPriceLabel]="selectedServicePriceLabel()"
+          (pickService)="addServiceToCart($event)"
+          (removeService)="removeServiceFromCart($event)"
+          (continueToSchedule)="goToScheduleStep()"
         />
       }
 
@@ -456,6 +459,10 @@
           [selectedEmployeeId]="selectedEmployeeId()"
           [selectedPeriod]="selectedPeriod()"
           [availableSlotsForSelection]="availableSlotsForSelection()"
+          [availabilityLoading]="publicAvailabilityLoading()"
+          [serviceDurationMinutes]="selectedServiceDurationMinutes()"
+          [cartRows]="cartServiceRows()"
+          [totalPriceLabel]="selectedServicePriceLabel()"
           [selectedSlot]="selectedSlot()"
           [bookingError]="bookingError()"
           [bookingSubmitting]="bookingSubmitting()"
@@ -464,6 +471,8 @@
           (pickEmployee)="pickEmployee($event)"
           (setPeriod)="setPeriod($event)"
           (pickSlot)="pickSlot($event)"
+          (addAnotherService)="goToAddAnotherService()"
+          (removeService)="removeServiceFromCart($event)"
           (back)="back()"
           (goToSummary)="goToSummaryStep()"
           (submitReschedule)="submitRescheduleFromStep2()"
@@ -474,14 +483,16 @@
         <app-public-booking-confirm-step
           [confirmForm]="confirmForm"
           [bookingError]="bookingError()"
-          [selectedService]="selectedService()"
+          [selectedServiceLines]="selectedServiceSummaryLines()"
           [selectedDate]="selectedDate()"
           [selectedSlot]="selectedSlot()"
           [selectedEmployeeLabel]="selectedEmployeeLabel()"
           [bookingClientTexts]="bookingClientTexts()"
           [selectedServicePriceLabel]="selectedServicePriceLabel()"
+          [totalDurationMinutes]="selectedServiceDurationMinutes() ?? 0"
           [bookingSubmitting]="bookingSubmitting()"
           [selectedEmployeeId]="selectedEmployeeId()"
+          [hasServices]="selectedServices().length > 0"
           (back)="back()"
           (submitConfirm)="confirm()"
         />
@@ -490,32 +501,21 @@
   }
     </div>
     <aside class="stage-side">
-      <div class="az-card side-card side-card--tips">
-        <h3>Tu reserva</h3>
-        <p class="muted side-tips-intro">
-          Aquí no mostramos valoraciones falsas: la confianza la da el propio negocio (nombre, datos que configure y tu
-          experiencia). Si tienes dudas, contacta directamente antes de reservar.
-        </p>
-        <ul class="side-tip-list">
-          <li>Lee la sección «Antes de confirmar» en el último paso: cancelación y avisos.</li>
-          <li>Guarda la referencia que verás tras reservar; sirve ante el negocio y para buscar tus citas en «Mis citas».</li>
-        </ul>
-      </div>
       <div class="az-card side-card">
-        <h3>Cómo funciona</h3>
+        <h3>Antes de reservar</h3>
         <ol class="side-steps">
-          <li><strong>Reservar:</strong> servicio, fecha y franja disponible.</li>
-          <li><strong>Referencia:</strong> guarda el código que verás al confirmar.</li>
-          <li><strong>Mis citas:</strong> cambia fecha u hora con antelación (90 min); la asistencia la marca el negocio.</li>
+          <li>Elige servicio, fecha y hora disponible.</li>
+          <li>Guarda la referencia al confirmar.</li>
+          <li>En «Mis citas» puedes reprogramar con 90 min de antelación.</li>
           @if (catalogoVisible()) {
-            <li><strong>Tienda:</strong> solicita productos; el negocio te responde fuera de Azenda.</li>
+            <li>Desde «Tienda» puedes solicitar productos al negocio.</li>
           }
         </ol>
-      </div>
-      <div class="az-card side-card side-card--soft">
-        <h3>¿Necesitas el inicio?</h3>
-        <p class="muted">Vuelve a la página principal de Azenda cuando quieras.</p>
-        <a class="az-btn az-btn-secondary side-cta" routerLink="/">Ir al inicio</a>
+        @if (reviewsActionHref(); as reviews) {
+          <a class="az-btn az-btn-secondary side-cta" [href]="reviews" target="_blank" rel="noopener noreferrer">
+            Dejar una reseña
+          </a>
+        }
       </div>
     </aside>
   </section>

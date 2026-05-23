@@ -1,0 +1,82 @@
+<section class="promo-editor" [formGroup]="promoForm">
+  <label class="promo-editor-toggle">
+    <input type="checkbox" formControlName="promoEnabled" />
+    <span>Promoción activa</span>
+  </label>
+
+  @if (enabled) {
+    <div class="promo-editor-panel">
+      <div class="promo-editor-field">
+        <label class="az-label" for="promo-price-input">Precio promo (COP)</label>
+        <input
+          id="promo-price-input"
+          class="az-input"
+          type="number"
+          min="0"
+          step="1"
+          formControlName="promoPrice"
+        />
+      </div>
+
+      <fieldset class="promo-editor-fieldset">
+        <legend class="az-label">¿Cuándo aplica?</legend>
+        <div class="promo-editor-mode">
+          <label class="promo-editor-radio">
+            <input type="radio" formControlName="promoScheduleType" value="always" />
+            Siempre
+          </label>
+          <label class="promo-editor-radio">
+            <input type="radio" formControlName="promoScheduleType" value="weekdays" />
+            Días de la semana
+          </label>
+          <label class="promo-editor-radio">
+            <input type="radio" formControlName="promoScheduleType" value="date_range" />
+            Por fechas
+          </label>
+        </div>
+      </fieldset>
+
+      @if (scheduleType === 'weekdays') {
+        <div class="promo-editor-field">
+          <span class="az-label">Días</span>
+          <div class="promo-editor-days">
+            @for (day of weekdayOptions; track day.value) {
+              <button
+                type="button"
+                class="promo-day-chip"
+                [class.promo-day-chip--on]="isDaySelected(day.value)"
+                (click)="onToggleDay(day.value)"
+              >
+                {{ day.label }}
+              </button>
+            }
+          </div>
+          <div class="promo-editor-presets">
+            <button type="button" class="az-btn az-btn-ghost small" (click)="applyPreset('weekdays')">
+              Lun–Vie
+            </button>
+            <button type="button" class="az-btn az-btn-ghost small" (click)="applyPreset('weekend')">
+              Fin de semana
+            </button>
+            <button type="button" class="az-btn az-btn-ghost small" (click)="applyPreset('all')">
+              Todos
+            </button>
+          </div>
+        </div>
+      }
+
+      @if (scheduleType === 'date_range') {
+        <div class="promo-editor-dates">
+          <div class="promo-editor-field">
+            <label class="az-label" for="promo-start-date">Desde</label>
+            <input id="promo-start-date" class="az-input" type="date" formControlName="promoStartDate" />
+          </div>
+          <div class="promo-editor-field">
+            <label class="az-label" for="promo-end-date">Hasta</label>
+            <input id="promo-end-date" class="az-input" type="date" formControlName="promoEndDate" />
+          </div>
+        </div>
+      }
+    </div>
+  }
+</section>

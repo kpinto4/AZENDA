@@ -26,6 +26,7 @@ export class AdminPlanCatalogController {
         planKey: e.planKey,
         priceMonthly: e.priceMonthly,
         priceYearly: e.priceYearly,
+        operatingCostApprox: e.operatingCostApprox ?? 0,
       })),
     );
   }

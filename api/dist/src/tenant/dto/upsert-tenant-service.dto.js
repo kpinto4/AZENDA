@@ -12,7 +12,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UpsertTenantServiceDto = void 0;
 const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
-class UpsertTenantServiceDto {
+const service_duration_util_1 = require("../../common/service-duration.util");
+const catalog_promo_fields_dto_1 = require("./catalog-promo-fields.dto");
+class UpsertTenantServiceDto extends catalog_promo_fields_dto_1.CatalogPromoFieldsDto {
 }
 exports.UpsertTenantServiceDto = UpsertTenantServiceDto;
 __decorate([
@@ -36,13 +38,8 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsNumber)(),
-    (0, class_validator_1.Min)(0),
-    __metadata("design:type", Object)
-], UpsertTenantServiceDto.prototype, "promoPrice", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(120),
-    __metadata("design:type", Object)
-], UpsertTenantServiceDto.prototype, "promoLabel", void 0);
+    (0, class_validator_1.Min)(service_duration_util_1.MIN_SERVICE_DURATION_MINUTES),
+    (0, class_validator_1.Max)(service_duration_util_1.MAX_SERVICE_DURATION_MINUTES),
+    __metadata("design:type", Number)
+], UpsertTenantServiceDto.prototype, "durationMinutes", void 0);
 //# sourceMappingURL=upsert-tenant-service.dto.js.map

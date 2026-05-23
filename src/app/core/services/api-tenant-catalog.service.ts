@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import type { CatalogPromoFields } from '../promo-schedule.util';
 
 export interface ApiTenantBrandingDto {
   tenantId: string;
@@ -14,6 +15,8 @@ export interface ApiTenantBrandingDto {
   whatsappPhoneE164: string | null;
   whatsappDefaultMessage: string | null;
   publicBookingHoursJson: string | null;
+  reviewsUrl: string | null;
+  posPaymentMethodsJson: string;
   catalogLayout: 'horizontal' | 'grid';
   primaryColor: string;
   accentColor: string;
@@ -27,17 +30,25 @@ export interface ApiTenantBrandingDto {
   gradientAngleDeg: number;
 }
 
+export type CatalogPromoPayload = CatalogPromoFields;
+
 export interface ApiTenantProductDto {
   id: string;
   tenantId: string;
   name: string;
   description: string | null;
   price: number;
-  promoPrice: number | null;
   sku: string;
   stock: number;
   catalogOrder: number;
   imageUrl: string | null;
+  promoPrice: number | null;
+  promoEnabled: boolean;
+  promoScheduleType: CatalogPromoFields['promoScheduleType'];
+  promoDays: number[];
+  promoStartDate: string | null;
+  promoEndDate: string | null;
+  promoLabel: string | null;
 }
 
 export interface ApiTenantServiceDto {
@@ -46,9 +57,15 @@ export interface ApiTenantServiceDto {
   name: string;
   description: string | null;
   price: number;
-  promoPrice: number | null;
-  promoLabel: string | null;
+  durationMinutes: number;
   catalogOrder: number;
+  promoPrice: number | null;
+  promoEnabled: boolean;
+  promoScheduleType: CatalogPromoFields['promoScheduleType'];
+  promoDays: number[];
+  promoStartDate: string | null;
+  promoEndDate: string | null;
+  promoLabel: string | null;
 }
 
 export interface ApiTenantCatalogResponse {
@@ -79,11 +96,10 @@ export class ApiTenantCatalogService {
     name: string;
     description?: string | null;
     price: number;
-    promoPrice?: number | null;
     sku: string;
     stock: number;
     imageUrl?: string | null;
-  }): Observable<ApiTenantProductDto> {
+  } & CatalogPromoPayload): Observable<ApiTenantProductDto> {
     return this.http.post<ApiTenantProductDto>(`${environment.apiBaseUrl}/tenant/catalog/products`, body);
   }
 
@@ -93,11 +109,10 @@ export class ApiTenantCatalogService {
       name: string;
       description?: string | null;
       price: number;
-      promoPrice?: number | null;
       sku: string;
       stock: number;
       imageUrl?: string | null;
-    },
+    } & CatalogPromoPayload,
   ): Observable<ApiTenantProductDto> {
     return this.http.patch<ApiTenantProductDto>(
       `${environment.apiBaseUrl}/tenant/catalog/products/${encodeURIComponent(productId)}`,
@@ -122,9 +137,8 @@ export class ApiTenantCatalogService {
     name: string;
     description?: string | null;
     price: number;
-    promoPrice?: number | null;
-    promoLabel?: string | null;
-  }): Observable<ApiTenantServiceDto> {
+    durationMinutes?: number;
+  } & CatalogPromoPayload): Observable<ApiTenantServiceDto> {
     return this.http.post<ApiTenantServiceDto>(`${environment.apiBaseUrl}/tenant/catalog/services`, body);
   }
 
@@ -134,9 +148,8 @@ export class ApiTenantCatalogService {
       name: string;
       description?: string | null;
       price: number;
-      promoPrice?: number | null;
-      promoLabel?: string | null;
-    },
+      durationMinutes?: number;
+    } & CatalogPromoPayload,
   ): Observable<ApiTenantServiceDto> {
     return this.http.patch<ApiTenantServiceDto>(
       `${environment.apiBaseUrl}/tenant/catalog/services/${encodeURIComponent(serviceId)}`,

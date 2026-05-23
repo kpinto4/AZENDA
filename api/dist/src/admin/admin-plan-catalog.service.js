@@ -11,21 +11,30 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminPlanCatalogService = void 0;
 const common_1 = require("@nestjs/common");
+const plan_catalog_site_config_1 = require("../infrastructure/sql-db/plan-catalog-site-config");
+const platform_site_config_repository_1 = require("../infrastructure/sql-db/repositories/platform-site-config.repository");
 const tenant_repository_1 = require("../infrastructure/sql-db/repositories/tenant.repository");
 let AdminPlanCatalogService = class AdminPlanCatalogService {
-    constructor(tenants) {
+    constructor(tenants, platformSite) {
         this.tenants = tenants;
+        this.platformSite = platformSite;
     }
     list() {
         return this.tenants.listPlanCatalog();
     }
-    replace(entries) {
-        return this.tenants.replacePlanCatalog(entries);
+    async replace(entries) {
+        const updated = await this.tenants.replacePlanCatalog(entries);
+        const pricePatch = (0, plan_catalog_site_config_1.planCatalogPricePatch)(updated);
+        if (Object.keys(pricePatch).length > 0) {
+            await this.platformSite.patch(pricePatch);
+        }
+        return updated;
     }
 };
 exports.AdminPlanCatalogService = AdminPlanCatalogService;
 exports.AdminPlanCatalogService = AdminPlanCatalogService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [tenant_repository_1.TenantRepository])
+    __metadata("design:paramtypes", [tenant_repository_1.TenantRepository,
+        platform_site_config_repository_1.PlatformSiteConfigRepository])
 ], AdminPlanCatalogService);
 //# sourceMappingURL=admin-plan-catalog.service.js.map

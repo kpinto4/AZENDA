@@ -157,6 +157,33 @@ export function slotsForPublicBookingDate(
   });
 }
 
+/** Último minuto del día laboral (close) para validar duración de servicio. */
+export function latestClosingMinuteForDate(
+  weekly: WeeklyBusinessHours | null,
+  dateYmd: string,
+): number | null {
+  const effective =
+    weekly && Object.keys(weekly).length
+      ? weekly
+      : defaultWeeklyBusinessHours();
+  const day = dayCodeForYmd(dateYmd);
+  if (!day) {
+    return null;
+  }
+  const ranges = effective[day];
+  if (!ranges?.length) {
+    return null;
+  }
+  let maxClose: number | null = null;
+  for (const { close } of ranges) {
+    const cMin = timeToMinutes(close);
+    if (cMin != null && (maxClose == null || cMin > maxClose)) {
+      maxClose = cMin;
+    }
+  }
+  return maxClose;
+}
+
 function ymdFromDate(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');

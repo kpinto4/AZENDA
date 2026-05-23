@@ -34,8 +34,11 @@ let PublicController = class PublicController {
     getPublicCatalog(slug) {
         return this.booking.getPublicCatalog(slug);
     }
-    getPublicAvailability(slug, date) {
-        return this.booking.getPublicAvailability(slug, date);
+    getPublicAvailability(slug, date, durationMinutes) {
+        const parsed = durationMinutes != null && durationMinutes.trim() !== ''
+            ? Number(durationMinutes)
+            : undefined;
+        return this.booking.getPublicAvailability(slug, date, parsed);
     }
     createBooking(slug, dto) {
         return this.booking.createBooking(slug, dto);
@@ -78,8 +81,9 @@ __decorate([
     (0, common_1.Get)(':slug/availability'),
     __param(0, (0, common_1.Param)('slug')),
     __param(1, (0, common_1.Query)('date')),
+    __param(2, (0, common_1.Query)('durationMinutes')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", void 0)
 ], PublicController.prototype, "getPublicAvailability", null);
 __decorate([

@@ -41,6 +41,15 @@ export class TenantAppointmentsController {
     return this.appointments.createForUser(req.user, dto);
   }
 
+  @Patch(':appointmentId/cancel')
+  @HttpCode(HttpStatus.OK)
+  cancel(
+    @Req() req: AuthenticatedRequest,
+    @Param('appointmentId') appointmentId: string,
+  ) {
+    return this.appointments.cancelForUser(req.user, appointmentId);
+  }
+
   @Patch(':appointmentId/status')
   patchStatus(
     @Req() req: AuthenticatedRequest,

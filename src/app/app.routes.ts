@@ -1,11 +1,13 @@
 import { Routes } from '@angular/router';
 import { superAdminGuard, tenantAdminGuard, tenantGuard } from './core/guards/auth.guards';
+import { landingSiteConfigResolver } from './features/landing/landing-site-config.resolver';
 
 export const routes: Routes = [
   {
     path: '',
     loadComponent: () =>
       import('./features/landing/pages/landing/landing.page').then((m) => m.LandingPageComponent),
+    resolve: { siteConfig: landingSiteConfigResolver },
   },
   {
     path: 'auth/iniciar-sesion',

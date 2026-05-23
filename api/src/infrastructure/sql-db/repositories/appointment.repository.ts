@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { publicCustomerNameMatches } from '../../../common/customer-name-match.util';
-import { normalizePhoneToWaDigits } from '../../../common/phone-e164.util';
+import { normalizeServiceDurationMinutes } from '../../../common/service-duration.util';
+import { normalizeColombiaMobileDigits } from '../../../common/phone-co.util';
 import { PgClientService } from '../pg-client.service';
 import {
   AppointmentAttendance,
@@ -8,6 +9,11 @@ import {
   AppointmentStatus,
 } from '../sql-db.types';
 import { TenantRepository } from './tenant.repository';
+
+const APPT_SELECT = `
+        SELECT id, tenant_id, customer, service, when_at, status, attendance,
+               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at, duration_minutes
+`;
 
 @Injectable()
 export class AppointmentRepository {
@@ -35,6 +41,10 @@ export class AppointmentRepository {
       when: String(row.when_at),
       status: row.status as AppointmentStatus,
       attendance,
+      durationMinutes:
+        row.duration_minutes == null
+          ? null
+          : normalizeServiceDurationMinutes(row.duration_minutes),
       customerPhoneE164:
         phoneRaw == null || String(phoneRaw).trim() === ''
           ? null
@@ -49,9 +59,7 @@ export class AppointmentRepository {
 
   async listByTenantId(tenantId: string): Promise<AppointmentEntity[]> {
     const rows = await this.pg.queryRows(
-      `
-        SELECT id, tenant_id, customer, service, when_at, status, attendance,
-               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+      `${APPT_SELECT}
         FROM appointments
         WHERE tenant_id = ?
         ORDER BY when_at ASC
@@ -72,19 +80,24 @@ export class AppointmentRepository {
     attendance?: AppointmentAttendance;
     customerPhoneE164?: string | null;
     waReminderConsent?: boolean;
+    durationMinutes?: number | null;
   }): Promise<AppointmentEntity> {
     const id = `appt_${Date.now()}`;
     const status = data.status ?? 'pendiente';
     const attendance = data.attendance ?? 'PENDIENTE';
     const phone = data.customerPhoneE164?.trim() || null;
     const waConsent = Boolean(data.waReminderConsent);
+    const durationMinutes =
+      data.durationMinutes == null
+        ? null
+        : normalizeServiceDurationMinutes(data.durationMinutes);
     await this.pg.exec(
       `
         INSERT INTO appointments (
           id, tenant_id, customer, service, when_at, status, attendance,
-          customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+          customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at, duration_minutes
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
       `,
       [
         id,
@@ -96,6 +109,7 @@ export class AppointmentRepository {
         attendance,
         phone,
         waConsent,
+        durationMinutes,
       ],
     );
 
@@ -115,9 +129,7 @@ export class AppointmentRepository {
       [new Date().toISOString(), appointmentId, tenantId],
     );
     const row = await this.pg.queryOne(
-      `
-        SELECT id, tenant_id, customer, service, when_at, status, attendance,
-               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+      `${APPT_SELECT}
         FROM appointments
         WHERE id = ? AND tenant_id = ?
         LIMIT 1
@@ -134,9 +146,7 @@ export class AppointmentRepository {
     when: string,
   ): Promise<AppointmentEntity | undefined> {
     const row = await this.pg.queryOne(
-      `
-        SELECT id, tenant_id, customer, service, when_at, status, attendance,
-               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+      `${APPT_SELECT}
         FROM appointments
         WHERE tenant_id = ? AND when_at = ?
         LIMIT 1
@@ -152,9 +162,7 @@ export class AppointmentRepository {
     appointmentId: string,
   ): Promise<AppointmentEntity | undefined> {
     const row = await this.pg.queryOne(
-      `
-        SELECT id, tenant_id, customer, service, when_at, status, attendance,
-               customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+      `${APPT_SELECT}
         FROM appointments
         WHERE id = ?
       `,
@@ -258,10 +266,8 @@ export class AppointmentRepository {
     }
     const customerName = (customerNameRaw ?? '').trim();
     const ref = appointmentIdRaw?.trim() ?? '';
-    const defaultCc =
-      (process.env.PUBLIC_BOOKING_DEFAULT_COUNTRY_CODE ?? '34').trim() || '34';
     const phoneDigits = customerPhoneRaw?.trim()
-      ? normalizePhoneToWaDigits(customerPhoneRaw, defaultCc)
+      ? normalizeColombiaMobileDigits(customerPhoneRaw)
       : null;
 
     if (!ref && !phoneDigits) {
@@ -276,9 +282,7 @@ export class AppointmentRepository {
       }
     } else if (phoneDigits) {
       const rows = await this.pg.queryRows(
-        `
-          SELECT id, tenant_id, customer, service, when_at, status, attendance,
-                 customer_phone_e164, wa_reminder_consent, wa_reminder_sent_at
+        `${APPT_SELECT}
           FROM appointments
           WHERE tenant_id = ? AND customer_phone_e164 = ?
             AND status != 'cancelada'

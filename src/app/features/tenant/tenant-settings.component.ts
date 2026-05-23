@@ -16,6 +16,13 @@ import {
   parseWeeklyHoursJson,
   weeklyHoursToJson,
 } from '../../core/public-booking-hours';
+import {
+  DEFAULT_POS_PAYMENT_METHODS,
+  type PosPaymentMethod,
+  parsePosPaymentMethodsJson,
+  paymentMethodNeedsDetail,
+  serializePosPaymentMethods,
+} from '../../core/pos-payment-methods';
 
 interface ColorPreset {
   id: string;
@@ -51,6 +58,11 @@ export class TenantSettingsComponent {
   readonly billingStatus = signal<ApiTenantBillingStatusResponse | null>(null);
   readonly brandingImageHint = signal<string | null>(null);
   readonly logoPreview = signal<string | null>(null);
+  readonly paymentMethods = signal<PosPaymentMethod[]>(
+    DEFAULT_POS_PAYMENT_METHODS.map((m) => ({ ...m })),
+  );
+  readonly paymentMsg = signal('');
+  protected readonly paymentMethodNeedsDetail = paymentMethodNeedsDetail;
   readonly colorPresets: ColorPreset[] = [
     {
       id: 'azenda-default',
@@ -225,6 +237,7 @@ export class TenantSettingsComponent {
     gradientAngleDeg: 135,
     publicAddress: '',
     publicMapsUrl: '',
+    reviewsUrl: '',
     cancellationPolicy: '',
     reminderNotice: '',
   });
@@ -263,6 +276,7 @@ export class TenantSettingsComponent {
                   gradientAngleDeg: b.gradientAngleDeg,
                   publicAddress: b.publicAddress ?? '',
                   publicMapsUrl: b.publicMapsUrl ?? '',
+                  reviewsUrl: b.reviewsUrl ?? '',
                   cancellationPolicy: b.cancellationPolicy ?? '',
                   reminderNotice: b.reminderNotice ?? '',
                   waPhone: this.formatWaPhoneDisplay(b.whatsappPhoneE164),
@@ -270,6 +284,7 @@ export class TenantSettingsComponent {
                 },
                 { emitEvent: false },
               );
+              this.paymentMethods.set(parsePosPaymentMethodsJson(b.posPaymentMethodsJson));
               this.patchHoursFromBrandingJson(b.publicBookingHoursJson ?? null);
               this.logoPreview.set(b.logoUrl ?? null);
             });
@@ -302,6 +317,7 @@ export class TenantSettingsComponent {
             gradientAngleDeg: branding.gradientAngleDeg,
             publicAddress: branding.publicAddress ?? '',
             publicMapsUrl: branding.publicMapsUrl ?? '',
+            reviewsUrl: branding.reviewsUrl ?? '',
             cancellationPolicy: branding.cancellationPolicy ?? '',
             reminderNotice: branding.reminderNotice ?? '',
             waPhone: this.formatWaPhoneDisplay(branding.whatsappPhoneE164),
@@ -309,6 +325,7 @@ export class TenantSettingsComponent {
           },
           { emitEvent: false },
         );
+        this.paymentMethods.set(parsePosPaymentMethodsJson(branding.posPaymentMethodsJson));
         this.patchHoursFromBrandingJson(branding.publicBookingHoursJson ?? null);
         this.logoPreview.set(branding.logoUrl ?? null);
       });
@@ -342,7 +359,7 @@ export class TenantSettingsComponent {
       return;
     }
     if (file.size > 800 * 1024) {
-      this.brandingImageHint.set('Logo demasiado grande (máx. ~800 KB en demo).');
+      this.brandingImageHint.set('Logo demasiado grande (máx. ~800 KB).');
       input.value = '';
       return;
     }
@@ -381,8 +398,10 @@ export class TenantSettingsComponent {
       gradientAngleDeg: Number(v.gradientAngleDeg),
       publicAddress: v.publicAddress.trim(),
       publicMapsUrl: v.publicMapsUrl.trim(),
+      reviewsUrl: v.reviewsUrl.trim(),
       cancellationPolicy: v.cancellationPolicy.trim(),
       reminderNotice: v.reminderNotice.trim(),
+      posPaymentMethodsJson: serializePosPaymentMethods(this.paymentMethods()),
       ...this.buildScheduleWhatsappPatch(),
     };
     this.data.updateTenantName(tenantId, v.tenantName);
@@ -395,19 +414,52 @@ export class TenantSettingsComponent {
       this.apiCatalog.patchBranding(brandingPatch).subscribe({
         next: (b) => {
           this.data.applyBrandingFromApi(tenantId, b);
-          this.brandingMsg.set(
-            'Identidad y estilo guardados en API. Aplica al panel y al enlace de reservas.',
-          );
+          this.brandingMsg.set('Identidad y estilo guardados.');
         },
         error: () => {
-          this.brandingMsg.set(
-            'Se guardó solo localmente. No se pudo persistir branding en API.',
-          );
+          this.brandingMsg.set('No se pudo guardar. Inténtalo de nuevo.');
         },
       });
       return;
     }
-    this.brandingMsg.set('Identidad y estilo guardados. Aplica al panel y al enlace de reservas.');
+    this.brandingMsg.set('Identidad y estilo guardados.');
+  }
+
+  savePaymentMethods(): void {
+    const tenantId = this.session.tenantId();
+    if (!tenantId) {
+      return;
+    }
+    const payload = {
+      posPaymentMethodsJson: serializePosPaymentMethods(this.paymentMethods()),
+    };
+    this.data.updateTenantBranding(tenantId, payload);
+    if (environment.useLiveAuth && this.session.accessToken()) {
+      this.apiCatalog.patchBranding(payload).subscribe({
+        next: (b) => {
+          this.data.applyBrandingFromApi(tenantId, b);
+          this.paymentMethods.set(parsePosPaymentMethodsJson(b.posPaymentMethodsJson));
+          this.paymentMsg.set('Métodos de pago actualizados.');
+        },
+        error: () => {
+          this.paymentMsg.set('No se pudieron guardar los métodos de pago.');
+        },
+      });
+      return;
+    }
+    this.paymentMsg.set('Métodos de pago actualizados.');
+  }
+
+  togglePaymentMethod(id: string, enabled: boolean): void {
+    this.paymentMethods.update((list) =>
+      list.map((m) => (m.id === id ? { ...m, enabled } : m)),
+    );
+  }
+
+  updatePaymentMethodDetail(id: string, detail: string): void {
+    this.paymentMethods.update((list) =>
+      list.map((m) => (m.id === id ? { ...m, detail } : m)),
+    );
   }
 
   resetBrandingColors(): void {
@@ -486,12 +538,12 @@ export class TenantSettingsComponent {
           this.scheduleMsg.set('Horario de reservas y WhatsApp guardados.');
         },
         error: () => {
-          this.scheduleMsg.set('No se pudo guardar horario/WhatsApp en API.');
+          this.scheduleMsg.set('No se pudo guardar horario ni WhatsApp.');
         },
       });
       return;
     }
-    this.scheduleMsg.set('Horario de reservas y WhatsApp guardados (modo demo).');
+    this.scheduleMsg.set('Horario de reservas y WhatsApp guardados.');
   }
 
   private buildScheduleWhatsappPatch(): {

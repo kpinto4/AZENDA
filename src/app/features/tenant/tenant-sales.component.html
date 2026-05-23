@@ -98,7 +98,7 @@
     <div class="pos-section" [class.inactive]="!selectedProduct()">
       <p class="pos-section-label">Método de pago</p>
       <div class="pos-method-row" role="group" aria-label="Método de pago">
-        @for (m of methods; track m) {
+        @for (m of methods(); track m) {
           <button
             type="button"
             class="pos-method-btn"
@@ -110,6 +110,9 @@
           </button>
         }
       </div>
+      @if (selectedPaymentDetail()) {
+        <p class="pos-payment-detail muted small">{{ selectedPaymentDetail() }}</p>
+      }
     </div>
 
     <button

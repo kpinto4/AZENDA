@@ -1,4 +1,8 @@
 import { TenantBrandingEntity } from './sql-db.types';
+import {
+  defaultPosPaymentMethodsJson,
+  parsePosPaymentMethodsJson,
+} from '../../tenant/default-pos-payment-methods';
 
 export function mapTenantBrandingRow(
   row: Record<string, unknown>,
@@ -29,6 +33,17 @@ export function mapTenantBrandingRow(
       String(row.public_booking_hours_json).trim() === ''
         ? null
         : String(row.public_booking_hours_json),
+    reviewsUrl:
+      row.reviews_url == null || String(row.reviews_url).trim() === ''
+        ? null
+        : String(row.reviews_url).trim(),
+    posPaymentMethodsJson:
+      row.pos_payment_methods_json == null ||
+      String(row.pos_payment_methods_json).trim() === ''
+        ? defaultPosPaymentMethodsJson()
+        : JSON.stringify(
+            parsePosPaymentMethodsJson(String(row.pos_payment_methods_json)),
+          ),
     catalogLayout: row.catalog_layout === 'grid' ? 'grid' : 'horizontal',
     primaryColor: String(row.primary_color),
     accentColor: String(row.accent_color),

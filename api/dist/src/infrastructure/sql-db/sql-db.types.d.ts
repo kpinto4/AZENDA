@@ -4,6 +4,7 @@ export interface PlanCatalogEntry {
     planKey: string;
     priceMonthly: number;
     priceYearly: number;
+    operatingCostApprox: number;
 }
 export interface TenantBillingSnapshot {
     cycle: BillingCycle;
@@ -57,6 +58,7 @@ export interface AppointmentEntity {
     when: string;
     status: AppointmentStatus;
     attendance: AppointmentAttendance;
+    durationMinutes: number | null;
     customerPhoneE164: string | null;
     waReminderConsent: boolean;
     waReminderSentAt: string | null;
@@ -79,6 +81,8 @@ export interface TenantBrandingEntity {
     whatsappPhoneE164: string | null;
     whatsappDefaultMessage: string | null;
     publicBookingHoursJson: string | null;
+    reviewsUrl: string | null;
+    posPaymentMethodsJson: string;
     catalogLayout: 'horizontal' | 'grid';
     primaryColor: string;
     accentColor: string;
@@ -91,6 +95,8 @@ export interface TenantBrandingEntity {
     gradientTo: string;
     gradientAngleDeg: number;
 }
+import type { CatalogPromoFields, PromoScheduleType } from '../../common/promo-schedule.util';
+export type TenantCatalogPromoFields = CatalogPromoFields;
 export interface TenantProductEntity {
     id: string;
     tenantId: string;
@@ -98,6 +104,12 @@ export interface TenantProductEntity {
     description: string | null;
     price: number;
     promoPrice: number | null;
+    promoEnabled: boolean;
+    promoScheduleType: PromoScheduleType | null;
+    promoDays: number[];
+    promoStartDate: string | null;
+    promoEndDate: string | null;
+    promoLabel: string | null;
     sku: string;
     stock: number;
     catalogOrder: number;
@@ -110,7 +122,13 @@ export interface TenantServiceEntity {
     description: string | null;
     price: number;
     promoPrice: number | null;
+    promoEnabled: boolean;
+    promoScheduleType: PromoScheduleType | null;
+    promoDays: number[];
+    promoStartDate: string | null;
+    promoEndDate: string | null;
     promoLabel: string | null;
+    durationMinutes: number;
     catalogOrder: number;
 }
 export interface TenantSaleEntity {

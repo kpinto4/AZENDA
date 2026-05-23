@@ -6,8 +6,9 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { CatalogPromoFieldsDto } from './catalog-promo-fields.dto';
 
-export class UpsertTenantProductDto {
+export class UpsertTenantProductDto extends CatalogPromoFieldsDto {
   @IsString()
   @MaxLength(120)
   name!: string;
@@ -21,12 +22,6 @@ export class UpsertTenantProductDto {
   @IsNumber()
   @Min(0)
   price!: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  promoPrice?: number | null;
 
   @IsString()
   @MaxLength(80)

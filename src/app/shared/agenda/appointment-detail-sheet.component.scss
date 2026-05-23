@@ -250,8 +250,18 @@
 }
 
 .appt-sheet-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   padding-top: 0.5rem;
   border-top: 1px solid var(--az-border);
+}
+
+.appt-sheet-cancel {
+  width: 100%;
+  background: color-mix(in srgb, var(--az-danger, #dc2626) 12%, var(--az-surface));
+  border: 1px solid color-mix(in srgb, var(--az-danger, #dc2626) 35%, var(--az-border));
+  color: var(--az-danger, #dc2626);
 }
 
 .appt-sheet-close {

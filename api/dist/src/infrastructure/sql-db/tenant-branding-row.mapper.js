@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.mapTenantBrandingRow = mapTenantBrandingRow;
+const default_pos_payment_methods_1 = require("../../tenant/default-pos-payment-methods");
 function mapTenantBrandingRow(row) {
     return {
         tenantId: String(row.tenant_id),
@@ -21,6 +22,13 @@ function mapTenantBrandingRow(row) {
             String(row.public_booking_hours_json).trim() === ''
             ? null
             : String(row.public_booking_hours_json),
+        reviewsUrl: row.reviews_url == null || String(row.reviews_url).trim() === ''
+            ? null
+            : String(row.reviews_url).trim(),
+        posPaymentMethodsJson: row.pos_payment_methods_json == null ||
+            String(row.pos_payment_methods_json).trim() === ''
+            ? (0, default_pos_payment_methods_1.defaultPosPaymentMethodsJson)()
+            : JSON.stringify((0, default_pos_payment_methods_1.parsePosPaymentMethodsJson)(String(row.pos_payment_methods_json))),
         catalogLayout: row.catalog_layout === 'grid' ? 'grid' : 'horizontal',
         primaryColor: String(row.primary_color),
         accentColor: String(row.accent_color),

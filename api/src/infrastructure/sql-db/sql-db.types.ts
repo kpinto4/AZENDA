@@ -7,6 +7,8 @@ export interface PlanCatalogEntry {
   planKey: string;
   priceMonthly: number;
   priceYearly: number;
+  /** Costo operativo aproximado (referencia interna super admin). */
+  operatingCostApprox: number;
 }
 
 export interface TenantBillingSnapshot {
@@ -71,7 +73,8 @@ export interface AppointmentEntity {
   when: string;
   status: AppointmentStatus;
   attendance: AppointmentAttendance;
-  /** Teléfono en dígitos internacionales sin "+" (wa.me / contacto). */
+  /** Duración reservada en minutos (catálogo al crear). */
+  durationMinutes: number | null;
   customerPhoneE164: string | null;
   waReminderConsent: boolean;
   /** ISO 8601 cuando el negocio marcó recordatorio por WhatsApp (manual) o histórico de envío automático. */
@@ -105,6 +108,10 @@ export interface TenantBrandingEntity {
   whatsappDefaultMessage: string | null;
   /** JSON horario reserva pública: días mon–sun y franjas [{open,close},…]. */
   publicBookingHoursJson: string | null;
+  /** Enlace externo para dejar reseña (p. ej. Google Maps). */
+  reviewsUrl: string | null;
+  /** JSON métodos de pago del POS: [{id,label,enabled,detail},…]. */
+  posPaymentMethodsJson: string;
   catalogLayout: 'horizontal' | 'grid';
   primaryColor: string;
   accentColor: string;
@@ -118,6 +125,10 @@ export interface TenantBrandingEntity {
   gradientAngleDeg: number;
 }
 
+import type { CatalogPromoFields, PromoScheduleType } from '../../common/promo-schedule.util';
+
+export type TenantCatalogPromoFields = CatalogPromoFields;
+
 export interface TenantProductEntity {
   id: string;
   tenantId: string;
@@ -125,6 +136,12 @@ export interface TenantProductEntity {
   description: string | null;
   price: number;
   promoPrice: number | null;
+  promoEnabled: boolean;
+  promoScheduleType: PromoScheduleType | null;
+  promoDays: number[];
+  promoStartDate: string | null;
+  promoEndDate: string | null;
+  promoLabel: string | null;
   sku: string;
   stock: number;
   catalogOrder: number;
@@ -138,7 +155,14 @@ export interface TenantServiceEntity {
   description: string | null;
   price: number;
   promoPrice: number | null;
+  promoEnabled: boolean;
+  promoScheduleType: PromoScheduleType | null;
+  promoDays: number[];
+  promoStartDate: string | null;
+  promoEndDate: string | null;
   promoLabel: string | null;
+  /** Duración estimada en minutos (reservas y agenda). */
+  durationMinutes: number;
   catalogOrder: number;
 }
 

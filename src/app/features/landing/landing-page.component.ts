@@ -1,8 +1,8 @@
 import { Component, effect, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { formatCop } from '../../core/format-currency';
 import {
-  ApiSiteConfigService,
+  ApiSiteConfig,
   DEFAULT_API_SITE_CONFIG,
   mergeApiSiteConfig,
 } from '../../core/services/api-site-config.service';
@@ -15,22 +15,15 @@ import {
 })
 export class LandingPageComponent {
   private readonly router = inject(Router);
-  private readonly siteApi = inject(ApiSiteConfigService);
+  private readonly route = inject(ActivatedRoute);
 
-  readonly siteConfig = signal(mergeApiSiteConfig(DEFAULT_API_SITE_CONFIG));
+  readonly siteConfig = signal(this.readInitialSiteConfig());
   readonly menuOpen = signal(false);
 
   /** Importes en COP (formato local) para la landing. */
   readonly formatCop = formatCop;
 
   constructor() {
-    this.siteApi.getPublic().subscribe({
-      next: (c) => this.siteConfig.set(mergeApiSiteConfig(c)),
-      error: () => {
-        /* se mantiene DEFAULT_API_SITE_CONFIG */
-      },
-    });
-
     if (typeof window !== 'undefined') {
       window.addEventListener('resize', () => {
         if (window.innerWidth > 768) {
@@ -70,5 +63,10 @@ export class LandingPageComponent {
   /** Abre la reserva pública de ejemplo para mostrar el flujo al visitante. */
   openPublicBooking(): void {
     void this.router.navigateByUrl('/reservar/barberia-centro');
+  }
+
+  private readInitialSiteConfig(): ApiSiteConfig {
+    const resolved = this.route.snapshot.data['siteConfig'] as ApiSiteConfig | undefined;
+    return mergeApiSiteConfig(resolved ?? DEFAULT_API_SITE_CONFIG);
   }
 }

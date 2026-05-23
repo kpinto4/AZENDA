@@ -8,6 +8,8 @@ export declare class UpdateTenantBrandingDto {
     whatsappPhoneE164?: string | null;
     whatsappDefaultMessage?: string | null;
     publicBookingHoursJson?: string | null;
+    reviewsUrl?: string | null;
+    posPaymentMethodsJson?: string | null;
     catalogLayout?: 'horizontal' | 'grid';
     primaryColor?: string;
     accentColor?: string;

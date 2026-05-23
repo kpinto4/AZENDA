@@ -298,11 +298,12 @@ let TenantRepository = class TenantRepository {
     }
     async listPlanCatalog() {
         try {
-            const rows = await this.pg.queryRows(`SELECT plan_key, price_monthly, price_yearly FROM plan_catalog`);
+            const rows = await this.pg.queryRows(`SELECT plan_key, price_monthly, price_yearly, operating_cost_approx FROM plan_catalog`);
             const mapped = rows.map((r) => ({
                 planKey: String(r.plan_key),
                 priceMonthly: Math.max(0, Number(r.price_monthly ?? 0)),
                 priceYearly: Math.max(0, Number(r.price_yearly ?? 0)),
+                operatingCostApprox: Math.max(0, Number(r.operating_cost_approx ?? 0)),
             }));
             const order = ['Trial', 'Básico', 'Pro', 'Negocio'];
             return mapped.sort((a, b) => order.indexOf(a.planKey) - order.indexOf(b.planKey));
@@ -314,10 +315,11 @@ let TenantRepository = class TenantRepository {
     async replacePlanCatalog(entries) {
         await this.ensurePlanCatalogTable();
         for (const e of entries) {
-            await this.pg.exec(`INSERT INTO plan_catalog (plan_key, price_monthly, price_yearly) VALUES (?, ?, ?)
+            await this.pg.exec(`INSERT INTO plan_catalog (plan_key, price_monthly, price_yearly, operating_cost_approx) VALUES (?, ?, ?, ?)
          ON CONFLICT (plan_key) DO UPDATE SET
            price_monthly = EXCLUDED.price_monthly,
-           price_yearly = EXCLUDED.price_yearly`, [e.planKey, e.priceMonthly, e.priceYearly]);
+           price_yearly = EXCLUDED.price_yearly,
+           operating_cost_approx = EXCLUDED.operating_cost_approx`, [e.planKey, e.priceMonthly, e.priceYearly, e.operatingCostApprox]);
         }
         await this.syncTenantPlanPricesFromCatalog();
         return this.listPlanCatalog();
@@ -327,15 +329,17 @@ let TenantRepository = class TenantRepository {
       CREATE TABLE IF NOT EXISTS plan_catalog (
         plan_key TEXT PRIMARY KEY,
         price_monthly NUMERIC(12,2) NOT NULL DEFAULT 0,
-        price_yearly NUMERIC(12,2) NOT NULL DEFAULT 0
+        price_yearly NUMERIC(12,2) NOT NULL DEFAULT 0,
+        operating_cost_approx NUMERIC(12,2) NOT NULL DEFAULT 0
       )
     `);
+        await this.pg.execScript(`ALTER TABLE plan_catalog ADD COLUMN IF NOT EXISTS operating_cost_approx NUMERIC(12,2) NOT NULL DEFAULT 0`);
         await this.pg.execScript(`
-      INSERT INTO plan_catalog (plan_key, price_monthly, price_yearly) VALUES
-        ('Trial', 0, 0),
-        ('Básico', 29, 290),
-        ('Pro', 59, 590),
-        ('Negocio', 99, 990)
+      INSERT INTO plan_catalog (plan_key, price_monthly, price_yearly, operating_cost_approx) VALUES
+        ('Trial', 0, 0, 0),
+        ('Básico', 39900, 399000, 3800),
+        ('Pro', 69900, 699000, 4500),
+        ('Negocio', 99900, 999000, 6000)
       ON CONFLICT (plan_key) DO NOTHING
     `);
     }

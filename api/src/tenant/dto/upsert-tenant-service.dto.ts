@@ -3,11 +3,17 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
   Min,
 } from 'class-validator';
+import {
+  MAX_SERVICE_DURATION_MINUTES,
+  MIN_SERVICE_DURATION_MINUTES,
+} from '../../common/service-duration.util';
+import { CatalogPromoFieldsDto } from './catalog-promo-fields.dto';
 
-export class UpsertTenantServiceDto {
+export class UpsertTenantServiceDto extends CatalogPromoFieldsDto {
   @IsString()
   @MaxLength(120)
   name!: string;
@@ -25,11 +31,7 @@ export class UpsertTenantServiceDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  @Min(0)
-  promoPrice?: number | null;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(120)
-  promoLabel?: string | null;
+  @Min(MIN_SERVICE_DURATION_MINUTES)
+  @Max(MAX_SERVICE_DURATION_MINUTES)
+  durationMinutes?: number;
 }

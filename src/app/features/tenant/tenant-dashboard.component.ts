@@ -15,6 +15,7 @@ import {
   MESES_CORT,
   addDays,
   cleanServiceLabel,
+  isCalendarVisibleAppointment,
   parseWhenLocal,
   readEmployeeIdFromService,
   toYmdLocal,
@@ -185,6 +186,11 @@ export class TenantDashboardComponent {
     return this.data.appointmentsForBookingSlug(this.session.publicBookingSlug());
   });
 
+  /** Misma regla que /app/citas: solo futuras y no canceladas. */
+  readonly calendarAppointments = computed(() =>
+    this.myAppointments().filter((a) => isCalendarVisibleAppointment(a)),
+  );
+
   readonly upcomingAppointments = computed(() => {
     const now = new Date();
     return this.myAppointments()
@@ -207,7 +213,7 @@ export class TenantDashboardComponent {
 
   readonly appointmentsTodayCount = computed(() => {
     const todayYmd = toYmdLocal(new Date());
-    return this.myAppointments().filter((a) => parseWhenLocal(a.when)?.ymd === todayYmd).length;
+    return this.calendarAppointments().filter((a) => parseWhenLocal(a.when)?.ymd === todayYmd).length;
   });
 
   readonly citasHoyKpiLabel = computed(() =>
@@ -280,7 +286,7 @@ export class TenantDashboardComponent {
         map.set(e.name, EMPLOYEE_COLORS[idx % EMPLOYEE_COLORS.length]);
       });
     }
-    for (const a of this.myAppointments()) {
+    for (const a of this.calendarAppointments()) {
       const name = this.employeeForAppointment(a);
       if (!map.has(name)) {
         map.set(name, EMPLOYEE_COLORS[map.size % EMPLOYEE_COLORS.length]);

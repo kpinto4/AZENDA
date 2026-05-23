@@ -34,6 +34,9 @@ let TenantAppointmentsController = class TenantAppointmentsController {
     create(req, dto) {
         return this.appointments.createForUser(req.user, dto);
     }
+    cancel(req, appointmentId) {
+        return this.appointments.cancelForUser(req.user, appointmentId);
+    }
     patchStatus(req, appointmentId, dto) {
         return this.appointments.patchStatus(req.user, appointmentId, dto);
     }
@@ -60,6 +63,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, create_appointment_dto_1.CreateAppointmentDto]),
     __metadata("design:returntype", void 0)
 ], TenantAppointmentsController.prototype, "create", null);
+__decorate([
+    (0, common_1.Patch)(':appointmentId/cancel'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('appointmentId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], TenantAppointmentsController.prototype, "cancel", null);
 __decorate([
     (0, common_1.Patch)(':appointmentId/status'),
     __param(0, (0, common_1.Req)()),

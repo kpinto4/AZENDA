@@ -1,1 +1,35 @@
-/* Estilos específicos mínimos; cabecera y alertas en `super-admin-ui.scss`. */
+.sale-ref-table {
+  margin-top: 0.5rem;
+}
+
+.sale-ref-table .compact-num {
+  max-width: 9rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.88rem;
+}
+
+.th-copy-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.copy-col-btn {
+  border: none;
+  background: transparent;
+  color: var(--az-muted);
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0.15rem 0.25rem;
+  border-radius: 4px;
+}
+
+.copy-col-btn:hover {
+  color: var(--az-text);
+  background: color-mix(in srgb, var(--az-border) 40%, transparent);
+}
+
+.sale-ref-table tr.is-trial td {
+  opacity: 0.65;
+}

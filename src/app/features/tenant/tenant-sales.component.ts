@@ -12,6 +12,13 @@ import { MockDataService, MockProduct } from '../../core/services/mock-data.serv
 import { MockSessionService } from '../../core/services/mock-session.service';
 import { FormatCopPipe } from '../../core/format-cop.pipe';
 import { UiAlertService } from '../../core/services/ui-alert.service';
+import {
+  DEFAULT_POS_PAYMENT_METHODS,
+  type PosPaymentMethod,
+  enabledPaymentMethodLabels,
+  parsePosPaymentMethodsJson,
+  paymentMethodNeedsDetail,
+} from '../../core/pos-payment-methods';
 
 export interface SaleCatalogProduct {
   id: string;
@@ -62,8 +69,22 @@ export class TenantSalesComponent {
   readonly selectedProduct = signal<SaleCatalogProduct | null>(null);
   readonly quantity = signal(1);
   readonly paymentMethod = signal('Efectivo');
+  readonly posPaymentMethods = signal<PosPaymentMethod[]>(
+    DEFAULT_POS_PAYMENT_METHODS.map((m) => ({ ...m })),
+  );
 
-  readonly methods = ['Efectivo', 'Tarjeta', 'Bizum', 'Transferencia'];
+  readonly methods = computed(() => {
+    const labels = enabledPaymentMethodLabels(this.posPaymentMethods());
+    return labels.length ? labels : ['Efectivo'];
+  });
+  readonly selectedPaymentDetail = computed(() => {
+    const label = this.paymentMethod();
+    const method = this.posPaymentMethods().find((m) => m.label === label);
+    if (!method || !paymentMethodNeedsDetail(method.id)) {
+      return '';
+    }
+    return method.detail ?? '';
+  });
   readonly salesBlockedMessage = computed(() => this.session.tenantRestrictionMessage());
   readonly canCreateSales = computed(() => !this.session.isTenantRestricted());
 
@@ -124,6 +145,11 @@ export class TenantSalesComponent {
           this.storeVisitsRemote.set([]);
           this.tenantSalesLive.set([]);
           this.catalogProductsLive.set([]);
+          const tid = this.session.tenantId();
+          if (tid) {
+            const branding = this.data.brandingForTenant(tid);
+            this.applyPaymentMethodsFromJson(branding.posPaymentMethodsJson);
+          }
         });
         return;
       }
@@ -141,7 +167,10 @@ export class TenantSalesComponent {
       );
       const subCat = untracked(() =>
         this.apiCatalog.getCatalog().subscribe({
-          next: (c) => this.catalogProductsLive.set(c.products),
+          next: (c) => {
+            this.catalogProductsLive.set(c.products);
+            this.applyPaymentMethodsFromJson(c.branding.posPaymentMethodsJson);
+          },
           error: () => this.catalogProductsLive.set([]),
         }),
       );
@@ -203,6 +232,15 @@ export class TenantSalesComponent {
 
   selectMethod(method: string): void {
     this.paymentMethod.set(method);
+  }
+
+  private applyPaymentMethodsFromJson(raw: string | undefined): void {
+    const methods = parsePosPaymentMethodsJson(raw);
+    this.posPaymentMethods.set(methods);
+    const labels = enabledPaymentMethodLabels(methods);
+    if (!labels.includes(this.paymentMethod())) {
+      this.paymentMethod.set(labels[0] ?? 'Efectivo');
+    }
   }
 
   toggleHistory(): void {
@@ -301,7 +339,7 @@ export class TenantSalesComponent {
       { productId: product.id, stockQty: qty, tenantId: this.session.tenantId() },
     );
     this.alerts.success(
-      `Venta registrada en esta sesión (no se guardó en la base de datos). Se descontaron ${qty} unidad(es) del inventario demo.`,
+      `Venta registrada en esta sesión. Se descontaron ${qty} unidad(es) del inventario.`,
     );
     this.clearSelection();
     this.refreshCatalog();

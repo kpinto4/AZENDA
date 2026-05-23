@@ -20,6 +20,10 @@ export class PlanCatalogRowDto {
   @IsNumber()
   @Min(0)
   priceYearly!: number;
+
+  @IsNumber()
+  @Min(0)
+  operatingCostApprox!: number;
 }
 
 export class ReplacePlanCatalogDto {

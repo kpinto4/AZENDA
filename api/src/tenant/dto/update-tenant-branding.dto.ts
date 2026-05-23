@@ -59,6 +59,18 @@ export class UpdateTenantBrandingDto {
   @MaxLength(8000)
   publicBookingHoursJson?: string | null;
 
+  /** Enlace para dejar reseña (Google Maps, etc.). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  reviewsUrl?: string | null;
+
+  /** JSON métodos de pago POS: [{id,label,enabled,detail},…]. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(8000)
+  posPaymentMethodsJson?: string | null;
+
   @IsOptional()
   @IsIn(['horizontal', 'grid'])
   catalogLayout?: 'horizontal' | 'grid';

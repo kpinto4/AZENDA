@@ -12,12 +12,14 @@ import type { PublicBookingClientTexts } from '../public-booking.types';
 export class PublicBookingConfirmStepComponent {
   readonly confirmForm = input.required<FormGroup>();
   readonly bookingError = input<string | null>(null);
-  readonly selectedService = input('');
+  readonly selectedServiceLines = input<string[]>([]);
+  readonly hasServices = input(false);
   readonly selectedDate = input('');
   readonly selectedSlot = input('');
   readonly selectedEmployeeLabel = input('');
   readonly bookingClientTexts = input.required<PublicBookingClientTexts>();
   readonly selectedServicePriceLabel = input<string | null>(null);
+  readonly totalDurationMinutes = input(0);
   readonly bookingSubmitting = input(false);
   readonly selectedEmployeeId = input('');
 

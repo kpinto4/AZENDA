@@ -12,7 +12,7 @@
           agenda).
         </li>
         <li>
-          Copia tu <a routerLink="/app/configuracion">enlace de reservas</a> y haz una prueba como cliente.
+          Copia tu <a routerLink="/app/configuracion">enlace de reservas</a> y pruébalo como cliente.
         </li>
         <li>
           En esta misma página, rellena «Información para quien reserva» antes de publicar el enlace.
@@ -23,7 +23,7 @@
   <div class="az-page-head tenant-page-head">
     <div>
       <h1 class="az-page-title">Configuración</h1>
-      <p class="az-page-sub">Horario de reservas, WhatsApp del negocio, catálogo y branding (persistencia en API con cuenta real).</p>
+      <p class="az-page-sub">Horario de reservas, WhatsApp, métodos de pago del POS, catálogo y branding.</p>
     </div>
     <button type="button" class="az-btn az-btn-secondary" (click)="toggleDark()">
       {{ dark() ? 'Modo claro' : 'Modo oscuro (preview)' }}
@@ -50,7 +50,7 @@
         </div>
         <p class="muted tiny">{{ b.progressLabel }}</p>
       } @else {
-        <p class="muted">El contador de plan estará disponible al conectar con el API.</p>
+        <p class="muted">Información de plan no disponible en este momento.</p>
       }
       @if (billingMsg()) {
         <p class="services-msg">{{ billingMsg() }}</p>
@@ -161,6 +161,36 @@
     </div>
   </div>
 
+  @if (canManageOperations()) {
+    <div class="az-card mt payment-methods-card compact-panel">
+      <h3>Métodos de pago</h3>
+      <p class="muted small">Activa los que uses en ventas. Efectivo no lleva detalle; el resto puede tener cuenta, número o enlace.</p>
+      <ul class="payment-methods-compact">
+        @for (m of paymentMethods(); track m.id) {
+          <li class="payment-method-item" [class.has-detail]="paymentMethodNeedsDetail(m.id)">
+            <label class="payment-method-toggle">
+              <input type="checkbox" [checked]="m.enabled" (change)="togglePaymentMethod(m.id, $any($event.target).checked)" />
+              <span>{{ m.label }}</span>
+            </label>
+            @if (paymentMethodNeedsDetail(m.id) && m.enabled) {
+              <input
+                class="az-input payment-detail-input"
+                type="text"
+                [value]="m.detail"
+                [placeholder]="m.id === 'tarjeta' ? 'Link de pago (opcional)' : 'Cuenta o número'"
+                (input)="updatePaymentMethodDetail(m.id, $any($event.target).value)"
+              />
+            }
+          </li>
+        }
+      </ul>
+      <button type="button" class="az-btn az-btn-primary compact-save" (click)="savePaymentMethods()">Guardar</button>
+      @if (paymentMsg()) {
+        <p class="services-msg">{{ paymentMsg() }}</p>
+      }
+    </div>
+  }
+
   <div class="az-card mt branding-card">
     <h3>Personalización</h3>
     <p class="muted small">Identidad visual del panel y del enlace público.</p>
@@ -207,6 +237,11 @@
             <div class="full-row">
               <label class="az-label" for="pub-maps">Mapa (opcional)</label>
               <input id="pub-maps" class="az-input wide" type="url" formControlName="publicMapsUrl" placeholder="https://maps.app.goo.gl/…" />
+            </div>
+            <div class="full-row">
+              <label class="az-label" for="pub-reviews">Enlace de reseñas</label>
+              <input id="pub-reviews" class="az-input wide" type="url" formControlName="reviewsUrl" placeholder="https://g.page/r/… (Google u otra plataforma)" />
+              <p class="muted tiny">Aparece como botón «Dejar una reseña» en tu página pública de reservas.</p>
             </div>
             <div class="full-row">
               <label class="az-label" for="pub-cancel">Cancelación</label>

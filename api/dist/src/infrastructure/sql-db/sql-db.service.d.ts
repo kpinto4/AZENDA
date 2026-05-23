@@ -82,6 +82,7 @@ export declare class SqlDbService implements OnModuleInit {
         attendance?: AppointmentAttendance;
         customerPhoneE164?: string | null;
         waReminderConsent?: boolean;
+        durationMinutes?: number | null;
     }): Promise<AppointmentEntity>;
     markAppointmentReminderSentForTenant(appointmentId: string, tenantId: string): Promise<AppointmentEntity | undefined>;
     findAppointmentByTenantAndWhen(tenantId: string, when: string): Promise<AppointmentEntity | undefined>;
@@ -122,13 +123,16 @@ export declare class SqlDbService implements OnModuleInit {
     deleteTenantProduct(tenantId: string, productId: string): Promise<boolean>;
     moveTenantProduct(tenantId: string, productId: string, direction: -1 | 1): Promise<void>;
     listServicesByTenantId(tenantId: string): Promise<TenantServiceEntity[]>;
-    createTenantService(tenantId: string, data: Omit<TenantServiceEntity, 'id' | 'tenantId' | 'catalogOrder'>): Promise<TenantServiceEntity>;
+    createTenantService(tenantId: string, data: Omit<TenantServiceEntity, 'id' | 'tenantId' | 'catalogOrder' | 'durationMinutes'> & {
+        durationMinutes?: number;
+    }): Promise<TenantServiceEntity>;
     updateTenantService(tenantId: string, serviceId: string, patch: Omit<Partial<TenantServiceEntity>, 'id' | 'tenantId' | 'catalogOrder'>): Promise<TenantServiceEntity | undefined>;
     deleteTenantService(tenantId: string, serviceId: string): Promise<boolean>;
     moveTenantService(tenantId: string, serviceId: string, direction: -1 | 1): Promise<void>;
     private columnExists;
     private ensureSchemaMigrations;
     private createSchema;
+    private ensureCatalogPromoScheduleColumns;
     private normalizeTenantBillingPeriods;
     private syncKnownSeedUsers;
     private seedIfEmpty;
@@ -141,6 +145,7 @@ export declare class SqlDbService implements OnModuleInit {
     listPlanCatalog(): Promise<PlanCatalogEntry[]>;
     replacePlanCatalog(entries: PlanCatalogEntry[]): Promise<PlanCatalogEntry[]>;
     getPlatformSiteConfig(): Promise<PlatformSiteConfig>;
+    getPlatformSiteConfigForPublic(): Promise<PlatformSiteConfig>;
     patchPlatformSiteConfig(patch: Partial<PlatformSiteConfig> & {
         landing?: Partial<PlatformSiteLandingCopy>;
     }): Promise<PlatformSiteConfig>;

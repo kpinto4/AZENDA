@@ -32,8 +32,9 @@ export declare class PublicController {
             role: import("../auth/auth.types").UserRole;
         }[];
     }>;
-    getPublicAvailability(slug: string, date: string): Promise<{
+    getPublicAvailability(slug: string, date: string, durationMinutes?: string): Promise<{
         date: string;
+        durationMinutes: number;
         slotsByEmployee: Record<string, string[]>;
         allSlots: string[];
         employees: {

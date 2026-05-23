@@ -1,9 +1,11 @@
-import { Component, input, output, ViewEncapsulation } from '@angular/core';
+import { Component, computed, input, output, ViewEncapsulation } from '@angular/core';
 import type {
   PublicBookingDayChip,
   PublicBookingEmployeeOption,
   PublicBookingPeriod,
+  PublicBookingServiceRow,
 } from '../public-booking.types';
+import { MAX_SERVICES_PER_BOOKING } from '../public-booking.types';
 
 @Component({
   selector: 'app-public-booking-schedule-step',
@@ -20,9 +22,18 @@ export class PublicBookingScheduleStepComponent {
   readonly selectedEmployeeId = input('');
   readonly selectedPeriod = input<PublicBookingPeriod>('manana');
   readonly availableSlotsForSelection = input<string[]>([]);
+  readonly availabilityLoading = input(false);
+  readonly serviceDurationMinutes = input<number | undefined>(undefined);
   readonly selectedSlot = input('');
   readonly bookingError = input<string | null>(null);
   readonly bookingSubmitting = input(false);
+  readonly cartRows = input<PublicBookingServiceRow[]>([]);
+  readonly totalPriceLabel = input<string | null>(null);
+  readonly maxServices = MAX_SERVICES_PER_BOOKING;
+
+  readonly canAddMoreServices = computed(
+    () => this.cartRows().length < this.maxServices,
+  );
 
   readonly updateDate = output<string>();
   readonly pickDateFromChip = output<string>();
@@ -32,4 +43,6 @@ export class PublicBookingScheduleStepComponent {
   readonly back = output<void>();
   readonly goToSummary = output<void>();
   readonly submitReschedule = output<void>();
+  readonly addAnotherService = output<void>();
+  readonly removeService = output<string>();
 }

@@ -7,6 +7,7 @@ export interface ApiPlanCatalogEntry {
   planKey: string;
   priceMonthly: number;
   priceYearly: number;
+  operatingCostApprox: number;
 }
 
 export interface ApiReplacePlanCatalogBody {
