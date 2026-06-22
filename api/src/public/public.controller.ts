@@ -26,6 +26,11 @@ export class PublicController {
     return this.booking.getSiteConfig();
   }
 
+  @Get('plan-catalog')
+  getPlanCatalog() {
+    return this.booking.getPublicPlanCatalog();
+  }
+
   @Get(':slug/meta')
   getPublicMeta(@Param('slug') slug: string) {
     return this.booking.getPublicMeta(slug);

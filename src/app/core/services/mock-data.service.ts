@@ -942,7 +942,7 @@ export class MockDataService {
       storefrontEnabled: false,
       manualBookingEnabled: true,
       active: true,
-      modules: ['citas', 'ventas', 'inventario'],
+      modules: ['citas'],
     };
     this.tenants.update((list) => [...list, row]);
     this.ensureDefaultServicesForSlug(row.bookingSlug, row.name);

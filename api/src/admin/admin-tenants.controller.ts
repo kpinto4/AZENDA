@@ -17,6 +17,7 @@ import { Systems } from '../auth/decorators/systems.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { AdminTenantsService } from './admin-tenants.service';
+import { defaultModulesForPlan } from '../infrastructure/sql-db/plan-modules';
 import { TenantEntity } from '../infrastructure/sql-db/sql-db.types';
 import { AdminUpgradeQuoteDto } from './dto/admin-upgrade-quote.dto';
 import { CreateTenantDto } from './dto/create-tenant.dto';
@@ -61,21 +62,28 @@ export class AdminTenantsController {
 
   @Post()
   createTenant(@Body() body: CreateTenantDto) {
+    const plan = body.plan ?? 'Trial';
+    const planModules = defaultModulesForPlan(plan);
     return this.adminTenants.createTenant({
       id: body.id,
       name: body.name,
       slug: body.slug,
       status: body.status,
-      plan: body.plan ?? 'Trial',
+      plan,
       storefrontEnabled: body.storefrontEnabled ?? false,
       manualBookingEnabled: body.manualBookingEnabled ?? true,
       billingCycle: body.billingCycle ?? 'MONTHLY',
       modules: {
-        citas: body.citas ?? true,
-        ventas: body.ventas ?? true,
-        inventario: body.inventario ?? false,
+        citas: body.citas ?? planModules.citas,
+        ventas: body.ventas ?? planModules.ventas,
+        inventario: body.inventario ?? planModules.inventario,
       },
     });
+  }
+
+  @Post(':tenantId/activate-subscription')
+  async activateSubscription(@Param('tenantId') tenantId: string) {
+    return this.adminTenants.activateSubscription(tenantId);
   }
 
   @Patch(':tenantId')

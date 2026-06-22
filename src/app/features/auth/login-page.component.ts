@@ -76,14 +76,19 @@ export class LoginPageComponent {
           }
           if (err instanceof HttpErrorResponse) {
             const s = err.status;
-            if (s === 0 || s >= 500) {
+            if (s === 0) {
               this.message =
-                'El API no respondio. Verifica conectividad al backend y que DATABASE_URL de Neon este configurada.';
+                'El API aun no responde. Si acabas de ejecutar npm run dev, espera a que aparezca «Nest application successfully started» en la terminal y vuelve a pulsar Entrar.';
+              return;
+            }
+            if (s >= 500) {
+              this.message =
+                'El API respondio con error. Verifica que DATABASE_URL de Neon este configurada en api/.env.';
               return;
             }
           }
           this.message =
-            'No se pudo conectar al API. Verifica que el backend este activo y accesible con DATABASE_URL de Neon.';
+            'No se pudo conectar al API. Verifica que el backend este activo (npm run dev en la raiz del proyecto).';
         },
       });
       return;

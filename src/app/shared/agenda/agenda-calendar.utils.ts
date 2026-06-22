@@ -140,6 +140,28 @@ export function isPendingAttendanceClosure(a: MockAppointment, nowMs = Date.now(
   return ms != null && ms <= nowMs;
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Citas útiles en la tabla operativa (no historial completo). */
+export function isTableRelevantAppointment(
+  a: MockAppointment,
+  nowMs = Date.now(),
+  historyDays = 14,
+): boolean {
+  if (isCalendarVisibleAppointment(a, nowMs)) {
+    return true;
+  }
+  if (isPendingAttendanceClosure(a, nowMs)) {
+    return true;
+  }
+  const ms = appointmentStartMs(a.when);
+  if (ms == null) {
+    return false;
+  }
+  const cutoff = nowMs - historyDays * MS_PER_DAY;
+  return ms >= cutoff;
+}
+
 export function eventTone(a: MockAppointment): AgendaEventTone {
   const att = a.attendance ?? 'PENDIENTE';
   if (att === 'ASISTIO') {

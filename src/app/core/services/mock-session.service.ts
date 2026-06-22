@@ -11,7 +11,7 @@ import {
 import { environment } from '../../../environments/environment';
 import { ApiAuthService, ApiAuthUser, ApiLoginResponse } from './api-auth.service';
 import { MockDataService, MockTenant } from './mock-data.service';
-import { isJwtExpired } from '../utils/jwt.util';
+import { decodeJwtPayload, isJwtExpired } from '../utils/jwt.util';
 
 export type DemoRole = 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EMPLOYEE' | null;
 
@@ -61,6 +61,8 @@ export class MockSessionService {
   /** Estado operativo del tenant para avisos/restricciones en UI. */
   readonly tenantStatus = signal<TenantLifecycleStatus | null>(null);
   readonly darkMode = signal(false);
+  /** Sesión JWT del tenant showroom (`tenant_azenda_demo`). */
+  readonly isDemoShowcase = signal(false);
 
   readonly isSuperAdmin = computed(() => this.role() === 'SUPER_ADMIN');
   readonly isTenantUser = computed(() => {
@@ -86,7 +88,7 @@ export class MockSessionService {
   readonly tenantRestrictionMessage = computed(() => {
     const status = this.tenantStatus();
     if (status === 'PAUSED') {
-      return 'Tu plan esta pausado. Las funciones operativas estan deshabilitadas temporalmente.';
+      return 'Tu suscripcion esta pendiente de pago. Completa el pago o espera la activacion para usar el panel.';
     }
     if (status === 'BLOCKED') {
       return 'Tu negocio esta bloqueado. Contacta a soporte para recuperar el acceso.';
@@ -235,6 +237,7 @@ export class MockSessionService {
     this.tenantStorefront.set(false);
     this.manualBookingEnabled.set(true);
     this.tenantStatus.set(null);
+    this.isDemoShowcase.set(false);
   }
 
   /** Actualiza menús del tenant desde el API (módulos, plan, tienda pública). */
@@ -271,6 +274,10 @@ export class MockSessionService {
             modules: ctx.tenant.modules,
           },
         ]);
+        const token = this.accessToken();
+        if (token) {
+          this.syncDemoShowcase(token, ctx.tenant.isDemoTenant);
+        }
       }),
       map(() => undefined),
     );
@@ -294,7 +301,6 @@ export class MockSessionService {
     this.accessToken.set(token);
     this.currentUserId.set(u.id);
     this.apiTenantId.set(u.tenantId);
-
     const roleKey = typeof u.role === 'string' ? u.role.trim().toUpperCase() : '';
 
     if (roleKey === 'SUPER_ADMIN') {
@@ -346,7 +352,10 @@ export class MockSessionService {
             return throwError(() => new Error('Tenant demo no encontrado'));
           }
 
-          this.loginFromTenant(tenant, { userName: u.email, role });
+          this.loginFromTenant(tenant, {
+            userName: this.displayNameForUser(u.email),
+            role,
+          });
           // Mantener el id real del usuario autenticado (no mock), para filtros por empleado.
           this.currentUserId.set(u.id);
 
@@ -362,6 +371,7 @@ export class MockSessionService {
           this.tenantStorefront.set(!!ctx.tenant.storefrontEnabled);
           this.manualBookingEnabled.set(!!ctx.tenant.manualBookingEnabled);
           this.tenantStatus.set(ctx.tenant.status as TenantLifecycleStatus);
+          this.syncDemoShowcase(token, ctx.tenant.isDemoTenant);
 
           return of(undefined);
         }),
@@ -384,6 +394,23 @@ export class MockSessionService {
     this.publicBookingSlug.set(t.bookingSlug);
     this.apiTenantId.set(t.apiTenantId ?? null);
     this.applyModulesFromTenant(t);
+  }
+
+  private syncDemoShowcase(token: string, isDemoTenant?: boolean): void {
+    const payload = decodeJwtPayload(token);
+    const fromJwt = payload?.['isDemoShowcase'] === true;
+    this.isDemoShowcase.set(fromJwt || !!isDemoTenant);
+  }
+
+  private displayNameForUser(email: string): string {
+    const normalized = email.trim().toLowerCase();
+    if (normalized === 'demo-admin@azenda.dev') {
+      return 'Admin Demo';
+    }
+    if (normalized === 'demo-empleado@azenda.dev') {
+      return 'Laura Demo';
+    }
+    return email;
   }
 
   private applyModulesFromTenant(t: MockTenant): void {

@@ -111,6 +111,131 @@
   display: none;
 }
 
+.appts-table-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 1rem 1.15rem 0.75rem;
+  border-bottom: 1px solid var(--az-border);
+  background: color-mix(in srgb, var(--az-surface) 90%, var(--az-bg));
+}
+
+.appts-table-head h3 {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+}
+
+.appts-table-sub {
+  margin: 0;
+  max-width: 36rem;
+  line-height: 1.45;
+}
+
+.appts-hidden-note {
+  color: var(--az-primary);
+  font-weight: 600;
+}
+
+.appts-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.appts-history-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--az-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.appts-history-toggle input {
+  accent-color: var(--az-primary);
+}
+
+.appts-table-scroll {
+  max-height: min(420px, 55vh);
+  overflow: auto;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.appts-table-scroll .appts-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: linear-gradient(
+    180deg,
+    var(--az-surface),
+    color-mix(in srgb, var(--az-surface) 88%, var(--az-border))
+  );
+  box-shadow: 0 1px 0 var(--az-border);
+}
+
+.appts-table tbody tr.appts-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.appts-table tbody tr.appts-row:hover {
+  background: color-mix(in srgb, var(--az-primary) 5%, var(--az-surface));
+}
+
+.appts-table tbody tr.appts-row:focus-visible {
+  outline: 2px solid var(--az-primary);
+  outline-offset: -2px;
+}
+
+.appts-cell-client {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.appts-cell-service {
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.84rem;
+  color: var(--az-muted);
+}
+
+.appts-cell-when {
+  white-space: nowrap;
+  font-size: 0.84rem;
+}
+
+.appts-cell-att {
+  min-width: 11rem;
+}
+
+.attendance-chips--compact {
+  flex-wrap: nowrap;
+}
+
+.attendance-chips--compact .att-chip {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.68rem;
+}
+
+.appts-table-empty {
+  padding: 2rem 1.15rem;
+  text-align: center;
+  margin: 0;
+}
+
+.tiny {
+  font-size: 0.75rem;
+}
+
 .attendance-chips {
   display: flex;
   flex-wrap: wrap;

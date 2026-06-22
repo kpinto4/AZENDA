@@ -41,6 +41,7 @@ exports.SqlDbModule = SqlDbModule = __decorate([
             sql_db_service_1.SqlDbService,
         ],
         exports: [
+            pg_client_service_1.PgClientService,
             sql_db_service_1.SqlDbService,
             user_repository_1.UserRepository,
             tenant_repository_1.TenantRepository,

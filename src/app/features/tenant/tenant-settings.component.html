@@ -31,34 +31,45 @@
   </div>
 
   <div class="tenant-cards-grid az-section">
-    <div class="az-card">
-      <h3>Plan y facturación</h3>
-      @if (billingSummary(); as b) {
-        <div class="tenant-metric-row">
-          <span class="tenant-metric-pill">Plan · {{ b.startedLabel }}</span>
-          <span class="tenant-metric-pill">{{ b.cycleLabel }}</span>
-        </div>
+    @if (session.isDemoShowcase()) {
+      <div class="az-card demo-settings-card">
+        <h3>Modo demo</h3>
         <p class="muted">
-          Renovación: <strong>{{ b.renewalLabel }}</strong>
+          Estás en la barbería de ejemplo. Aquí no contratas ni pagas nada: solo pruebas cómo quedaría tu negocio. Las
+          citas y ventas de prueba se borran cada semana.
         </p>
-        <p class="muted">
-          Periodo: <strong>{{ b.periodStartLabel }}</strong> → <strong>{{ b.periodEndLabel }}</strong>
-        </p>
-        <p class="muted">{{ b.daysLabel }}</p>
-        <div class="tenant-progress" role="progressbar" [attr.aria-valuenow]="b.progressPct" aria-valuemin="0" aria-valuemax="100">
-          <span class="tenant-progress-bar" [style.width.%]="b.progressPct"></span>
-        </div>
-        <p class="muted tiny">{{ b.progressLabel }}</p>
-      } @else {
-        <p class="muted">Información de plan no disponible en este momento.</p>
-      }
-      @if (billingMsg()) {
-        <p class="services-msg">{{ billingMsg() }}</p>
-      }
-    </div>
+        <a routerLink="/contratar" class="az-btn az-btn-primary small">Inicia con tu negocio</a>
+      </div>
+    } @else {
+      <div class="az-card">
+        <h3>Plan y facturación</h3>
+        @if (billingSummary(); as b) {
+          <div class="tenant-metric-row">
+            <span class="tenant-metric-pill">Plan · {{ b.startedLabel }}</span>
+            <span class="tenant-metric-pill">{{ b.cycleLabel }}</span>
+          </div>
+          <p class="muted">
+            Renovación: <strong>{{ b.renewalLabel }}</strong>
+          </p>
+          <p class="muted">
+            Periodo: <strong>{{ b.periodStartLabel }}</strong> → <strong>{{ b.periodEndLabel }}</strong>
+          </p>
+          <p class="muted">{{ b.daysLabel }}</p>
+          <div class="tenant-progress" role="progressbar" [attr.aria-valuenow]="b.progressPct" aria-valuemin="0" aria-valuemax="100">
+            <span class="tenant-progress-bar" [style.width.%]="b.progressPct"></span>
+          </div>
+          <p class="muted tiny">{{ b.progressLabel }}</p>
+        } @else {
+          <p class="muted">Información de plan no disponible en este momento.</p>
+        }
+        @if (billingMsg()) {
+          <p class="services-msg">{{ billingMsg() }}</p>
+        }
+      </div>
+    }
 
     @if (session.publicBookingSlug()) {
-      <div class="az-card public-links-card">
+      <div class="az-card public-links-card" data-tour="config-enlace">
         <h3>Enlace público</h3>
         <p class="muted small">
           Una sola página para reservar, confirmar asistencia y catálogo (si está activo).
@@ -97,7 +108,7 @@
   </div>
 
   <div class="az-grid cols-2">
-    <div class="az-card schedule-card" [formGroup]="hoursForm">
+    <div class="az-card schedule-card" data-tour="config-horario" [formGroup]="hoursForm">
       <h3>Horario de reservas públicas</h3>
       <p class="muted small">
         Marca los días abiertos y el rango horario. El cliente solo verá huecos dentro de estas franjas.

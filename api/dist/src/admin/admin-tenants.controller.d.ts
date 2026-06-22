@@ -6,7 +6,7 @@ import { UpdateTenantDto } from './dto/update-tenant.dto';
 export declare class AdminTenantsController {
     private readonly adminTenants;
     constructor(adminTenants: AdminTenantsService);
-    listTenants(): Promise<TenantEntity[]>;
+    listTenants(): Promise<import("./admin-tenants.service").AdminTenantListRow[]>;
     getTenantById(tenantId: string): Promise<TenantEntity>;
     upgradeQuote(tenantId: string, body: AdminUpgradeQuoteDto): Promise<{
         tenantId: string;
@@ -26,6 +26,7 @@ export declare class AdminTenantsController {
         carryOverBalance: number;
     }>;
     createTenant(body: CreateTenantDto): Promise<TenantEntity>;
+    activateSubscription(tenantId: string): Promise<TenantEntity>;
     updateTenant(tenantId: string, body: UpdateTenantDto): Promise<TenantEntity>;
     deleteTenant(tenantId: string): Promise<void>;
 }

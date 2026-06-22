@@ -50,6 +50,54 @@
   </div>
 
   @if (useApiTenants()) {
+    @if (pendingActivationRows().length) {
+      <section class="pending-activation-card az-card" aria-labelledby="pending-activation-title">
+        <h2 id="pending-activation-title" class="pending-activation-title">
+          Pendientes de activación
+          <span class="super-ui-badge super-ui-badge--warn">{{ pendingActivationRows().length }}</span>
+        </h2>
+        <p class="muted small pending-activation-lead">
+          Verifica el pago recibido, ajusta los módulos si hace falta y confirma para que el negocio entre al panel.
+        </p>
+        <ul class="pending-activation-list">
+          @for (t of pendingActivationRows(); track t.id) {
+            <li class="pending-activation-item">
+              <div class="pending-activation-main">
+                <strong>{{ t.name }}</strong>
+                <span class="muted tiny">/{{ t.slug }}</span>
+                @if (t.adminEmail) {
+                  <span class="pending-email">{{ t.adminEmail }}</span>
+                }
+                <span class="az-badge warn">Pago pendiente</span>
+              </div>
+              <div class="pending-activation-modules">
+                @for (key of moduleKeys; track key) {
+                  <label class="mod-label">
+                    <input
+                      type="checkbox"
+                      [checked]="
+                        key === 'citas' ? t.modules.citas : key === 'ventas' ? t.modules.ventas : t.modules.inventario
+                      "
+                      (change)="setApiTenantModule(t, key, $any($event.target).checked)"
+                    />
+                    {{ key }}
+                  </label>
+                }
+              </div>
+              <button
+                type="button"
+                class="az-btn az-btn-primary small"
+                [disabled]="activatingTenantId() === t.id"
+                (click)="confirmPaymentAndActivate(t)"
+              >
+                {{ activatingTenantId() === t.id ? 'Activando…' : 'Confirmar pago y activar' }}
+              </button>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
     <div class="az-table-wrap mt">
       <table class="az-table tenants-table">
         <thead>
@@ -80,6 +128,9 @@
                   <span class="az-badge warn">Pausado</span>
                 } @else {
                   <span class="az-badge">Bloqueado</span>
+                }
+                @if (isPendingActivation(t)) {
+                  <span class="az-badge warn pending-badge">Pago pendiente</span>
                 }
               </td>
               <td>
@@ -143,6 +194,16 @@
                 >
                   {{ t.status === 'ACTIVE' ? 'Pausar' : 'Activar' }}
                 </button>
+                @if (isPendingActivation(t)) {
+                  <button
+                    type="button"
+                    class="az-btn az-btn-primary small"
+                    [disabled]="activatingTenantId() === t.id"
+                    (click)="confirmPaymentAndActivate(t)"
+                  >
+                    {{ activatingTenantId() === t.id ? 'Activando…' : 'Confirmar pago' }}
+                  </button>
+                }
                 <button type="button" class="az-btn az-btn-ghost small danger" (click)="deleteApiTenant(t)">
                   Eliminar
                 </button>

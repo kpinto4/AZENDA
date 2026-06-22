@@ -7,7 +7,14 @@ import { JwtService } from '@nestjs/jwt';
 import { AppSystem, AuthUser, UserRole } from './auth.types';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { DemoSessionDto } from './dto/demo-session.dto';
+import {
+  DEMO_ADMIN_EMAIL,
+  DEMO_EMPLOYEE_EMAIL,
+  DEMO_TENANT_ID,
+} from '../../scripts/demo-tenant.snapshot';
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
+import { defaultModulesForPlan } from '../infrastructure/sql-db/plan-modules';
 import { PasswordService } from './password.service';
 
 @Injectable()
@@ -29,14 +36,19 @@ export class AuthService {
     const tenantId = `tenant_${Date.now()}`;
     const slug = await this.uniqueTenantSlug(business, tenantId);
 
+    const registrationPlan = dto.selectedPlan ?? 'Básico';
+    const billingCycle = dto.billingCycle ?? 'MONTHLY';
+
     await this.sqlDbService.createTenant({
       id: tenantId,
       name: business,
       slug,
-      status: 'ACTIVE',
-      plan: 'Trial',
+      status: 'PAUSED',
+      plan: registrationPlan,
       storefrontEnabled: false,
-      modules: { citas: true, ventas: true, inventario: true },
+      billingCycle,
+      subscriptionStatus: 'pending_payment',
+      modules: defaultModulesForPlan(registrationPlan),
     });
 
     const userId = `usr_${Date.now()}`;
@@ -105,6 +117,39 @@ export class AuthService {
       throw new UnauthorizedException('Usuario no encontrado');
     }
     return this.toSafeUser(user);
+  }
+
+  async startDemoSession(dto: DemoSessionDto = {}) {
+    const role = dto.role ?? 'admin';
+    const email =
+      role === 'employee' ? DEMO_EMPLOYEE_EMAIL : DEMO_ADMIN_EMAIL;
+    const user = await this.sqlDbService.findUserByEmailNormalized(email);
+    if (!user || user.tenantId !== DEMO_TENANT_ID) {
+      throw new UnauthorizedException('Demo no disponible');
+    }
+    const isDemo = await this.sqlDbService.isDemoTenant(DEMO_TENANT_ID);
+    if (!isDemo) {
+      throw new UnauthorizedException('Demo no disponible');
+    }
+    if (user.status !== 'ACTIVE') {
+      throw new UnauthorizedException('Usuario demo no activo');
+    }
+
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      tenantId: user.tenantId,
+      systems: user.systems,
+      isDemoShowcase: true,
+    };
+
+    return {
+      accessToken: this.jwtService.sign(payload),
+      tokenType: 'Bearer',
+      user: this.toSafeUser(user),
+      isDemoShowcase: true,
+    };
   }
 
   async findById(userId: string) {

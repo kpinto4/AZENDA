@@ -31,6 +31,22 @@ export interface ApiSiteConfig {
   landing: ApiSiteLandingCopy;
 }
 
+/** Estado resuelto para la landing: textos pueden usar fallback; precios solo si vienen del API. */
+export interface LandingSiteConfigState {
+  config: ApiSiteConfig;
+  pricesFromApi: boolean;
+}
+
+export function createLandingSiteConfigState(
+  fromApi: ApiSiteConfig | null | undefined,
+  pricesFromApi: boolean,
+): LandingSiteConfigState {
+  return {
+    config: mergeApiSiteConfig(fromApi ?? DEFAULT_API_SITE_CONFIG),
+    pricesFromApi,
+  };
+}
+
 export const DEFAULT_API_SITE_CONFIG: ApiSiteConfig = {
   currencyCode: 'COP',
   currencySymbol: '$',

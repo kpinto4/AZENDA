@@ -53,6 +53,8 @@ import { TenantBillingService } from './tenant-billing.service';
   ],
 
   exports: [
+    PgClientService,
+
     SqlDbService,
 
     UserRepository,

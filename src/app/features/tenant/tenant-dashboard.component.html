@@ -16,7 +16,7 @@
     </div>
   </div>
 
-  <div class="az-grid cols-3 dashboard-kpis az-section">
+  <div class="az-grid cols-3 dashboard-kpis az-section" data-tour="panel-kpis">
     <div class="az-card kpi-tile">
       <div class="az-kpi-label">{{ citasHoyKpiLabel() }}</div>
       <div class="az-kpi">{{ appointmentsTodayCount() }}</div>
@@ -31,7 +31,7 @@
     </div>
   </div>
 
-  <div class="az-card az-section agenda-principal">
+  <div class="az-card az-section agenda-principal" data-tour="panel-agenda">
     <app-agenda-calendar
       title="Agenda principal"
       [appointments]="calendarAppointments()"
@@ -61,7 +61,7 @@
     </div>
   }
 
-  <div class="az-card az-section upcoming-card">
+  <div class="az-card az-section upcoming-card" data-tour="panel-proximas">
     <h3>Próximas citas</h3>
     <ul class="mini-card-list">
       @for (a of upcomingAppointments().slice(0, 4); track a.id) {

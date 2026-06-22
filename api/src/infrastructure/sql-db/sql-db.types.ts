@@ -2,6 +2,12 @@ import { AppSystem, UserRole, UserStatus } from '../../auth/auth.types';
 
 export type BillingCycle = 'MONTHLY' | 'YEARLY';
 
+export type SubscriptionStatus =
+  | 'pending_payment'
+  | 'active'
+  | 'past_due'
+  | 'canceled';
+
 /** Precios de lista globales por plan comercial (Trial, Básico, Pro, Negocio). */
 export interface PlanCatalogEntry {
   planKey: string;
@@ -47,6 +53,9 @@ export interface TenantEntity {
     ventas: boolean;
     inventario: boolean;
   };
+  /** Tenant showroom público (exploración sin contrato). */
+  isDemoTenant?: boolean;
+  subscriptionStatus?: SubscriptionStatus;
 }
 
 export interface UserEntity {

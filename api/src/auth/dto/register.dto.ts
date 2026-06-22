@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import { BillingCycle } from '../../infrastructure/sql-db/sql-db.types';
 
 export class RegisterDto {
   @IsString()
@@ -15,4 +16,12 @@ export class RegisterDto {
   @IsString()
   @MinLength(6)
   password!: string;
+
+  @IsOptional()
+  @IsIn(['Básico', 'Pro', 'Negocio'])
+  selectedPlan?: string;
+
+  @IsOptional()
+  @IsIn(['MONTHLY', 'YEARLY'])
+  billingCycle?: BillingCycle;
 }

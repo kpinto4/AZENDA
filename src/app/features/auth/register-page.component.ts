@@ -46,6 +46,10 @@ export class RegisterPageComponent {
           this.session.applyLiveLoginResponse(res).subscribe({
             next: () => {
               this.session.persistAuthIfRequested(res.accessToken, v.rememberMe);
+              if (this.session.isTenantRestricted()) {
+                void this.router.navigateByUrl('/contratar/pago');
+                return;
+              }
               void this.router.navigateByUrl('/app');
             },
             error: () => {

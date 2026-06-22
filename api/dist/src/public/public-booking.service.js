@@ -139,6 +139,9 @@ let PublicBookingService = class PublicBookingService {
     getSiteConfig() {
         return this.sqlDb.getPlatformSiteConfigForPublic();
     }
+    getPublicPlanCatalog() {
+        return this.sqlDb.listPlanCatalog();
+    }
     async getPublicMeta(slug) {
         const tenant = await this.sqlDb.findTenantBySlug(slug);
         if (!tenant) {

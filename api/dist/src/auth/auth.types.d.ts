@@ -25,4 +25,5 @@ export interface JwtPayload {
     role: UserRole;
     tenantId: string | null;
     systems: AppSystem[];
+    isDemoShowcase?: boolean;
 }

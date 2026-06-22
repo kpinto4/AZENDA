@@ -36,6 +36,7 @@ export declare class SqlDbService implements OnModuleInit {
     listTenants(): Promise<TenantEntity[]>;
     findTenantBySlug(slug: string): Promise<TenantEntity | undefined>;
     findTenantById(tenantId: string): Promise<TenantEntity | undefined>;
+    isDemoTenant(tenantId: string): Promise<boolean>;
     createTenant(data: Omit<TenantEntity, 'manualBookingEnabled' | 'billingCycle' | 'planPriceMonthly' | 'planPriceYearly' | 'subscriptionStartedAt' | 'currentPeriodStart' | 'currentPeriodEnd' | 'nextRenewalAt'> & {
         manualBookingEnabled?: boolean;
         billingCycle?: BillingCycle;

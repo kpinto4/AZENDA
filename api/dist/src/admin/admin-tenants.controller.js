@@ -20,6 +20,7 @@ const systems_decorator_1 = require("../auth/decorators/systems.decorator");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
 const admin_tenants_service_1 = require("./admin-tenants.service");
+const plan_modules_1 = require("../infrastructure/sql-db/plan-modules");
 const admin_upgrade_quote_dto_1 = require("./dto/admin-upgrade-quote.dto");
 const create_tenant_dto_1 = require("./dto/create-tenant.dto");
 const update_tenant_dto_1 = require("./dto/update-tenant.dto");
@@ -49,21 +50,26 @@ let AdminTenantsController = class AdminTenantsController {
         return quote;
     }
     createTenant(body) {
+        const plan = body.plan ?? 'Trial';
+        const planModules = (0, plan_modules_1.defaultModulesForPlan)(plan);
         return this.adminTenants.createTenant({
             id: body.id,
             name: body.name,
             slug: body.slug,
             status: body.status,
-            plan: body.plan ?? 'Trial',
+            plan,
             storefrontEnabled: body.storefrontEnabled ?? false,
             manualBookingEnabled: body.manualBookingEnabled ?? true,
             billingCycle: body.billingCycle ?? 'MONTHLY',
             modules: {
-                citas: body.citas ?? true,
-                ventas: body.ventas ?? true,
-                inventario: body.inventario ?? false,
+                citas: body.citas ?? planModules.citas,
+                ventas: body.ventas ?? planModules.ventas,
+                inventario: body.inventario ?? planModules.inventario,
             },
         });
+    }
+    async activateSubscription(tenantId) {
+        return this.adminTenants.activateSubscription(tenantId);
     }
     async updateTenant(tenantId, body) {
         const modPatch = {};
@@ -127,6 +133,13 @@ __decorate([
     __metadata("design:paramtypes", [create_tenant_dto_1.CreateTenantDto]),
     __metadata("design:returntype", void 0)
 ], AdminTenantsController.prototype, "createTenant", null);
+__decorate([
+    (0, common_1.Post)(':tenantId/activate-subscription'),
+    __param(0, (0, common_1.Param)('tenantId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminTenantsController.prototype, "activateSubscription", null);
 __decorate([
     (0, common_1.Patch)(':tenantId'),
     __param(0, (0, common_1.Param)('tenantId')),

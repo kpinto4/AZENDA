@@ -18,6 +18,13 @@ export interface ApiReplacePlanCatalogBody {
 export class ApiPlanCatalogService {
   private readonly http = inject(HttpClient);
 
+  /** Catálogo global de precios (fuente de verdad en `plan_catalog`). */
+  getPublic(): Observable<ApiPlanCatalogEntry[]> {
+    return this.http.get<ApiPlanCatalogEntry[]>(
+      `${environment.apiBaseUrl}/public/plan-catalog`,
+    );
+  }
+
   list(): Observable<ApiPlanCatalogEntry[]> {
     return this.http.get<ApiPlanCatalogEntry[]>(
       `${environment.apiBaseUrl}/admin/plan-catalog`,

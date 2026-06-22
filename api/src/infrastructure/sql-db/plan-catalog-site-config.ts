@@ -12,6 +12,33 @@ const PLAN_KEY_TO_SITE_PRICE: Record<
   Negocio: 'planPriceBusiness',
 };
 
+function normalizePlanKey(key: string): string {
+  return key
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function sitePriceFieldForPlanKey(
+  planKey: string,
+): keyof Pick<
+  PlatformSiteConfig,
+  'planPriceBasic' | 'planPricePro' | 'planPriceBusiness'
+> | undefined {
+  const direct = PLAN_KEY_TO_SITE_PRICE[planKey];
+  if (direct) {
+    return direct;
+  }
+  const normalized = normalizePlanKey(planKey);
+  for (const [key, field] of Object.entries(PLAN_KEY_TO_SITE_PRICE)) {
+    if (normalizePlanKey(key) === normalized) {
+      return field;
+    }
+  }
+  return undefined;
+}
+
 export function planCatalogPricePatch(
   entries: PlanCatalogEntry[],
 ): Partial<
@@ -27,7 +54,7 @@ export function planCatalogPricePatch(
     >
   > = {};
   for (const entry of entries) {
-    const field = PLAN_KEY_TO_SITE_PRICE[entry.planKey];
+    const field = sitePriceFieldForPlanKey(entry.planKey);
     if (field && entry.priceMonthly != null) {
       patch[field] = entry.priceMonthly;
     }

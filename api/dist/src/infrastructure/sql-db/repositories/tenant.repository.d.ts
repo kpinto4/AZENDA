@@ -5,6 +5,7 @@ export declare class TenantRepository {
     constructor(pg: PgClientService);
     private computeCycleEnd;
     private mapTenantRow;
+    private parseSubscriptionStatus;
     private mergeTenantWithCatalog;
     fetchPlanCatalogMap(): Promise<Map<string, {
         monthly: number;
@@ -17,7 +18,7 @@ export declare class TenantRepository {
     listTenants(): Promise<TenantEntity[]>;
     findBySlug(slug: string): Promise<TenantEntity | undefined>;
     findById(tenantId: string): Promise<TenantEntity | undefined>;
-    createTenant(data: Omit<TenantEntity, 'manualBookingEnabled' | 'billingCycle' | 'planPriceMonthly' | 'planPriceYearly' | 'subscriptionStartedAt' | 'currentPeriodStart' | 'currentPeriodEnd' | 'nextRenewalAt'> & {
+    createTenant(data: Omit<TenantEntity, 'manualBookingEnabled' | 'billingCycle' | 'planPriceMonthly' | 'planPriceYearly' | 'subscriptionStartedAt' | 'currentPeriodStart' | 'currentPeriodEnd' | 'nextRenewalAt' | 'subscriptionStatus'> & {
         manualBookingEnabled?: boolean;
         billingCycle?: BillingCycle;
         planPriceMonthly?: number;
@@ -26,6 +27,7 @@ export declare class TenantRepository {
         currentPeriodStart?: string;
         currentPeriodEnd?: string;
         nextRenewalAt?: string;
+        subscriptionStatus?: TenantEntity['subscriptionStatus'];
     }): Promise<TenantEntity>;
     updateTenant(tenantId: string, patch: Omit<Partial<TenantEntity>, 'modules'> & {
         modules?: Partial<TenantEntity['modules']>;

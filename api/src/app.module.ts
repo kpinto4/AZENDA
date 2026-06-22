@@ -9,6 +9,7 @@ import { SqlDbModule } from './infrastructure/sql-db/sql-db.module';
 import { TenantModule } from './tenant/tenant.module';
 import { AdminModule } from './admin/admin.module';
 import { PublicModule } from './public/public.module';
+import { DemoModule } from './demo/demo.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PublicModule } from './public/public.module';
       throttlers: [{ name: 'default', ttl: 60000, limit: 400 }],
     }),
     SqlDbModule,
+    DemoModule,
     AuthModule,
     TenantModule,
     AdminModule,

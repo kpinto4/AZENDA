@@ -331,7 +331,12 @@ export class TenantSettingsComponent {
       });
     });
     effect(() => {
-      if (!environment.useLiveAuth || !this.session.accessToken() || !this.session.isTenantUser()) {
+      if (
+        !environment.useLiveAuth ||
+        !this.session.accessToken() ||
+        !this.session.isTenantUser() ||
+        this.session.isDemoShowcase()
+      ) {
         this.billingStatus.set(null);
         this.billingMsg.set('');
         return;

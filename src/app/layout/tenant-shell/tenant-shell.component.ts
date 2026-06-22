@@ -1,17 +1,29 @@
 import { NgStyle } from '@angular/common';
 import { Component, computed, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiAppointmentsService } from '../../core/services/api-appointments.service';
 import { ApiTenantCatalogService } from '../../core/services/api-tenant-catalog.service';
 import { MockDataService } from '../../core/services/mock-data.service';
 import { MockSessionService } from '../../core/services/mock-session.service';
+import { DemoRoleSwitchComponent } from '../../features/demo/demo-role-switch.component';
+import { DemoTourDrawerComponent } from '../../features/demo-tour/demo-tour-drawer.component';
+import { DemoTourStepCardComponent } from '../../features/demo-tour/demo-tour-step-card.component';
+import { DemoTourService } from '../../features/demo-tour/demo-tour.service';
 
 @Component({
   selector: 'app-tenant-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, NgStyle],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    NgStyle,
+    DemoRoleSwitchComponent,
+    DemoTourDrawerComponent,
+    DemoTourStepCardComponent,
+  ],
   templateUrl: './tenant-shell.component.html',
   styleUrl: './tenant-shell.component.scss',
 })
@@ -20,8 +32,10 @@ export class TenantShellComponent {
   private readonly data = inject(MockDataService);
   private readonly apiCatalog = inject(ApiTenantCatalogService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly apiAppointments = inject(ApiAppointmentsService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly demoTour = inject(DemoTourService);
 
   /** En móvil el menú se abre como panel lateral; en escritorio no aplica. */
   readonly menuOpen = signal(false);
@@ -57,7 +71,30 @@ export class TenantShellComponent {
   );
   readonly tenantRestrictionMessage = computed(() => this.session.tenantRestrictionMessage());
 
+  exitDemo(): void {
+    this.demoTour.skip();
+    this.logout();
+  }
+
+  startTour(): void {
+    const role = this.session.role() === 'EMPLOYEE' ? 'employee' : 'admin';
+    this.demoTour.start(role);
+  }
+
   constructor() {
+    effect(() => {
+      if (!this.session.isDemoShowcase()) {
+        return;
+      }
+      const forceTour = this.route.snapshot.queryParamMap.get('tour') === 'start';
+      const firstVisit =
+        this.demoTour.completed().size === 0 && !this.demoTour.dismissed();
+      if ((forceTour || firstVisit) && !this.demoTour.active()) {
+        const role = this.session.role() === 'EMPLOYEE' ? 'employee' : 'admin';
+        untracked(() => this.demoTour.start(role));
+      }
+    });
+
     this.destroyRef.onDestroy(() => {
       if (typeof document !== 'undefined') {
         document.body.style.overflow = '';

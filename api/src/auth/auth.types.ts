@@ -29,4 +29,6 @@ export interface JwtPayload {
   role: UserRole;
   tenantId: string | null;
   systems: AppSystem[];
+  /** Sesión showroom del tenant demo (sin contraseña pública). */
+  isDemoShowcase?: boolean;
 }

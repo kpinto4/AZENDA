@@ -26,6 +26,19 @@ export const tenantGuard: CanActivateFn = () => {
   return toLogin(router, '/app');
 };
 
+/** Bloquea el panel si el tenant está pausado (pago pendiente), salvo en demo. */
+export const subscriptionActiveGuard: CanActivateFn = () => {
+  const session = inject(MockSessionService);
+  const router = inject(Router);
+  if (session.isDemoShowcase()) {
+    return true;
+  }
+  if (!session.isTenantRestricted()) {
+    return true;
+  }
+  return router.createUrlTree(['/contratar/pago']);
+};
+
 export const tenantAdminGuard: CanActivateFn = () => {
   const session = inject(MockSessionService);
   const router = inject(Router);

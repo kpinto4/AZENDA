@@ -17,6 +17,12 @@ export interface ApiTenantDto {
   modules: { citas: boolean; ventas: boolean; inventario: boolean };
 }
 
+export type ApiSubscriptionStatus =
+  | 'pending_payment'
+  | 'active'
+  | 'past_due'
+  | 'canceled';
+
 /** Respuesta de administración: incluye campos de facturación persistidos en `tenants`. */
 export interface ApiTenantAdminDto extends ApiTenantDto {
   billingCycle: 'MONTHLY' | 'YEARLY';
@@ -26,6 +32,8 @@ export interface ApiTenantAdminDto extends ApiTenantDto {
   currentPeriodStart: string;
   currentPeriodEnd: string;
   nextRenewalAt: string;
+  subscriptionStatus?: ApiSubscriptionStatus;
+  adminEmail?: string | null;
 }
 
 export interface ApiCreateTenantBody {
@@ -114,6 +122,13 @@ export class ApiTenantsAdminService {
     return this.http.patch<ApiTenantAdminDto>(
       `${environment.apiBaseUrl}/admin/tenants/${tenantId}`,
       body,
+    );
+  }
+
+  activateSubscription(tenantId: string): Observable<ApiTenantAdminDto> {
+    return this.http.post<ApiTenantAdminDto>(
+      `${environment.apiBaseUrl}/admin/tenants/${encodeURIComponent(tenantId)}/activate-subscription`,
+      {},
     );
   }
 

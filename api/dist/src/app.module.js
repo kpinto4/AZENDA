@@ -18,6 +18,7 @@ const sql_db_module_1 = require("./infrastructure/sql-db/sql-db.module");
 const tenant_module_1 = require("./tenant/tenant.module");
 const admin_module_1 = require("./admin/admin.module");
 const public_module_1 = require("./public/public.module");
+const demo_module_1 = require("./demo/demo.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -28,6 +29,7 @@ exports.AppModule = AppModule = __decorate([
                 throttlers: [{ name: 'default', ttl: 60000, limit: 400 }],
             }),
             sql_db_module_1.SqlDbModule,
+            demo_module_1.DemoModule,
             auth_module_1.AuthModule,
             tenant_module_1.TenantModule,
             admin_module_1.AdminModule,

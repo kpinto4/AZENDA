@@ -1090,6 +1090,11 @@
   color: var(--landing-muted);
 }
 
+.price-spacer {
+  min-height: 3.15rem;
+  margin: 0 0 1rem;
+}
+
 .plan.featured {
   position: relative;
   border-color: color-mix(in srgb, var(--az-primary) 38%, var(--az-border)) !important;

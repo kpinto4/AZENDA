@@ -3,7 +3,7 @@
 Documento vivo para seguir **qué vamos haciendo**, **qué se arregla**, **qué dejamos igual** y **qué riesgos siguen**. Marca el progreso cambiando `[ ]` por `[x]`.
 
 **Origen:** evaluación técnica del proyecto (mayo 2026).  
-**Relacionado:** [PENDIENTES_MEJORA_UX.md](PENDIENTES_MEJORA_UX.md) (producto/UX), [BACKEND.md](BACKEND.md) (API y Neon).
+**Relacionado:** [PENDIENTES_MEJORA_UX.md](PENDIENTES_MEJORA_UX.md) (producto/UX), [BACKEND.md](BACKEND.md) (API y Neon), [PLAN_REGISTRO_SUSCRIPCION_Y_ACCESO.md](PLAN_REGISTRO_SUSCRIPCION_Y_ACCESO.md) (registro, pago y acceso).
 
 ---
 

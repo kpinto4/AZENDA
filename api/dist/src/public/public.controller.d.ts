@@ -8,6 +8,7 @@ export declare class PublicController {
     private readonly booking;
     constructor(booking: PublicBookingService);
     getSiteConfig(): Promise<import("../infrastructure/sql-db/sql-db.types").PlatformSiteConfig>;
+    getPlanCatalog(): Promise<import("../infrastructure/sql-db/sql-db.types").PlanCatalogEntry[]>;
     getPublicMeta(slug: string): Promise<{
         slug: string;
         name: string;

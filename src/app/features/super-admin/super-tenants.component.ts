@@ -35,6 +35,12 @@ export class SuperTenantsComponent {
 
   readonly apiRows = signal<ApiTenantAdminDto[]>([]);
   readonly apiError = signal<string>('');
+  readonly activatingTenantId = signal<string | null>(null);
+
+  /** Registros desde checkout con pago aún no verificado por super admin. */
+  readonly pendingActivationRows = computed(() =>
+    this.apiRows().filter((t) => t.subscriptionStatus === 'pending_payment'),
+  );
 
   readonly useApiTenants = computed(
     () =>
@@ -176,6 +182,36 @@ export class SuperTenantsComponent {
     this.apiTenantsAdmin.delete(row.id).subscribe({
       next: () => this.reloadApiTenants(),
       error: () => this.apiError.set('Error al eliminar.'),
+    });
+  }
+
+  isPendingActivation(t: ApiTenantAdminDto): boolean {
+    return t.subscriptionStatus === 'pending_payment';
+  }
+
+  confirmPaymentAndActivate(t: ApiTenantAdminDto): void {
+    if (this.activatingTenantId()) {
+      return;
+    }
+    const emailHint = t.adminEmail ? ` (${t.adminEmail})` : '';
+    if (
+      !confirm(
+        `¿Confirmar pago y activar "${t.name}"${emailHint}? El negocio podrá entrar al panel con los módulos marcados.`,
+      )
+    ) {
+      return;
+    }
+    this.apiError.set('');
+    this.activatingTenantId.set(t.id);
+    this.apiTenantsAdmin.activateSubscription(t.id).subscribe({
+      next: () => {
+        this.activatingTenantId.set(null);
+        this.reloadApiTenants();
+      },
+      error: () => {
+        this.activatingTenantId.set(null);
+        this.apiError.set('No se pudo activar la suscripción.');
+      },
     });
   }
 

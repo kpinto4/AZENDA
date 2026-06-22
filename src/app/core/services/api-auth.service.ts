@@ -22,6 +22,7 @@ export interface ApiLoginResponse {
   accessToken: string;
   tokenType: string;
   user: ApiAuthUser;
+  isDemoShowcase?: boolean;
 }
 
 export interface ApiTenantContextResponse {
@@ -33,6 +34,8 @@ export interface ApiTenantContextResponse {
     plan: string;
     storefrontEnabled: boolean;
     manualBookingEnabled: boolean;
+    isDemoTenant?: boolean;
+    subscriptionStatus?: string;
     modules: { citas: boolean; ventas: boolean; inventario: boolean };
   } | null;
   message?: string;
@@ -72,10 +75,27 @@ export class ApiAuthService {
     business: string,
     email: string,
     password: string,
+    opts?: {
+      selectedPlan?: string;
+      billingCycle?: 'MONTHLY' | 'YEARLY';
+    },
   ): Observable<ApiLoginResponse> {
     return this.http.post<ApiLoginResponse>(
       `${environment.apiBaseUrl}/auth/register`,
-      { business, email, password },
+      {
+        business,
+        email,
+        password,
+        selectedPlan: opts?.selectedPlan,
+        billingCycle: opts?.billingCycle,
+      },
+    );
+  }
+
+  demoSession(role: 'admin' | 'employee' = 'admin'): Observable<ApiLoginResponse> {
+    return this.http.post<ApiLoginResponse>(
+      `${environment.apiBaseUrl}/auth/demo-session`,
+      { role },
     );
   }
 

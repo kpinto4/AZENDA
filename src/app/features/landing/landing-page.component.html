@@ -39,10 +39,8 @@
       <h1>{{ cfg.landing.heroTitle }}</h1>
       <p class="lead">{{ cfg.landing.heroLead }}</p>
       <div class="hero-cta">
-        <a routerLink="/auth/registro" class="az-btn az-btn-primary landing-btn-primary">Empezar gratis</a>
-        <button type="button" class="az-btn az-btn-secondary landing-btn-secondary" (click)="openPublicBooking()">
-          Ver página de reserva
-        </button>
+        <a routerLink="/contratar" class="az-btn az-btn-primary landing-btn-primary">Inicia con tu negocio</a>
+        <a routerLink="/demo" class="az-btn az-btn-secondary landing-btn-secondary">Explorar demo interactiva</a>
       </div>
       <div class="landing-proof-row" aria-label="Destacados">
         <span class="landing-proof-chip">En COP</span>
@@ -241,41 +239,55 @@
       <article class="az-card plan">
         <p class="plan-tier">Plan</p>
         <h3>Básico</h3>
-        <p class="price">{{ formatCop(cfg.planPriceBasic) }}<span>/mes</span></p>
+        @if (pricesFromApi()) {
+          <p class="price">{{ formatCop(cfg.planPriceBasic) }}<span>/mes</span></p>
+        } @else {
+          <div class="price-spacer" aria-hidden="true"></div>
+        }
         <ul>
           <li>Citas y reserva pública</li>
           <li>1 empleado</li>
           <li>WhatsApp (enlaces wa.me)</li>
         </ul>
-        <a routerLink="/auth/registro" class="az-btn az-btn-secondary full">Elegir</a>
+        <a routerLink="/contratar" class="az-btn az-btn-secondary full">Elegir</a>
       </article>
       <article class="az-card plan featured">
         <div class="ribbon">Popular</div>
         <p class="plan-tier">Plan</p>
         <h3>Pro</h3>
-        <p class="price">{{ formatCop(cfg.planPricePro) }}<span>/mes</span></p>
+        @if (pricesFromApi()) {
+          <p class="price">{{ formatCop(cfg.planPricePro) }}<span>/mes</span></p>
+        } @else {
+          <div class="price-spacer" aria-hidden="true"></div>
+        }
         <ul>
           <li>Registro de ventas (sin cobro online)</li>
           <li>Hasta 10 empleados</li>
           <li>Mensajes plantilla WA</li>
         </ul>
-        <a routerLink="/auth/registro" class="az-btn az-btn-primary full">Elegir</a>
+        <a routerLink="/contratar" class="az-btn az-btn-primary full">Elegir</a>
       </article>
       <article class="az-card plan">
         <p class="plan-tier">Plan</p>
         <h3>Negocio</h3>
-        <p class="price">{{ formatCop(cfg.planPriceBusiness) }}<span>/mes</span></p>
+        @if (pricesFromApi()) {
+          <p class="price">{{ formatCop(cfg.planPriceBusiness) }}<span>/mes</span></p>
+        } @else {
+          <div class="price-spacer" aria-hidden="true"></div>
+        }
         <ul>
           <li>Incluye inventario</li>
           <li>Empleados amplios (uso razonable)</li>
           <li>Soporte prioritario</li>
         </ul>
-        <a routerLink="/auth/registro" class="az-btn az-btn-secondary full">Elegir</a>
+        <a routerLink="/contratar" class="az-btn az-btn-secondary full">Elegir</a>
       </article>
     </div>
-    <p class="muted plan-currency-note">
-      Valores en <strong>COP</strong>. Límites concretos (empleados, módulos) según contrato y configuración.
-    </p>
+    @if (pricesFromApi()) {
+      <p class="muted plan-currency-note">
+        Valores en <strong>COP</strong>. Límites concretos (empleados, módulos) según contrato y configuración.
+      </p>
+    }
   </div>
 </section>
 
@@ -318,7 +330,7 @@
   <div class="az-container cta-inner">
     <h2>{{ cfg.landing.ctaTitle }}</h2>
     <p>{{ cfg.landing.ctaLead }}</p>
-    <a routerLink="/auth/registro" class="az-btn az-btn-primary big landing-btn-cta">Crear mi espacio</a>
+    <a routerLink="/contratar" class="az-btn az-btn-primary big landing-btn-cta">Inicia con tu negocio</a>
   </div>
 </section>
 

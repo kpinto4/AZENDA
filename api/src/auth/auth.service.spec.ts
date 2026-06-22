@@ -31,6 +31,10 @@ describe('AuthService', () => {
     >;
     findUserById: jest.Mock<Promise<AuthUser | undefined>, [string]>;
     updateUser: jest.Mock;
+    createTenant: jest.Mock;
+    createUser: jest.Mock;
+    findTenantBySlug: jest.Mock;
+    isDemoTenant: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -46,6 +50,10 @@ describe('AuthService', () => {
       findUserByEmailNormalized: jest.fn(),
       findUserById: jest.fn(),
       updateUser: jest.fn(),
+      createTenant: jest.fn(),
+      createUser: jest.fn(),
+      findTenantBySlug: jest.fn().mockResolvedValue(undefined),
+      isDemoTenant: jest.fn().mockResolvedValue(false),
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -58,6 +66,32 @@ describe('AuthService', () => {
     }).compile();
 
     service = moduleRef.get(AuthService);
+  });
+
+  it('registra tenant pausado con plan elegido y pago pendiente', async () => {
+    sqlDbService.findUserByEmailNormalized.mockResolvedValue(undefined);
+    sqlDbService.createTenant.mockResolvedValue(undefined);
+    sqlDbService.createUser.mockResolvedValue(undefined);
+    sqlDbService.findUserByEmailNormalized.mockResolvedValueOnce(undefined).mockResolvedValueOnce(activeUser);
+    passwordService.verify.mockResolvedValue(true);
+
+    await service.register({
+      business: 'Mi Peluquería',
+      email: 'nuevo@azenda.dev',
+      password: 'secret',
+      selectedPlan: 'Pro',
+      billingCycle: 'MONTHLY',
+    });
+
+    expect(sqlDbService.createTenant).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plan: 'Pro',
+        status: 'PAUSED',
+        subscriptionStatus: 'pending_payment',
+        billingCycle: 'MONTHLY',
+        modules: { citas: true, ventas: true, inventario: true },
+      }),
+    );
   });
 
   it('hace login y devuelve usuario sin password', async () => {
@@ -149,6 +183,40 @@ describe('AuthService', () => {
 
     await expect(service.me('missing-user')).rejects.toThrow(
       new UnauthorizedException('Usuario no encontrado'),
+    );
+  });
+
+  it('inicia sesion demo showcase como admin', async () => {
+    const demoUser: AuthUser = {
+      ...activeUser,
+      id: 'usr_demo_admin',
+      email: 'demo-admin@azenda.dev',
+      tenantId: 'tenant_azenda_demo',
+    };
+    sqlDbService.findUserByEmailNormalized.mockResolvedValue(demoUser);
+    sqlDbService.isDemoTenant.mockResolvedValue(true);
+
+    const res = await service.startDemoSession({ role: 'admin' });
+
+    expect(jwtService.sign).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sub: demoUser.id,
+        isDemoShowcase: true,
+        tenantId: 'tenant_azenda_demo',
+      }),
+    );
+    expect(res.isDemoShowcase).toBe(true);
+  });
+
+  it('rechaza demo si el tenant no es showroom', async () => {
+    sqlDbService.findUserByEmailNormalized.mockResolvedValue({
+      ...activeUser,
+      tenantId: 'tenant_azenda_demo',
+    });
+    sqlDbService.isDemoTenant.mockResolvedValue(false);
+
+    await expect(service.startDemoSession()).rejects.toThrow(
+      new UnauthorizedException('Demo no disponible'),
     );
   });
 });

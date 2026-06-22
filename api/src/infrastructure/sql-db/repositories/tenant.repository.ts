@@ -59,7 +59,24 @@ export class TenantRepository {
         ventas: Boolean(row.ventas_enabled),
         inventario: Boolean(row.inventario_enabled),
       },
+      isDemoTenant: Boolean(row.is_demo_tenant),
+      subscriptionStatus: this.parseSubscriptionStatus(row.subscription_status),
     };
+  }
+
+  private parseSubscriptionStatus(
+    raw: unknown,
+  ): TenantEntity['subscriptionStatus'] {
+    const v = String(raw ?? 'active').trim();
+    if (
+      v === 'pending_payment' ||
+      v === 'active' ||
+      v === 'past_due' ||
+      v === 'canceled'
+    ) {
+      return v;
+    }
+    return 'active';
   }
 
   private mergeTenantWithCatalog(
@@ -137,6 +154,7 @@ export class TenantRepository {
       `
         SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
              , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
+             , is_demo_tenant, subscription_status
         FROM tenants
         ORDER BY name ASC
       `,
@@ -154,6 +172,7 @@ export class TenantRepository {
       `
         SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
              , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
+             , is_demo_tenant, subscription_status
         FROM tenants
         WHERE slug = ?
       `,
@@ -171,6 +190,7 @@ export class TenantRepository {
       `
         SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
              , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
+             , is_demo_tenant, subscription_status
         FROM tenants
         WHERE id = ?
       `,
@@ -194,6 +214,7 @@ export class TenantRepository {
       | 'currentPeriodStart'
       | 'currentPeriodEnd'
       | 'nextRenewalAt'
+      | 'subscriptionStatus'
     > & {
       manualBookingEnabled?: boolean;
       billingCycle?: BillingCycle;
@@ -203,6 +224,7 @@ export class TenantRepository {
       currentPeriodStart?: string;
       currentPeriodEnd?: string;
       nextRenewalAt?: string;
+      subscriptionStatus?: TenantEntity['subscriptionStatus'];
     },
   ): Promise<TenantEntity> {
     const now = new Date();
@@ -224,14 +246,16 @@ export class TenantRepository {
       currentPeriodStart: periodStart,
       currentPeriodEnd: periodEnd,
       nextRenewalAt: data.nextRenewalAt ?? periodEnd,
+      subscriptionStatus: data.subscriptionStatus ?? 'active',
     };
     await this.pg.exec(
       `
         INSERT INTO tenants (
           id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled,
-          billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
+          billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at,
+          subscription_status
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         row.id,
@@ -251,6 +275,7 @@ export class TenantRepository {
         row.currentPeriodStart,
         row.currentPeriodEnd,
         row.nextRenewalAt,
+        row.subscriptionStatus ?? 'active',
       ],
     );
 
@@ -292,6 +317,8 @@ export class TenantRepository {
         patch.currentPeriodStart ?? current.currentPeriodStart,
       currentPeriodEnd: patch.currentPeriodEnd ?? current.currentPeriodEnd,
       nextRenewalAt: patch.nextRenewalAt ?? current.nextRenewalAt,
+      subscriptionStatus:
+        patch.subscriptionStatus ?? current.subscriptionStatus ?? 'active',
       modules: {
         ...current.modules,
         ...(patch.modules ?? {}),
@@ -308,7 +335,8 @@ export class TenantRepository {
         SET name = ?, slug = ?, status = ?, plan = ?, storefront_enabled = ?, manual_booking_enabled = ?,
             citas_enabled = ?, ventas_enabled = ?, inventario_enabled = ?, billing_cycle = ?,
             plan_price_monthly = ?, plan_price_yearly = ?, subscription_started_at = ?,
-            current_period_start = ?, current_period_end = ?, next_renewal_at = ?
+            current_period_start = ?, current_period_end = ?, next_renewal_at = ?,
+            subscription_status = ?
         WHERE id = ?
       `,
       [
@@ -328,6 +356,7 @@ export class TenantRepository {
         next.currentPeriodStart,
         next.currentPeriodEnd,
         next.nextRenewalAt,
+        next.subscriptionStatus ?? 'active',
         tenantId,
       ],
     );

@@ -234,6 +234,10 @@ export class PublicBookingService {
     return this.sqlDb.getPlatformSiteConfigForPublic();
   }
 
+  getPublicPlanCatalog() {
+    return this.sqlDb.listPlanCatalog();
+  }
+
   async getPublicMeta(slug: string) {
     const tenant = await this.sqlDb.findTenantBySlug(slug);
     if (!tenant) {

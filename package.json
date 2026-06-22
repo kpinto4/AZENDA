@@ -6,9 +6,10 @@
     "start": "ng serve",
     "start:web": "ng serve",
     "start:api": "npm --prefix api run start:dev",
-    "dev:apps": "concurrently -n api,web -c blue,green \"npm run start:api\" \"npm run start:web\"",
+    "dev:apps": "concurrently -n api,web -c blue,green \"npm run start:api\" \"wait-on -t 120000 http-get://127.0.0.1:3000/api && npm run start:web\"",
     "dev": "npm run dev:apps",
     "db:bootstrap": "npm --prefix api run db:bootstrap",
+    "demo:reset": "npm --prefix api run demo:reset",
     "db:setup": "npm run db:bootstrap",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
@@ -48,6 +49,7 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "typescript": "~5.7.2"
+    "typescript": "~5.7.2",
+    "wait-on": "^9.0.10"
   }
 }

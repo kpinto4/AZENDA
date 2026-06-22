@@ -2,6 +2,7 @@ import { JwtService } from '@nestjs/jwt';
 import { AppSystem, UserRole } from './auth.types';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { DemoSessionDto } from './dto/demo-session.dto';
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
 import { PasswordService } from './password.service';
 export declare class AuthService {
@@ -43,6 +44,20 @@ export declare class AuthService {
         tenantId: string | null;
         systems: AppSystem[];
         status: import("./auth.types").UserStatus;
+    }>;
+    startDemoSession(dto?: DemoSessionDto): Promise<{
+        accessToken: string;
+        tokenType: string;
+        user: {
+            id: string;
+            email: string;
+            password?: string;
+            role: UserRole;
+            tenantId: string | null;
+            systems: AppSystem[];
+            status: import("./auth.types").UserStatus;
+        };
+        isDemoShowcase: boolean;
     }>;
     findById(userId: string): Promise<import("../infrastructure/sql-db/sql-db.types").UserEntity | undefined>;
     private toSafeUser;

@@ -22,7 +22,9 @@ import {
   cleanServiceLabel,
   isCalendarVisibleAppointment,
   isPendingAttendanceClosure,
+  isTableRelevantAppointment,
   parseWhenLocal,
+  formatWhenDisplay,
   readEmployeeIdFromService,
 } from '../../shared/agenda/agenda-calendar.utils';
 import { AppointmentDetailSheetComponent } from '../../shared/agenda/appointment-detail-sheet.component';
@@ -54,6 +56,7 @@ export class TenantAppointmentsComponent {
   readonly creatingAppointment = signal(false);
   readonly liveServiceOptions = signal<string[]>([]);
   readonly refreshingList = signal(false);
+  readonly showHistoryTable = signal(false);
 
   readonly sheetOpen = signal(false);
   readonly sheetMode = signal<'detail' | 'day-list'>('detail');
@@ -103,6 +106,23 @@ export class TenantAppointmentsComponent {
       return mapped;
     }
     return this.data.appointmentsForBookingSlug(this.session.publicBookingSlug());
+  });
+
+  readonly tableAppointments = computed(() => {
+    const all = this.tenantAppointments();
+    const showAll = this.showHistoryTable();
+    const filtered = showAll
+      ? all
+      : all.filter((a) => isTableRelevantAppointment(a));
+    return [...filtered].sort((a, b) => b.when.localeCompare(a.when));
+  });
+
+  readonly tableHiddenCount = computed(() => {
+    if (this.showHistoryTable()) {
+      return 0;
+    }
+    const all = this.tenantAppointments().length;
+    return Math.max(0, all - this.tableAppointments().length);
   });
 
   readonly calendarAppointments = computed(() =>
@@ -487,5 +507,19 @@ export class TenantAppointmentsComponent {
 
   displayServiceLabel(service: string): string {
     return cleanServiceLabel(service);
+  }
+
+  formatWhen(when: string): string {
+    return formatWhenDisplay(when);
+  }
+
+  openTableRow(appt: MockAppointment): void {
+    this.sheetMode.set('detail');
+    this.sheetAppointment.set(appt);
+    this.sheetOpen.set(true);
+  }
+
+  toggleHistoryTable(): void {
+    this.showHistoryTable.update((v) => !v);
   }
 }

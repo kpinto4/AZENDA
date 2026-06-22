@@ -13,7 +13,9 @@ exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const auth_types_1 = require("./auth.types");
+const demo_tenant_snapshot_1 = require("../../scripts/demo-tenant.snapshot");
 const sql_db_service_1 = require("../infrastructure/sql-db/sql-db.service");
+const plan_modules_1 = require("../infrastructure/sql-db/plan-modules");
 const password_service_1 = require("./password.service");
 let AuthService = class AuthService {
     constructor(jwtService, sqlDbService, passwordService) {
@@ -30,14 +32,18 @@ let AuthService = class AuthService {
         const business = dto.business.trim();
         const tenantId = `tenant_${Date.now()}`;
         const slug = await this.uniqueTenantSlug(business, tenantId);
+        const registrationPlan = dto.selectedPlan ?? 'Básico';
+        const billingCycle = dto.billingCycle ?? 'MONTHLY';
         await this.sqlDbService.createTenant({
             id: tenantId,
             name: business,
             slug,
-            status: 'ACTIVE',
-            plan: 'Trial',
+            status: 'PAUSED',
+            plan: registrationPlan,
             storefrontEnabled: false,
-            modules: { citas: true, ventas: true, inventario: true },
+            billingCycle,
+            subscriptionStatus: 'pending_payment',
+            modules: (0, plan_modules_1.defaultModulesForPlan)(registrationPlan),
         });
         const userId = `usr_${Date.now()}`;
         await this.sqlDbService.createUser({
@@ -93,6 +99,35 @@ let AuthService = class AuthService {
             throw new common_1.UnauthorizedException('Usuario no encontrado');
         }
         return this.toSafeUser(user);
+    }
+    async startDemoSession(dto = {}) {
+        const role = dto.role ?? 'admin';
+        const email = role === 'employee' ? demo_tenant_snapshot_1.DEMO_EMPLOYEE_EMAIL : demo_tenant_snapshot_1.DEMO_ADMIN_EMAIL;
+        const user = await this.sqlDbService.findUserByEmailNormalized(email);
+        if (!user || user.tenantId !== demo_tenant_snapshot_1.DEMO_TENANT_ID) {
+            throw new common_1.UnauthorizedException('Demo no disponible');
+        }
+        const isDemo = await this.sqlDbService.isDemoTenant(demo_tenant_snapshot_1.DEMO_TENANT_ID);
+        if (!isDemo) {
+            throw new common_1.UnauthorizedException('Demo no disponible');
+        }
+        if (user.status !== 'ACTIVE') {
+            throw new common_1.UnauthorizedException('Usuario demo no activo');
+        }
+        const payload = {
+            sub: user.id,
+            email: user.email,
+            role: user.role,
+            tenantId: user.tenantId,
+            systems: user.systems,
+            isDemoShowcase: true,
+        };
+        return {
+            accessToken: this.jwtService.sign(payload),
+            tokenType: 'Bearer',
+            user: this.toSafeUser(user),
+            isDemoShowcase: true,
+        };
     }
     async findById(userId) {
         return this.sqlDbService.findUserById(userId);

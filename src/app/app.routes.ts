@@ -1,5 +1,15 @@
 import { Routes } from '@angular/router';
-import { superAdminGuard, tenantAdminGuard, tenantGuard } from './core/guards/auth.guards';
+import {
+  subscriptionActiveGuard,
+  superAdminGuard,
+  tenantAdminGuard,
+  tenantGuard,
+} from './core/guards/auth.guards';
+import {
+  checkoutAccountGuard,
+  checkoutPaymentGuard,
+  checkoutPlanGuard,
+} from './features/contratar/checkout-step.guards';
 import { landingSiteConfigResolver } from './features/landing/landing-site-config.resolver';
 
 export const routes: Routes = [
@@ -19,9 +29,71 @@ export const routes: Routes = [
       import('./features/auth/pages/register/register.page').then((m) => m.RegisterPageComponent),
   },
   {
+    path: 'demo',
+    loadComponent: () =>
+      import('./features/demo/demo-entry.page').then((m) => m.DemoEntryPageComponent),
+  },
+  {
+    path: 'contratar',
+    loadComponent: () =>
+      import('./features/contratar/checkout-shell.component').then(
+        (m) => m.CheckoutShellComponent,
+      ),
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('./features/contratar/steps/checkout-email.step').then(
+            (m) => m.CheckoutEmailStepComponent,
+          ),
+      },
+      {
+        path: 'planes',
+        canActivate: [checkoutPlanGuard],
+        loadComponent: () =>
+          import('./features/contratar/steps/checkout-plan-intro.step').then(
+            (m) => m.CheckoutPlanIntroStepComponent,
+          ),
+      },
+      {
+        path: 'planes/elegir',
+        canActivate: [checkoutPlanGuard],
+        loadComponent: () =>
+          import('./features/contratar/steps/checkout-plan-select.step').then(
+            (m) => m.CheckoutPlanSelectStepComponent,
+          ),
+      },
+      {
+        path: 'cuenta',
+        canActivate: [checkoutAccountGuard],
+        loadComponent: () =>
+          import('./features/contratar/steps/checkout-account.step').then(
+            (m) => m.CheckoutAccountStepComponent,
+          ),
+      },
+      {
+        path: 'pago',
+        canActivate: [checkoutPaymentGuard],
+        loadComponent: () =>
+          import('./features/contratar/steps/checkout-payment.step').then(
+            (m) => m.CheckoutPaymentStepComponent,
+          ),
+      },
+      {
+        path: 'confirmacion',
+        canActivate: [checkoutAccountGuard],
+        loadComponent: () =>
+          import('./features/contratar/steps/checkout-confirmation.step').then(
+            (m) => m.CheckoutConfirmationStepComponent,
+          ),
+      },
+    ],
+  },
+  {
     path: 'app',
     loadComponent: () => import('./layout/tenant-shell/tenant-shell.component').then((m) => m.TenantShellComponent),
-    canActivate: [tenantGuard],
+    canActivate: [tenantGuard, subscriptionActiveGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'panel' },
       {

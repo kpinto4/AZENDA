@@ -14,7 +14,7 @@
 
   <div class="tenant-compact-grid az-section">
     <div class="az-card tenant-pos-card">
-    <div class="pos-search-block">
+    <div class="pos-search-block" data-tour="ventas-buscar">
       <label class="az-label" for="pos-search">Buscar producto</label>
       <input
         id="pos-search"
@@ -85,50 +85,52 @@
       <p class="muted pos-hint">Escribe el nombre o escanea el código SKU y pulsa Enter si hay una sola coincidencia.</p>
     }
 
-    <div class="pos-total-block" [class.inactive]="!selectedProduct()">
-      <span class="pos-total-label">Total a cobrar</span>
-      <div class="pos-total-value">{{ lineTotal() | formatCop }}</div>
-      @if (selectedProduct(); as p) {
-        <p class="pos-total-breakdown muted small">
-          {{ quantity() }} × {{ p.unitPrice | formatCop }}
-        </p>
-      }
-    </div>
-
-    <div class="pos-section" [class.inactive]="!selectedProduct()">
-      <p class="pos-section-label">Método de pago</p>
-      <div class="pos-method-row" role="group" aria-label="Método de pago">
-        @for (m of methods(); track m) {
-          <button
-            type="button"
-            class="pos-method-btn"
-            [class.active]="paymentMethod() === m"
-            [disabled]="!selectedProduct()"
-            (click)="selectMethod(m)"
-          >
-            {{ m }}
-          </button>
+    <div class="pos-checkout-block" data-tour="ventas-cobrar">
+      <div class="pos-total-block" [class.inactive]="!selectedProduct()">
+        <span class="pos-total-label">Total a cobrar</span>
+        <div class="pos-total-value">{{ lineTotal() | formatCop }}</div>
+        @if (selectedProduct(); as p) {
+          <p class="pos-total-breakdown muted small">
+            {{ quantity() }} × {{ p.unitPrice | formatCop }}
+          </p>
         }
       </div>
-      @if (selectedPaymentDetail()) {
-        <p class="pos-payment-detail muted small">{{ selectedPaymentDetail() }}</p>
-      }
-    </div>
 
-    <button
-      type="button"
-      class="az-btn az-btn-primary pos-charge-btn"
-      [disabled]="!canConfirm()"
-      (click)="confirmSale()"
-    >
-      @if (savingSale()) {
-        Registrando…
-      } @else if (selectedProduct()) {
-        Confirmar venta · {{ lineTotal() | formatCop }}
-      } @else {
-        Selecciona un producto
-      }
-    </button>
+      <div class="pos-section" [class.inactive]="!selectedProduct()">
+        <p class="pos-section-label">Método de pago</p>
+        <div class="pos-method-row" role="group" aria-label="Método de pago">
+          @for (m of methods(); track m) {
+            <button
+              type="button"
+              class="pos-method-btn"
+              [class.active]="paymentMethod() === m"
+              [disabled]="!selectedProduct()"
+              (click)="selectMethod(m)"
+            >
+              {{ m }}
+            </button>
+          }
+        </div>
+        @if (selectedPaymentDetail()) {
+          <p class="pos-payment-detail muted small">{{ selectedPaymentDetail() }}</p>
+        }
+      </div>
+
+      <button
+        type="button"
+        class="az-btn az-btn-primary pos-charge-btn"
+        [disabled]="!canConfirm()"
+        (click)="confirmSale()"
+      >
+        @if (savingSale()) {
+          Registrando…
+        } @else if (selectedProduct()) {
+          Confirmar venta · {{ lineTotal() | formatCop }}
+        } @else {
+          Selecciona un producto
+        }
+      </button>
+    </div>
     </div>
 
     <div class="az-card tenant-table-card tenant-compact-side">

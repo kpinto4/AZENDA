@@ -56,7 +56,19 @@ let TenantRepository = class TenantRepository {
                 ventas: Boolean(row.ventas_enabled),
                 inventario: Boolean(row.inventario_enabled),
             },
+            isDemoTenant: Boolean(row.is_demo_tenant),
+            subscriptionStatus: this.parseSubscriptionStatus(row.subscription_status),
         };
+    }
+    parseSubscriptionStatus(raw) {
+        const v = String(raw ?? 'active').trim();
+        if (v === 'pending_payment' ||
+            v === 'active' ||
+            v === 'past_due' ||
+            v === 'canceled') {
+            return v;
+        }
+        return 'active';
     }
     mergeTenantWithCatalog(t, catalog) {
         const p = catalog.get(t.plan);
@@ -113,6 +125,7 @@ let TenantRepository = class TenantRepository {
         const rows = await this.pg.queryRows(`
         SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
              , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
+             , is_demo_tenant, subscription_status
         FROM tenants
         ORDER BY name ASC
       `);
@@ -122,6 +135,7 @@ let TenantRepository = class TenantRepository {
         const row = await this.pg.queryOne(`
         SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
              , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
+             , is_demo_tenant, subscription_status
         FROM tenants
         WHERE slug = ?
       `, [slug]);
@@ -135,6 +149,7 @@ let TenantRepository = class TenantRepository {
         const row = await this.pg.queryOne(`
         SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
              , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
+             , is_demo_tenant, subscription_status
         FROM tenants
         WHERE id = ?
       `, [tenantId]);
@@ -163,13 +178,15 @@ let TenantRepository = class TenantRepository {
             currentPeriodStart: periodStart,
             currentPeriodEnd: periodEnd,
             nextRenewalAt: data.nextRenewalAt ?? periodEnd,
+            subscriptionStatus: data.subscriptionStatus ?? 'active',
         };
         await this.pg.exec(`
         INSERT INTO tenants (
           id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled,
-          billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
+          billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at,
+          subscription_status
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
             row.id,
             row.name,
@@ -188,6 +205,7 @@ let TenantRepository = class TenantRepository {
             row.currentPeriodStart,
             row.currentPeriodEnd,
             row.nextRenewalAt,
+            row.subscriptionStatus ?? 'active',
         ]);
         await this.ensureDefaultBranding(row.id, row.name);
         return (await this.findById(row.id)) ?? row;
@@ -216,6 +234,7 @@ let TenantRepository = class TenantRepository {
             currentPeriodStart: patch.currentPeriodStart ?? current.currentPeriodStart,
             currentPeriodEnd: patch.currentPeriodEnd ?? current.currentPeriodEnd,
             nextRenewalAt: patch.nextRenewalAt ?? current.nextRenewalAt,
+            subscriptionStatus: patch.subscriptionStatus ?? current.subscriptionStatus ?? 'active',
             modules: {
                 ...current.modules,
                 ...(patch.modules ?? {}),
@@ -229,7 +248,8 @@ let TenantRepository = class TenantRepository {
         SET name = ?, slug = ?, status = ?, plan = ?, storefront_enabled = ?, manual_booking_enabled = ?,
             citas_enabled = ?, ventas_enabled = ?, inventario_enabled = ?, billing_cycle = ?,
             plan_price_monthly = ?, plan_price_yearly = ?, subscription_started_at = ?,
-            current_period_start = ?, current_period_end = ?, next_renewal_at = ?
+            current_period_start = ?, current_period_end = ?, next_renewal_at = ?,
+            subscription_status = ?
         WHERE id = ?
       `, [
             next.name,
@@ -248,6 +268,7 @@ let TenantRepository = class TenantRepository {
             next.currentPeriodStart,
             next.currentPeriodEnd,
             next.nextRenewalAt,
+            next.subscriptionStatus ?? 'active',
             tenantId,
         ]);
         return next;

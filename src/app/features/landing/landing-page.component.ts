@@ -1,11 +1,17 @@
 import { Component, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { catchError, EMPTY, retry, take, timer } from 'rxjs';
 import { formatCop } from '../../core/format-currency';
 import {
   ApiSiteConfig,
-  DEFAULT_API_SITE_CONFIG,
+  ApiSiteConfigService,
+  createLandingSiteConfigState,
+  LandingSiteConfigState,
   mergeApiSiteConfig,
 } from '../../core/services/api-site-config.service';
+
+const CLIENT_RETRY_COUNT = 2;
+const CLIENT_RETRY_DELAY_MS = 1200;
 
 @Component({
   selector: 'app-landing-page',
@@ -16,14 +22,22 @@ import {
 export class LandingPageComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly apiSiteConfig = inject(ApiSiteConfigService);
 
-  readonly siteConfig = signal(this.readInitialSiteConfig());
+  private readonly initialState = this.readInitialSiteConfigState();
+
+  readonly siteConfig = signal(this.initialState.config);
+  readonly pricesFromApi = signal(this.initialState.pricesFromApi);
   readonly menuOpen = signal(false);
 
   /** Importes en COP (formato local) para la landing. */
   readonly formatCop = formatCop;
 
   constructor() {
+    if (!this.pricesFromApi()) {
+      this.retryLoadPricesFromApi();
+    }
+
     if (typeof window !== 'undefined') {
       window.addEventListener('resize', () => {
         if (window.innerWidth > 768) {
@@ -65,8 +79,30 @@ export class LandingPageComponent {
     void this.router.navigateByUrl('/reservar/barberia-centro');
   }
 
-  private readInitialSiteConfig(): ApiSiteConfig {
-    const resolved = this.route.snapshot.data['siteConfig'] as ApiSiteConfig | undefined;
-    return mergeApiSiteConfig(resolved ?? DEFAULT_API_SITE_CONFIG);
+  private readInitialSiteConfigState(): LandingSiteConfigState {
+    const resolved = this.route.snapshot.data['siteConfig'] as LandingSiteConfigState | ApiSiteConfig | undefined;
+    if (resolved && typeof resolved === 'object' && 'pricesFromApi' in resolved) {
+      return resolved;
+    }
+    const legacy = resolved as ApiSiteConfig | undefined;
+    return createLandingSiteConfigState(legacy, legacy != null);
+  }
+
+  /** Si el resolver falló (p. ej. API aún arrancando), reintenta sin mostrar precios de fallback. */
+  private retryLoadPricesFromApi(): void {
+    this.apiSiteConfig
+      .getPublic()
+      .pipe(
+        retry({
+          count: CLIENT_RETRY_COUNT,
+          delay: () => timer(CLIENT_RETRY_DELAY_MS),
+        }),
+        take(1),
+        catchError(() => EMPTY),
+      )
+      .subscribe((config) => {
+        this.siteConfig.set(mergeApiSiteConfig(config));
+        this.pricesFromApi.set(true);
+      });
   }
 }

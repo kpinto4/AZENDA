@@ -17,6 +17,7 @@ export declare class PublicBookingService {
     private assertSlotFitsBusinessHours;
     private pickEmployeeForSlot;
     getSiteConfig(): Promise<import("../infrastructure/sql-db/sql-db.types").PlatformSiteConfig>;
+    getPublicPlanCatalog(): Promise<import("../infrastructure/sql-db/sql-db.types").PlanCatalogEntry[]>;
     getPublicMeta(slug: string): Promise<{
         slug: string;
         name: string;

@@ -28,6 +28,9 @@ let PublicController = class PublicController {
     getSiteConfig() {
         return this.booking.getSiteConfig();
     }
+    getPlanCatalog() {
+        return this.booking.getPublicPlanCatalog();
+    }
     getPublicMeta(slug) {
         return this.booking.getPublicMeta(slug);
     }
@@ -63,6 +66,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], PublicController.prototype, "getSiteConfig", null);
+__decorate([
+    (0, common_1.Get)('plan-catalog'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], PublicController.prototype, "getPlanCatalog", null);
 __decorate([
     (0, common_1.Get)(':slug/meta'),
     __param(0, (0, common_1.Param)('slug')),

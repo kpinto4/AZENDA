@@ -4,6 +4,7 @@ import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { DemoSessionDto } from './dto/demo-session.dto';
 import { Public } from './decorators/public.decorator';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthUser } from './auth.types';
@@ -26,6 +27,13 @@ export class AuthController {
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 3600000 } })
+  @Post('demo-session')
+  demoSession(@Body() dto: DemoSessionDto) {
+    return this.authService.startDemoSession(dto);
   }
 
   @UseGuards(JwtAuthGuard)

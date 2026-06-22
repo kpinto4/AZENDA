@@ -1,5 +1,6 @@
 import { AppSystem, UserRole, UserStatus } from '../../auth/auth.types';
 export type BillingCycle = 'MONTHLY' | 'YEARLY';
+export type SubscriptionStatus = 'pending_payment' | 'active' | 'past_due' | 'canceled';
 export interface PlanCatalogEntry {
     planKey: string;
     priceMonthly: number;
@@ -38,6 +39,8 @@ export interface TenantEntity {
         ventas: boolean;
         inventario: boolean;
     };
+    isDemoTenant?: boolean;
+    subscriptionStatus?: SubscriptionStatus;
 }
 export interface UserEntity {
     id: string;

@@ -103,7 +103,25 @@
         <strong>Estado del plan:</strong> {{ msg }}
       </div>
     }
-    @if (session.isDemoSession()) {
+    @if (session.isDemoShowcase()) {
+      <div class="tenant-demo-banner tenant-demo-banner--showcase" role="status">
+        <div class="tenant-demo-banner-copy">
+          <strong>Estás probando Azenda.</strong>
+          Explora con calma: las citas y ventas de ejemplo se renuevan cada semana; servicios y productos base
+          siempre están listos.
+        </div>
+        <div data-tour="demo-role-switch">
+          <app-demo-role-switch />
+        </div>
+        <div class="tenant-demo-banner-actions">
+          <button type="button" class="az-btn az-btn-secondary small" (click)="startTour()">Ver recorrido</button>
+          <a routerLink="/contratar" class="az-btn az-btn-primary small">Inicia con tu negocio</a>
+          <button type="button" class="az-btn az-btn-ghost small" (click)="exitDemo()">Salir del demo</button>
+        </div>
+      </div>
+      <app-demo-tour-drawer />
+      <app-demo-tour-step-card />
+    } @else if (session.isDemoSession()) {
       <div class="tenant-demo-banner" role="status">
         <strong>Modo demo.</strong> Los cambios no se guardan en la base de datos. Inicia sesión con correo y contraseña
         reales para persistir ventas, inventario y configuración.

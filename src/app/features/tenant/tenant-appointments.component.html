@@ -14,7 +14,7 @@
     </div>
   }
 
-  <div class="az-card az-section op-note">
+  <div class="az-card az-section op-note" data-tour="citas-cierre">
     <h3>Gestión operativa</h3>
     <p class="muted small">
       El calendario muestra solo citas <strong>futuras</strong>. Cuando pasa la hora, la cita pasa a
@@ -62,7 +62,7 @@
     </div>
   }
 
-  <div class="az-card az-section agenda-card">
+  <div class="az-card az-section agenda-card" data-tour="citas-calendario">
     <app-agenda-calendar
       title="Agenda"
       [appointments]="calendarAppointments()"
@@ -124,83 +124,115 @@
     </div>
   }
 
-  <div class="az-table-wrap az-section appts-table-desktop">
-    <div class="table-toolbar">
-      @if (apiAppointments.useRemote()) {
-        <p class="muted small table-hint">Vista de tabla (escritorio): datos del API.</p>
-        <button
-          type="button"
-          class="az-btn az-btn-secondary btn-refresh-appts"
-          (click)="refreshAppointmentList()"
-          [disabled]="refreshingList()"
-        >
-          {{ refreshingList() ? 'Actualizando…' : 'Actualizar lista' }}
-        </button>
+  <div class="az-card tenant-table-card az-section appts-table-desktop">
+    <div class="tenant-table-head appts-table-head">
+      <div>
+        <h3>Listado operativo</h3>
+        <p class="muted small appts-table-sub">
+          Próximas citas, pendientes de cerrar y las de los últimos 14 días.
+          @if (tableHiddenCount() > 0) {
+            <span class="appts-hidden-note">
+              ({{ tableHiddenCount() }} antiguas ocultas)
+            </span>
+          }
+        </p>
+      </div>
+      <div class="appts-table-actions">
+        <label class="appts-history-toggle">
+          <input
+            type="checkbox"
+            [checked]="showHistoryTable()"
+            (change)="toggleHistoryTable()"
+          />
+          Ver historial completo
+        </label>
+        @if (apiAppointments.useRemote()) {
+          <button
+            type="button"
+            class="az-btn az-btn-secondary btn-refresh-appts"
+            (click)="refreshAppointmentList()"
+            [disabled]="refreshingList()"
+          >
+            {{ refreshingList() ? 'Actualizando…' : 'Actualizar' }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="az-table-wrap appts-table-scroll">
+      @if (!tableAppointments().length) {
+        <p class="appts-table-empty muted">No hay citas en este rango.</p>
       } @else {
-        <p class="muted small table-hint">Vista demo: citas en memoria del navegador.</p>
+        <table class="az-table tenant-responsive-table appts-table">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Servicio</th>
+              <th>Cuándo</th>
+              <th>Estado</th>
+              <th>Asistencia</th>
+              @if (apiAppointments.useRemote()) {
+                <th>WA</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of tableAppointments(); track a.id) {
+              <tr
+                class="appts-row"
+                tabindex="0"
+                (click)="openTableRow(a)"
+                (keydown.enter)="openTableRow(a)"
+              >
+                <td class="appts-cell-client">{{ a.customer }}</td>
+                <td class="appts-cell-service" [title]="displayServiceLabel(a.service)">
+                  {{ displayServiceLabel(a.service) }}
+                </td>
+                <td class="appts-cell-when">{{ formatWhen(a.when) }}</td>
+                <td>
+                  <span
+                    class="status-pill"
+                    [class.pending]="a.status === 'pendiente'"
+                    [class.ok]="a.status === 'confirmada'"
+                    [class.cancelled]="a.status === 'cancelada'"
+                  >
+                    {{ statusLabel(a.status) }}
+                  </span>
+                </td>
+                <td class="appts-cell-att" (click)="$event.stopPropagation()">
+                  <div class="attendance-chips attendance-chips--compact" role="group" [attr.aria-label]="'Asistencia de ' + a.customer">
+                    @for (opt of attendanceQuickOptions; track opt.value) {
+                      <button
+                        type="button"
+                        class="att-chip"
+                        [class.att-chip--on]="(a.attendance ?? 'PENDIENTE') === opt.value"
+                        [attr.aria-pressed]="(a.attendance ?? 'PENDIENTE') === opt.value"
+                        [disabled]="session.isTenantRestricted()"
+                        (click)="setAttendance(a.id, opt.value)"
+                      >
+                        {{ opt.label }}
+                      </button>
+                    }
+                  </div>
+                </td>
+                @if (apiAppointments.useRemote()) {
+                  <td class="wa-cell" (click)="$event.stopPropagation()">
+                    @if (a.waReminderConsent) {
+                      @if (a.waReminderSentAt) {
+                        <span class="wa-pill wa-pill--ok" title="Recordatorio enviado">Listo</span>
+                      } @else {
+                        <span class="wa-pill wa-pill--pend" title="Pendiente">Pend.</span>
+                      }
+                    } @else {
+                      <span class="muted tiny">—</span>
+                    }
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
       }
     </div>
-    <table class="az-table">
-      <thead>
-        <tr>
-          <th>Cliente</th>
-          <th>Servicio</th>
-          <th>Cuándo</th>
-          <th>Estado</th>
-          <th>Asistencia</th>
-          @if (apiAppointments.useRemote()) {
-            <th>Contacto WA</th>
-          }
-        </tr>
-      </thead>
-      <tbody>
-        @for (a of tenantAppointments(); track a.id) {
-          <tr>
-            <td>{{ a.customer }}</td>
-            <td>{{ displayServiceLabel(a.service) }}</td>
-            <td>{{ a.when }}</td>
-            <td>
-              <span
-                class="status-pill"
-                [class.pending]="a.status === 'pendiente'"
-                [class.ok]="a.status === 'confirmada'"
-                [class.cancelled]="a.status === 'cancelada'"
-              >
-                {{ statusLabel(a.status) }}
-              </span>
-            </td>
-            <td>
-              <div class="attendance-chips" role="group" [attr.aria-label]="'Asistencia de ' + a.customer">
-                @for (opt of attendanceQuickOptions; track opt.value) {
-                  <button
-                    type="button"
-                    class="att-chip"
-                    [class.att-chip--on]="(a.attendance ?? 'PENDIENTE') === opt.value"
-                    [attr.aria-pressed]="(a.attendance ?? 'PENDIENTE') === opt.value"
-                    [disabled]="session.isTenantRestricted()"
-                    (click)="setAttendance(a.id, opt.value)"
-                  >
-                    {{ opt.label }}
-                  </button>
-                }
-              </div>
-            </td>
-            @if (apiAppointments.useRemote()) {
-              <td class="wa-cell">
-                @if (a.waReminderConsent) {
-                  @if (a.waReminderSentAt) {
-                    <span class="wa-pill wa-pill--ok" title="Recordatorio manual marcado como enviado">Listo</span>
-                  } @else {
-                    <span class="wa-pill wa-pill--pend" title="Pendiente">Pend.</span>
-                  }
-                } @else {
-                  <span class="muted tiny">—</span>
-                }
-              </td>
-            }
-          </tr>
-        }
-      </tbody>
-    </table>
   </div>
 </div>

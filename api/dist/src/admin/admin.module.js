@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminModule = void 0;
 const common_1 = require("@nestjs/common");
+const admin_demo_controller_1 = require("./admin-demo.controller");
 const admin_platform_stats_controller_1 = require("./admin-platform-stats.controller");
 const admin_platform_stats_service_1 = require("./admin-platform-stats.service");
 const admin_plan_catalog_controller_1 = require("./admin-plan-catalog.controller");
@@ -18,12 +19,15 @@ const admin_tenants_controller_1 = require("./admin-tenants.controller");
 const admin_tenants_service_1 = require("./admin-tenants.service");
 const admin_users_controller_1 = require("./admin-users.controller");
 const admin_users_service_1 = require("./admin-users.service");
+const demo_module_1 = require("../demo/demo.module");
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
 exports.AdminModule = AdminModule = __decorate([
     (0, common_1.Module)({
+        imports: [demo_module_1.DemoModule],
         controllers: [
+            admin_demo_controller_1.AdminDemoController,
             admin_tenants_controller_1.AdminTenantsController,
             admin_users_controller_1.AdminUsersController,
             admin_plan_catalog_controller_1.AdminPlanCatalogController,

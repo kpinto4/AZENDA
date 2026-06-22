@@ -171,6 +171,14 @@ export class SqlDbService implements OnModuleInit {
     return this.tenants.findById(tenantId);
   }
 
+  async isDemoTenant(tenantId: string): Promise<boolean> {
+    const row = await this.pg.queryOne(
+      `SELECT is_demo_tenant FROM tenants WHERE id = ?`,
+      [tenantId],
+    );
+    return Boolean(row?.is_demo_tenant);
+  }
+
   async createTenant(
     data: Omit<
       TenantEntity,
@@ -595,6 +603,24 @@ export class SqlDbService implements OnModuleInit {
       );
     }
 
+    if (!(await this.columnExists('tenants', 'is_demo_tenant'))) {
+      await this.pg.execScript(
+        `ALTER TABLE tenants ADD COLUMN is_demo_tenant BOOLEAN NOT NULL DEFAULT false`,
+      );
+    }
+    if (!(await this.columnExists('tenants', 'subscription_status'))) {
+      await this.pg.execScript(
+        `ALTER TABLE tenants ADD COLUMN subscription_status TEXT NOT NULL DEFAULT 'active'`,
+      );
+    }
+    for (const table of ['tenant_services', 'tenant_products'] as const) {
+      if (!(await this.columnExists(table, 'is_demo_core'))) {
+        await this.pg.execScript(
+          `ALTER TABLE ${table} ADD COLUMN is_demo_core BOOLEAN NOT NULL DEFAULT false`,
+        );
+      }
+    }
+
     const tenantRows = await this.pg.queryRows(`SELECT id, name FROM tenants`);
     for (const t of tenantRows) {
       await this.tenants.ensureDefaultBranding(String(t.id), String(t.name));
@@ -906,6 +932,8 @@ export class SqlDbService implements OnModuleInit {
       'usr_admin_spa',
       'usr_admin_clinica',
       'usr_employee_1',
+      'usr_demo_admin',
+      'usr_demo_employee',
     ];
     for (const userId of seedUserIds) {
       await this.users.syncSeedPasswordIfInvalid(userId, seedPassword);

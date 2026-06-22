@@ -2,6 +2,7 @@ import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { DemoSessionDto } from './dto/demo-session.dto';
 import { AuthUser } from './auth.types';
 type AuthenticatedRequest = Request & {
     user: AuthUser;
@@ -34,6 +35,20 @@ export declare class AuthController {
             systems: import("./auth.types").AppSystem[];
             status: import("./auth.types").UserStatus;
         };
+    }>;
+    demoSession(dto: DemoSessionDto): Promise<{
+        accessToken: string;
+        tokenType: string;
+        user: {
+            id: string;
+            email: string;
+            password?: string;
+            role: import("./auth.types").UserRole;
+            tenantId: string | null;
+            systems: import("./auth.types").AppSystem[];
+            status: import("./auth.types").UserStatus;
+        };
+        isDemoShowcase: boolean;
     }>;
     me(req: AuthenticatedRequest): Promise<{
         id: string;
