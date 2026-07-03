@@ -9,4 +9,8 @@ export declare class UpdateTenantDto {
     storefrontEnabled?: boolean;
     manualBookingEnabled?: boolean;
     billingCycle?: 'MONTHLY' | 'YEARLY';
+    planPriceMonthly?: number;
+    planPriceYearly?: number;
+    billingCustomized?: boolean;
+    billingNotes?: string;
 }

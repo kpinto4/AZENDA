@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import {
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
 import { defaultModulesForPlan } from '../infrastructure/sql-db/plan-modules';
 import { PasswordService } from './password.service';
+import { isDemoFeaturesEnabled } from '../common/env.util';
 
 @Injectable()
 export class AuthService {
@@ -120,6 +122,9 @@ export class AuthService {
   }
 
   async startDemoSession(dto: DemoSessionDto = {}) {
+    if (!isDemoFeaturesEnabled()) {
+      throw new ForbiddenException('Demo desactivado en este entorno');
+    }
     const role = dto.role ?? 'admin';
     const email =
       role === 'employee' ? DEMO_EMPLOYEE_EMAIL : DEMO_ADMIN_EMAIL;

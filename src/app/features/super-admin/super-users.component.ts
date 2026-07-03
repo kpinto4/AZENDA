@@ -46,7 +46,7 @@ export class SuperUsersComponent {
     password: [''],
     role: ['ADMIN' as ApiAdminUserRole, Validators.required],
     tenantId: [''],
-    tenantLabel: ['Barbería Centro', Validators.required],
+    tenantLabel: [''],
   });
 
   readonly tableRowsLive = computed(() => {
@@ -142,8 +142,8 @@ export class SuperUsersComponent {
       return;
     }
 
-    this.data.addPlatformUser(v.email, v.role, v.tenantLabel);
-    this.form.patchValue({ email: '' });
+    this.data.addPlatformUser(v.email, v.role, v.tenantLabel.trim() || 'Sin tenant');
+    this.form.patchValue({ email: '', tenantLabel: '' });
   }
 
   remove(row: { id: string }): void {

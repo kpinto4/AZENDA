@@ -58,7 +58,16 @@ let TenantRepository = class TenantRepository {
             },
             isDemoTenant: Boolean(row.is_demo_tenant),
             subscriptionStatus: this.parseSubscriptionStatus(row.subscription_status),
+            billingCustomized: Boolean(row.billing_customized),
+            billingNotes: String(row.billing_notes ?? ''),
         };
+    }
+    tenantSelectColumns() {
+        return `
+        id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
+             , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
+             , is_demo_tenant, subscription_status, billing_customized, billing_notes
+    `;
     }
     parseSubscriptionStatus(raw) {
         const v = String(raw ?? 'active').trim();
@@ -71,11 +80,14 @@ let TenantRepository = class TenantRepository {
         return 'active';
     }
     mergeTenantWithCatalog(t, catalog) {
+        if (t.billingCustomized) {
+            return t;
+        }
         const p = catalog.get(t.plan);
         return {
             ...t,
-            planPriceMonthly: p?.monthly ?? 0,
-            planPriceYearly: p?.yearly ?? 0,
+            planPriceMonthly: p?.monthly ?? t.planPriceMonthly,
+            planPriceYearly: p?.yearly ?? t.planPriceYearly,
         };
     }
     async fetchPlanCatalogMap() {
@@ -123,9 +135,7 @@ let TenantRepository = class TenantRepository {
     async listTenants() {
         const catalog = await this.fetchPlanCatalogMap();
         const rows = await this.pg.queryRows(`
-        SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
-             , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
-             , is_demo_tenant, subscription_status
+        SELECT ${this.tenantSelectColumns()}
         FROM tenants
         ORDER BY name ASC
       `);
@@ -133,9 +143,7 @@ let TenantRepository = class TenantRepository {
     }
     async findBySlug(slug) {
         const row = await this.pg.queryOne(`
-        SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
-             , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
-             , is_demo_tenant, subscription_status
+        SELECT ${this.tenantSelectColumns()}
         FROM tenants
         WHERE slug = ?
       `, [slug]);
@@ -147,9 +155,7 @@ let TenantRepository = class TenantRepository {
     }
     async findById(tenantId) {
         const row = await this.pg.queryOne(`
-        SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
-             , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
-             , is_demo_tenant, subscription_status
+        SELECT ${this.tenantSelectColumns()}
         FROM tenants
         WHERE id = ?
       `, [tenantId]);
@@ -235,21 +241,37 @@ let TenantRepository = class TenantRepository {
             currentPeriodEnd: patch.currentPeriodEnd ?? current.currentPeriodEnd,
             nextRenewalAt: patch.nextRenewalAt ?? current.nextRenewalAt,
             subscriptionStatus: patch.subscriptionStatus ?? current.subscriptionStatus ?? 'active',
+            billingCustomized: patch.billingCustomized !== undefined
+                ? patch.billingCustomized
+                : (current.billingCustomized ?? false),
+            billingNotes: patch.billingNotes !== undefined
+                ? patch.billingNotes
+                : (current.billingNotes ?? ''),
             modules: {
                 ...current.modules,
                 ...(patch.modules ?? {}),
             },
         };
-        const catalogPrices = await this.getPlanCatalogPrices(next.plan);
-        next.planPriceMonthly = catalogPrices.monthly;
-        next.planPriceYearly = catalogPrices.yearly;
+        if (next.billingCustomized) {
+            if (patch.planPriceMonthly !== undefined) {
+                next.planPriceMonthly = Math.max(0, patch.planPriceMonthly);
+            }
+            if (patch.planPriceYearly !== undefined) {
+                next.planPriceYearly = Math.max(0, patch.planPriceYearly);
+            }
+        }
+        else {
+            const catalogPrices = await this.getPlanCatalogPrices(next.plan);
+            next.planPriceMonthly = catalogPrices.monthly;
+            next.planPriceYearly = catalogPrices.yearly;
+        }
         await this.pg.exec(`
         UPDATE tenants
         SET name = ?, slug = ?, status = ?, plan = ?, storefront_enabled = ?, manual_booking_enabled = ?,
             citas_enabled = ?, ventas_enabled = ?, inventario_enabled = ?, billing_cycle = ?,
             plan_price_monthly = ?, plan_price_yearly = ?, subscription_started_at = ?,
             current_period_start = ?, current_period_end = ?, next_renewal_at = ?,
-            subscription_status = ?
+            subscription_status = ?, billing_customized = ?, billing_notes = ?
         WHERE id = ?
       `, [
             next.name,
@@ -269,6 +291,8 @@ let TenantRepository = class TenantRepository {
             next.currentPeriodEnd,
             next.nextRenewalAt,
             next.subscriptionStatus ?? 'active',
+            next.billingCustomized ? true : false,
+            next.billingNotes ?? '',
             tenantId,
         ]);
         return next;
@@ -375,6 +399,7 @@ let TenantRepository = class TenantRepository {
             (SELECT price_yearly FROM plan_catalog c WHERE c.plan_key = tenants.plan),
             0
           )
+      WHERE COALESCE(billing_customized, false) = false
     `);
     }
 };

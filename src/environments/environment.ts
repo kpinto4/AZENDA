@@ -1,4 +1,5 @@
 export const environment = {
+  production: false,
   /**
    * Base del API (prefijo `/api`). Con `ng serve` y `proxy.conf.json` va al Nest en :3000
    * sin CORS; misma URL sirve si el SPA y el API comparten origen en producción.
@@ -9,4 +10,5 @@ export const environment = {
    * Los accesos rápidos de la landing siguen siendo demo en memoria.
    */
   useLiveAuth: true,
+  showDemoLoginHints: true,
 };

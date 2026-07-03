@@ -1,8 +1,10 @@
 import {
   IsBoolean,
   IsIn,
+  IsNumber,
   IsOptional,
   IsString,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -48,4 +50,22 @@ export class UpdateTenantDto {
   @IsOptional()
   @IsIn(['MONTHLY', 'YEARLY'])
   billingCycle?: 'MONTHLY' | 'YEARLY';
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  planPriceMonthly?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  planPriceYearly?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  billingCustomized?: boolean;
+
+  @IsOptional()
+  @IsString()
+  billingNotes?: string;
 }

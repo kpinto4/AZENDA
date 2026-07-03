@@ -2,11 +2,13 @@
   <div class="az-card auth-card">
     <a routerLink="/" class="back">← Volver</a>
     <h1>Iniciar sesión</h1>
-    <p class="hint">
-      Demo: <strong>super</strong> → Super Admin · <strong>spa</strong> → Spa (sin inventario) ·
-      <strong>clinica</strong> o <strong>trial</strong> → Clínica pausada · <strong>empleado</strong> · otro correo →
-      Barbería Centro.
-    </p>
+    @if (environment.showDemoLoginHints) {
+      <p class="hint">
+        Demo: <strong>super</strong> → Super Admin · <strong>spa</strong> → Spa (sin inventario) ·
+        <strong>clinica</strong> o <strong>trial</strong> → Clínica pausada · <strong>empleado</strong> · otro correo →
+        Barbería Centro.
+      </p>
+    }
     @if (environment.useLiveAuth) {
       <p class="hint live">
         Con API activo usa credenciales reales (p. ej. <code>super&#64;azenda.dev</code>). Marca «Mantener sesión» para no

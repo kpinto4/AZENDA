@@ -34,6 +34,8 @@ export interface ApiTenantAdminDto extends ApiTenantDto {
   nextRenewalAt: string;
   subscriptionStatus?: ApiSubscriptionStatus;
   adminEmail?: string | null;
+  billingCustomized?: boolean;
+  billingNotes?: string;
 }
 
 export interface ApiCreateTenantBody {
@@ -61,6 +63,10 @@ export interface ApiPatchTenantBody {
   ventas?: boolean;
   inventario?: boolean;
   billingCycle?: 'MONTHLY' | 'YEARLY';
+  planPriceMonthly?: number;
+  planPriceYearly?: number;
+  billingCustomized?: boolean;
+  billingNotes?: string;
 }
 
 /** Respuesta de simulación de upgrade (prorrateo en el periodo actual). */

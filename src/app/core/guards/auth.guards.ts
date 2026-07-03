@@ -36,7 +36,7 @@ export const subscriptionActiveGuard: CanActivateFn = () => {
   if (!session.isTenantRestricted()) {
     return true;
   }
-  return router.createUrlTree(['/contratar/pago']);
+  return router.createUrlTree(['/contratar/confirmacion']);
 };
 
 export const tenantAdminGuard: CanActivateFn = () => {

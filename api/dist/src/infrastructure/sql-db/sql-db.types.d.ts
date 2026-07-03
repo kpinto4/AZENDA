@@ -41,6 +41,8 @@ export interface TenantEntity {
     };
     isDemoTenant?: boolean;
     subscriptionStatus?: SubscriptionStatus;
+    billingCustomized?: boolean;
+    billingNotes?: string;
 }
 export interface UserEntity {
     id: string;

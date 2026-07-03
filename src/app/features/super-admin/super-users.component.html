@@ -22,10 +22,10 @@
   </header>
 
   @if (apiFlash()) {
-    <p class="services-msg">{{ apiFlash() }}</p>
+    <div class="super-ui-alert super-ui-alert--success" role="status">{{ apiFlash() }}</div>
   }
   @if (apiError()) {
-    <p class="field-error">{{ apiError() }}</p>
+    <div class="super-ui-alert super-ui-alert--error" role="alert">{{ apiError() }}</div>
   }
 
   <div class="super-ui-surface">

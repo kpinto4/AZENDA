@@ -61,7 +61,17 @@ export class TenantRepository {
       },
       isDemoTenant: Boolean(row.is_demo_tenant),
       subscriptionStatus: this.parseSubscriptionStatus(row.subscription_status),
+      billingCustomized: Boolean(row.billing_customized),
+      billingNotes: String(row.billing_notes ?? ''),
     };
+  }
+
+  private tenantSelectColumns(): string {
+    return `
+        id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
+             , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
+             , is_demo_tenant, subscription_status, billing_customized, billing_notes
+    `;
   }
 
   private parseSubscriptionStatus(
@@ -83,11 +93,14 @@ export class TenantRepository {
     t: TenantEntity,
     catalog: Map<string, { monthly: number; yearly: number }>,
   ): TenantEntity {
+    if (t.billingCustomized) {
+      return t;
+    }
     const p = catalog.get(t.plan);
     return {
       ...t,
-      planPriceMonthly: p?.monthly ?? 0,
-      planPriceYearly: p?.yearly ?? 0,
+      planPriceMonthly: p?.monthly ?? t.planPriceMonthly,
+      planPriceYearly: p?.yearly ?? t.planPriceYearly,
     };
   }
 
@@ -152,9 +165,7 @@ export class TenantRepository {
     const catalog = await this.fetchPlanCatalogMap();
     const rows = await this.pg.queryRows(
       `
-        SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
-             , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
-             , is_demo_tenant, subscription_status
+        SELECT ${this.tenantSelectColumns()}
         FROM tenants
         ORDER BY name ASC
       `,
@@ -170,9 +181,7 @@ export class TenantRepository {
   async findBySlug(slug: string): Promise<TenantEntity | undefined> {
     const row = await this.pg.queryOne(
       `
-        SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
-             , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
-             , is_demo_tenant, subscription_status
+        SELECT ${this.tenantSelectColumns()}
         FROM tenants
         WHERE slug = ?
       `,
@@ -188,9 +197,7 @@ export class TenantRepository {
   async findById(tenantId: string): Promise<TenantEntity | undefined> {
     const row = await this.pg.queryOne(
       `
-        SELECT id, name, slug, status, plan, storefront_enabled, manual_booking_enabled, citas_enabled, ventas_enabled, inventario_enabled
-             , billing_cycle, plan_price_monthly, plan_price_yearly, subscription_started_at, current_period_start, current_period_end, next_renewal_at
-             , is_demo_tenant, subscription_status
+        SELECT ${this.tenantSelectColumns()}
         FROM tenants
         WHERE id = ?
       `,
@@ -319,15 +326,32 @@ export class TenantRepository {
       nextRenewalAt: patch.nextRenewalAt ?? current.nextRenewalAt,
       subscriptionStatus:
         patch.subscriptionStatus ?? current.subscriptionStatus ?? 'active',
+      billingCustomized:
+        patch.billingCustomized !== undefined
+          ? patch.billingCustomized
+          : (current.billingCustomized ?? false),
+      billingNotes:
+        patch.billingNotes !== undefined
+          ? patch.billingNotes
+          : (current.billingNotes ?? ''),
       modules: {
         ...current.modules,
         ...(patch.modules ?? {}),
       },
     };
 
-    const catalogPrices = await this.getPlanCatalogPrices(next.plan);
-    next.planPriceMonthly = catalogPrices.monthly;
-    next.planPriceYearly = catalogPrices.yearly;
+    if (next.billingCustomized) {
+      if (patch.planPriceMonthly !== undefined) {
+        next.planPriceMonthly = Math.max(0, patch.planPriceMonthly);
+      }
+      if (patch.planPriceYearly !== undefined) {
+        next.planPriceYearly = Math.max(0, patch.planPriceYearly);
+      }
+    } else {
+      const catalogPrices = await this.getPlanCatalogPrices(next.plan);
+      next.planPriceMonthly = catalogPrices.monthly;
+      next.planPriceYearly = catalogPrices.yearly;
+    }
 
     await this.pg.exec(
       `
@@ -336,7 +360,7 @@ export class TenantRepository {
             citas_enabled = ?, ventas_enabled = ?, inventario_enabled = ?, billing_cycle = ?,
             plan_price_monthly = ?, plan_price_yearly = ?, subscription_started_at = ?,
             current_period_start = ?, current_period_end = ?, next_renewal_at = ?,
-            subscription_status = ?
+            subscription_status = ?, billing_customized = ?, billing_notes = ?
         WHERE id = ?
       `,
       [
@@ -357,6 +381,8 @@ export class TenantRepository {
         next.currentPeriodEnd,
         next.nextRenewalAt,
         next.subscriptionStatus ?? 'active',
+        next.billingCustomized ? true : false,
+        next.billingNotes ?? '',
         tenantId,
       ],
     );
@@ -500,6 +526,7 @@ export class TenantRepository {
             (SELECT price_yearly FROM plan_catalog c WHERE c.plan_key = tenants.plan),
             0
           )
+      WHERE COALESCE(billing_customized, false) = false
     `);
   }
 }

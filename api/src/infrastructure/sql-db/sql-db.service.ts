@@ -28,6 +28,7 @@ import { TenantRetailRepository } from './repositories/tenant-retail.repository'
 import { TenantRepository } from './repositories/tenant.repository';
 import { UserRepository } from './repositories/user.repository';
 import { TenantBillingService } from './tenant-billing.service';
+import { isDemoFeaturesEnabled } from '../../common/env.util';
 
 @Injectable()
 export class SqlDbService implements OnModuleInit {
@@ -59,7 +60,9 @@ export class SqlDbService implements OnModuleInit {
     await this.createSchema();
     await this.ensureSchemaMigrations();
     await this.users.migrateLegacyPlaintextPasswords();
-    await this.syncKnownSeedUsers();
+    if (isDemoFeaturesEnabled()) {
+      await this.syncKnownSeedUsers();
+    }
     this.logger.log(
       'PostgreSQL: tablas y migraciones ligeras verificadas en el arranque. ' +
         'Semilla (usuarios demo): npm run db:bootstrap en la raiz si la base esta vacia. ' +
@@ -101,7 +104,9 @@ export class SqlDbService implements OnModuleInit {
       await this.createSchema();
       await this.ensureSchemaMigrations();
       await this.users.migrateLegacyPlaintextPasswords();
-      await this.syncKnownSeedUsers();
+      if (isDemoFeaturesEnabled()) {
+        await this.syncKnownSeedUsers();
+      }
       await this.seedIfEmpty();
       this.logger.log(
         `PostgreSQL listo (${context}): esquema y semilla verificados`,
@@ -613,6 +618,16 @@ export class SqlDbService implements OnModuleInit {
         `ALTER TABLE tenants ADD COLUMN subscription_status TEXT NOT NULL DEFAULT 'active'`,
       );
     }
+    if (!(await this.columnExists('tenants', 'billing_customized'))) {
+      await this.pg.execScript(
+        `ALTER TABLE tenants ADD COLUMN billing_customized BOOLEAN NOT NULL DEFAULT false`,
+      );
+    }
+    if (!(await this.columnExists('tenants', 'billing_notes'))) {
+      await this.pg.execScript(
+        `ALTER TABLE tenants ADD COLUMN billing_notes TEXT NOT NULL DEFAULT ''`,
+      );
+    }
     for (const table of ['tenant_services', 'tenant_products'] as const) {
       if (!(await this.columnExists(table, 'is_demo_core'))) {
         await this.pg.execScript(
@@ -949,42 +964,44 @@ export class SqlDbService implements OnModuleInit {
       return;
     }
 
-    await this.ensureSeedTenant({
-      id: 'tenant_spa',
-      name: 'Spa Relax',
-      slug: 'spa-relax',
-      status: 'ACTIVE',
-      plan: 'Básico',
-      billingCycle: 'MONTHLY',
-      planPriceMonthly: 29,
-      planPriceYearly: 290,
-      storefrontEnabled: false,
-      modules: { citas: true, ventas: true, inventario: false },
-    });
-    await this.ensureSeedTenant({
-      id: 'tenant_clinica',
-      name: 'Clinica Demo',
-      slug: 'clinica-demo',
-      status: 'PAUSED',
-      plan: 'Pro',
-      billingCycle: 'MONTHLY',
-      planPriceMonthly: 59,
-      planPriceYearly: 590,
-      storefrontEnabled: false,
-      modules: { citas: true, ventas: true, inventario: true },
-    });
-    await this.ensureSeedTenant({
-      id: 'tenant_barberia',
-      name: 'Barberia Centro',
-      slug: 'barberia-centro',
-      status: 'ACTIVE',
-      plan: 'Pro',
-      billingCycle: 'YEARLY',
-      planPriceMonthly: 59,
-      planPriceYearly: 590,
-      storefrontEnabled: true,
-      modules: { citas: true, ventas: true, inventario: true },
-    });
+    if (isDemoFeaturesEnabled()) {
+      await this.ensureSeedTenant({
+        id: 'tenant_spa',
+        name: 'Spa Relax',
+        slug: 'spa-relax',
+        status: 'ACTIVE',
+        plan: 'Básico',
+        billingCycle: 'MONTHLY',
+        planPriceMonthly: 29,
+        planPriceYearly: 290,
+        storefrontEnabled: false,
+        modules: { citas: true, ventas: true, inventario: false },
+      });
+      await this.ensureSeedTenant({
+        id: 'tenant_clinica',
+        name: 'Clinica Demo',
+        slug: 'clinica-demo',
+        status: 'PAUSED',
+        plan: 'Pro',
+        billingCycle: 'MONTHLY',
+        planPriceMonthly: 59,
+        planPriceYearly: 590,
+        storefrontEnabled: false,
+        modules: { citas: true, ventas: true, inventario: true },
+      });
+      await this.ensureSeedTenant({
+        id: 'tenant_barberia',
+        name: 'Barberia Centro',
+        slug: 'barberia-centro',
+        status: 'ACTIVE',
+        plan: 'Pro',
+        billingCycle: 'YEARLY',
+        planPriceMonthly: 59,
+        planPriceYearly: 590,
+        storefrontEnabled: true,
+        modules: { citas: true, ventas: true, inventario: true },
+      });
+    }
 
     await this.ensureSeedUser({
       id: 'usr_super_1',
@@ -999,6 +1016,11 @@ export class SqlDbService implements OnModuleInit {
       ],
       status: 'ACTIVE',
     });
+
+    if (!isDemoFeaturesEnabled()) {
+      return;
+    }
+
     await this.ensureSeedUser({
       id: 'usr_admin_spa',
       email: 'admin-spa@azenda.dev',

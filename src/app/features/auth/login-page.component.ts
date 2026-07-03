@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
@@ -13,7 +13,7 @@ import { MockSessionService } from '../../core/services/mock-session.service';
   templateUrl: './login-page.component.html',
   styleUrl: './login-page.component.scss',
 })
-export class LoginPageComponent {
+export class LoginPageComponent implements OnInit {
   protected readonly environment = environment;
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
@@ -30,6 +30,12 @@ export class LoginPageComponent {
 
   message = '';
   readonly passwordVisible = signal(false);
+
+  ngOnInit(): void {
+    if (this.route.snapshot.queryParamMap.get('expired') === '1') {
+      this.message = 'Tu sesión expiró. Inicia sesión de nuevo.';
+    }
+  }
 
   submit(): void {
     if (this.form.invalid) {

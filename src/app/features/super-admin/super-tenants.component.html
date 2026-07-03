@@ -1,195 +1,282 @@
-<div class="az-container az-page super-ui-page">
+<div class="az-container az-page super-ui-page tenants-page">
   <header class="super-ui-header">
     <div class="super-ui-header-main">
       <div class="super-ui-title-row">
-        <h1 class="super-ui-title">Tenants</h1>
+        <h1 class="super-ui-title">Negocios</h1>
         @if (useApiTenants()) {
-          <span class="super-ui-badge super-ui-badge--live">API</span>
+          <span class="super-ui-badge super-ui-badge--live">API en vivo</span>
         } @else {
           <span class="super-ui-badge super-ui-badge--neutral">Simulación</span>
         }
       </div>
-      @if (useApiTenants()) {
-        <p class="super-ui-lead">
-          Conectado al API: los cambios se guardan en base de datos. Cada negocio tiene un
-          <strong>id único</strong> y un <strong>slug único</strong> de reservas (pueden existir dos nombres iguales si el slug
-          difiere).
-        </p>
-      } @else {
-        <p class="super-ui-lead">
-          Simulación en memoria: alta, plan, pausa y módulos solo afectan al mock. Para persistir en base de datos, inicia
-          sesión como super admin con el API activo (<code>super&#64;azenda.dev</code>).
-        </p>
-      }
+      <p class="super-ui-lead">
+        @if (useApiTenants()) {
+          Gestiona altas, planes, módulos y activaciones de pago desde un solo lugar.
+        } @else {
+          Vista simulada en memoria. Inicia sesión como super admin con API activo para persistir cambios.
+        }
+      </p>
     </div>
+    @if (useApiTenants()) {
+      <div class="super-ui-header-actions">
+        <button type="button" class="super-ui-btn-primary" (click)="showAddForm.set(!showAddForm())">
+          {{ showAddForm() ? 'Cerrar formulario' : '+ Nuevo negocio' }}
+        </button>
+      </div>
+    }
   </header>
 
   @if (apiError()) {
     <div class="super-ui-alert super-ui-alert--error" role="alert">{{ apiError() }}</div>
   }
 
-  <div class="az-card add-card">
-    @if (useApiTenants()) {
-      <h3>Nuevo tenant (API)</h3>
-      <p class="muted small">
-        El nombre puede repetirse en otro negocio; el slug de reserva es único. El <strong>plan</strong> define los
-        módulos iniciales (rápido); después puedes afinar con el <strong>checklist</strong> en la tabla.
-      </p>
-    } @else {
-      <h3>Nuevo tenant (simulado)</h3>
-    }
-    <form [formGroup]="addForm" (ngSubmit)="addTenant()" class="add-row">
-      <input class="az-input grow" type="text" formControlName="name" placeholder="Nombre del negocio" />
-      <select class="az-select plan-sel" formControlName="plan" [title]="useApiTenants() ? 'Plan: módulos iniciales' : ''">
-        @for (p of plans; track p) {
-          <option [value]="p">{{ p }}</option>
-        }
-      </select>
-      <button type="submit" class="az-btn az-btn-primary">Añadir</button>
-    </form>
-  </div>
-
   @if (useApiTenants()) {
-    @if (pendingActivationRows().length) {
-      <section class="pending-activation-card az-card" aria-labelledby="pending-activation-title">
-        <h2 id="pending-activation-title" class="pending-activation-title">
-          Pendientes de activación
-          <span class="super-ui-badge super-ui-badge--warn">{{ pendingActivationRows().length }}</span>
-        </h2>
-        <p class="muted small pending-activation-lead">
-          Verifica el pago recibido, ajusta los módulos si hace falta y confirma para que el negocio entre al panel.
+    <div class="tenants-kpi-row">
+      <div class="tenants-kpi">
+        <span class="tenants-kpi-value">{{ apiRows().length }}</span>
+        <span class="tenants-kpi-label">Total</span>
+      </div>
+      <div class="tenants-kpi tenants-kpi--success">
+        <span class="tenants-kpi-value">{{ activeTenantCount() }}</span>
+        <span class="tenants-kpi-label">Activos</span>
+      </div>
+      <div class="tenants-kpi tenants-kpi--warn">
+        <span class="tenants-kpi-value">{{ pendingActivationRows().length }}</span>
+        <span class="tenants-kpi-label">Pago pendiente</span>
+      </div>
+    </div>
+
+    @if (showAddForm()) {
+      <section class="super-ui-surface tenants-add-panel">
+        <h3 class="super-ui-surface-title">Alta manual de negocio</h3>
+        <p class="tenants-add-hint">
+          El slug de reservas se genera automáticamente. El plan define los módulos iniciales.
         </p>
-        <ul class="pending-activation-list">
-          @for (t of pendingActivationRows(); track t.id) {
-            <li class="pending-activation-item">
-              <div class="pending-activation-main">
-                <strong>{{ t.name }}</strong>
-                <span class="muted tiny">/{{ t.slug }}</span>
-                @if (t.adminEmail) {
-                  <span class="pending-email">{{ t.adminEmail }}</span>
-                }
-                <span class="az-badge warn">Pago pendiente</span>
-              </div>
-              <div class="pending-activation-modules">
-                @for (key of moduleKeys; track key) {
-                  <label class="mod-label">
-                    <input
-                      type="checkbox"
-                      [checked]="
-                        key === 'citas' ? t.modules.citas : key === 'ventas' ? t.modules.ventas : t.modules.inventario
-                      "
-                      (change)="setApiTenantModule(t, key, $any($event.target).checked)"
-                    />
-                    {{ key }}
-                  </label>
-                }
-              </div>
-              <button
-                type="button"
-                class="az-btn az-btn-primary small"
-                [disabled]="activatingTenantId() === t.id"
-                (click)="confirmPaymentAndActivate(t)"
-              >
-                {{ activatingTenantId() === t.id ? 'Activando…' : 'Confirmar pago y activar' }}
-              </button>
-            </li>
-          }
-        </ul>
+        <form [formGroup]="addForm" (ngSubmit)="addTenant()" class="tenants-add-form">
+          <input class="az-input" type="text" formControlName="name" placeholder="Nombre del negocio" />
+          <select class="az-select" formControlName="plan">
+            @for (p of plans; track p) {
+              <option [value]="p">{{ p }}</option>
+            }
+          </select>
+          <button type="submit" class="super-ui-btn-primary">Crear negocio</button>
+        </form>
       </section>
     }
 
-    <div class="az-table-wrap mt">
-      <table class="az-table tenants-table">
-        <thead>
-          <tr>
-            <th>Id sistema</th>
-            <th>Nombre</th>
-            <th>Slug reservas (único)</th>
-            <th>Estado</th>
-            <th>Plan / facturación</th>
-            <th>Módulos</th>
-            <th>Tienda pública</th>
-            <th>Reserva</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (t of apiRows(); track t.id) {
-            <tr>
-              <td><code class="id-code">{{ t.id }}</code></td>
-              <td><strong>{{ t.name }}</strong></td>
-              <td>
-                <code class="slug-code">/{{ t.slug }}</code>
-              </td>
-              <td>
-                @if (t.status === 'ACTIVE') {
-                  <span class="az-badge success">Activo</span>
-                } @else if (t.status === 'PAUSED') {
-                  <span class="az-badge warn">Pausado</span>
-                } @else {
-                  <span class="az-badge">Bloqueado</span>
-                }
-                @if (isPendingActivation(t)) {
-                  <span class="az-badge warn pending-badge">Pago pendiente</span>
-                }
-              </td>
-              <td>
-                <div class="plan-bill-cell">
-                  <p class="plan-bill-line">
-                    <strong>{{ t.plan }}</strong>
-                    <span class="sep">·</span>
-                    <span>{{ t.billingCycle === 'YEARLY' ? 'Anual' : 'Mensual' }}</span>
-                    <span class="sep">·</span>
-                    <span class="nowrap">M {{ t.planPriceMonthly | number : '1.0-2' }} / A {{ t.planPriceYearly | number : '1.0-2' }}</span>
-                  </p>
-                  <p class="muted tiny">
-                    Alta: {{ formatDate(t.subscriptionStartedAt) }} · Renovación: {{ formatDate(t.nextRenewalAt) }} ·
-                    Quedan {{ daysRemaining(t) }} día(s)
-                  </p>
-                  <a class="az-btn az-btn-secondary small" [routerLink]="['/super/tenants', t.id, 'plan']">
-                    Editar plan y facturación
-                  </a>
+    @if (pendingActivationRows().length) {
+      <section class="tenants-queue" aria-labelledby="pending-activation-title">
+        <div class="tenants-queue-head">
+          <h2 id="pending-activation-title" class="tenants-queue-title">
+            Cola de activación
+            <span class="super-ui-badge super-ui-badge--warn">{{ pendingActivationRows().length }}</span>
+          </h2>
+          <p class="tenants-queue-lead">
+            Verifica el pago, ajusta módulos y confirma para habilitar el panel del negocio.
+          </p>
+        </div>
+        <div class="tenants-queue-list">
+          @for (t of pendingActivationRows(); track t.id) {
+            <article class="tenant-card tenant-card--pending">
+              <div class="tenant-card-head">
+                <div class="tenant-identity">
+                  <span class="tenant-avatar" aria-hidden="true">{{ tenantInitial(t.name) }}</span>
+                  <div class="tenant-identity-text">
+                    <strong class="tenant-name">{{ t.name }}</strong>
+                    <span class="tenant-slug">/{{ t.slug }}</span>
+                    @if (t.adminEmail) {
+                      <span class="tenant-email">{{ t.adminEmail }}</span>
+                    }
+                  </div>
                 </div>
-              </td>
-              <td>
-                <div class="mods">
+                <div class="tenant-badges">
+                  <span class="super-ui-status super-ui-status--warn">Pago pendiente</span>
+                  <span class="super-ui-status super-ui-status--neutral">{{ t.plan }}</span>
+                </div>
+              </div>
+              <div class="tenant-card-body">
+                <div class="tenant-modules">
+                  <span class="tenant-modules-label">Módulos</span>
+                  <div class="super-ui-chip-group">
+                    @for (key of moduleKeys; track key) {
+                      <label class="super-ui-chip" [class.super-ui-chip--on]="moduleEnabled(t, key)">
+                        <input
+                          type="checkbox"
+                          class="super-ui-chip-input"
+                          [checked]="moduleEnabled(t, key)"
+                          (change)="setApiTenantModule(t, key, $any($event.target).checked)"
+                        />
+                        {{ key }}
+                      </label>
+                    }
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  class="super-ui-btn-primary"
+                  [disabled]="activatingTenantId() === t.id"
+                  (click)="confirmPaymentAndActivate(t)"
+                >
+                  {{ activatingTenantId() === t.id ? 'Activando…' : 'Confirmar pago y activar' }}
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+    }
+
+    <section class="tenants-directory">
+      <div class="tenants-toolbar">
+        <label class="tenants-search">
+          <span class="tenants-search-icon" aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            class="az-input"
+            placeholder="Buscar por nombre, slug, correo o plan…"
+            [value]="searchQuery()"
+            (input)="onSearchInput($event)"
+          />
+        </label>
+        <div class="tenants-filter-pills" role="tablist" aria-label="Filtrar por estado">
+          @for (f of statusFilters; track f.id) {
+            <button
+              type="button"
+              class="tenants-filter-pill"
+              [class.active]="statusFilter() === f.id"
+              (click)="setStatusFilter(f.id)"
+            >
+              {{ f.label }}
+              @if (f.id === 'pending' && pendingActivationRows().length) {
+                <span class="tenants-filter-count">{{ pendingActivationRows().length }}</span>
+              }
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (!filteredApiRows().length) {
+        <div class="tenants-empty super-ui-surface">
+          <p>No hay negocios que coincidan con tu búsqueda o filtro.</p>
+        </div>
+      } @else {
+        <div class="tenants-card-list">
+          @for (t of filteredApiRows(); track t.id) {
+            <article class="tenant-card" [class.tenant-card--pending]="isPendingActivation(t)">
+              <div class="tenant-card-head">
+                <div class="tenant-identity">
+                  <span class="tenant-avatar" aria-hidden="true">{{ tenantInitial(t.name) }}</span>
+                  <div class="tenant-identity-text">
+                    <strong class="tenant-name">{{ t.name }}</strong>
+                    <span class="tenant-slug">/{{ t.slug }}</span>
+                    <code class="tenant-id">{{ t.id }}</code>
+                    @if (t.adminEmail) {
+                      <span class="tenant-email">{{ t.adminEmail }}</span>
+                    }
+                  </div>
+                </div>
+                <div class="tenant-badges">
+                  @if (t.status === 'ACTIVE') {
+                    <span class="super-ui-status super-ui-status--success">Activo</span>
+                  } @else if (t.status === 'PAUSED') {
+                    <span class="super-ui-status super-ui-status--neutral">Pausado</span>
+                  } @else {
+                    <span class="super-ui-status super-ui-status--danger">Bloqueado</span>
+                  }
+                  @if (isPendingActivation(t)) {
+                    <span class="super-ui-status super-ui-status--warn">Pago pendiente</span>
+                  }
+                </div>
+              </div>
+
+              <div class="tenant-card-meta">
+                <div class="tenant-meta-block">
+                  <span class="tenant-meta-label">Plan</span>
+                  <strong>{{ t.plan }}</strong>
+                  <span class="tenant-meta-sub">
+                    {{ cycleLabel(t.billingCycle) }} · M {{ t.planPriceMonthly | number : '1.0-0' }}
+                    @if (t.billingCustomized) {
+                      · <span class="tenant-price-custom">Personalizado</span>
+                    }
+                  </span>
+                  @if (t.billingNotes) {
+                    <span class="tenant-meta-sub tenant-billing-notes">{{ t.billingNotes }}</span>
+                  }
+                </div>
+                <div class="tenant-meta-block">
+                  <span class="tenant-meta-label">Renovación</span>
+                  <strong>{{ formatDate(t.nextRenewalAt) }}</strong>
+                  <span class="tenant-meta-sub">Quedan {{ daysRemaining(t) }} día(s)</span>
+                </div>
+                <div class="tenant-meta-block">
+                  <span class="tenant-meta-label">Alta</span>
+                  <strong>{{ formatDate(t.subscriptionStartedAt) }}</strong>
+                </div>
+              </div>
+
+              <div class="tenant-card-modules">
+                <span class="tenant-modules-label">Módulos</span>
+                <div class="super-ui-chip-group">
                   @for (key of moduleKeys; track key) {
-                    <label class="mod-label">
+                    <label class="super-ui-chip" [class.super-ui-chip--on]="moduleEnabled(t, key)">
                       <input
                         type="checkbox"
-                        [checked]="
-                          key === 'citas' ? t.modules.citas : key === 'ventas' ? t.modules.ventas : t.modules.inventario
-                        "
+                        class="super-ui-chip-input"
+                        [checked]="moduleEnabled(t, key)"
                         (change)="setApiTenantModule(t, key, $any($event.target).checked)"
                       />
                       {{ key }}
                     </label>
                   }
-                </div>
-              </td>
-              <td>
-                <label class="mod-label nowrap">
-                  <input
-                    type="checkbox"
-                    [checked]="t.storefrontEnabled"
-                    [disabled]="
+                  <label
+                    class="super-ui-chip super-ui-chip--catalog"
+                    [class.super-ui-chip--on]="t.storefrontEnabled"
+                    [class.super-ui-chip--disabled]="
                       !t.modules.inventario ||
                       !t.modules.ventas ||
                       (t.plan !== 'Pro' && t.plan !== 'Negocio')
                     "
-                    (change)="setApiTenantStorefront(t, $any($event.target).checked)"
-                  />
-                  Catálogo
-                </label>
-                <p class="muted tiny">Solo Pro / Negocio + ventas + inventario</p>
-              </td>
-              <td class="booking-cell">
-                <a class="az-btn az-btn-secondary small" [routerLink]="['/reservar', t.slug]">Abrir</a>
-              </td>
-              <td>
+                  >
+                    <input
+                      type="checkbox"
+                      class="super-ui-chip-input"
+                      [checked]="t.storefrontEnabled"
+                      [disabled]="
+                        !t.modules.inventario ||
+                        !t.modules.ventas ||
+                        (t.plan !== 'Pro' && t.plan !== 'Negocio')
+                      "
+                      (change)="setApiTenantStorefront(t, $any($event.target).checked)"
+                    />
+                    Catálogo
+                  </label>
+                </div>
+              </div>
+
+              <details
+                class="tenant-billing-drawer"
+                [open]="billingExpanded(t.id)"
+                (toggle)="toggleBillingDrawer(t.id, $event)"
+              >
+                <summary class="tenant-billing-summary">
+                  <span class="tenant-billing-summary-title">Plan y facturación</span>
+                  <span class="tenant-billing-summary-meta">
+                    {{ t.plan }} · {{ cycleLabel(t.billingCycle) }} · renueva {{ formatDate(t.nextRenewalAt) }}
+                  </span>
+                  <span class="tenant-billing-chevron" aria-hidden="true"></span>
+                </summary>
+                @if (billingExpanded(t.id)) {
+                  <app-super-tenant-billing-panel [tenant]="t" (saved)="onBillingSaved($event)" />
+                }
+              </details>
+
+              <div class="tenant-card-actions">
+                <a class="super-ui-btn-ghost" [routerLink]="['/reservar', t.slug]" target="_blank" rel="noopener">
+                  Reservas
+                </a>
                 <button
                   type="button"
-                  class="az-btn az-btn-secondary small"
+                  class="super-ui-btn-ghost"
                   (click)="setApiTenantActive(t, t.status !== 'ACTIVE')"
                 >
                   {{ t.status === 'ACTIVE' ? 'Pausar' : 'Activar' }}
@@ -197,86 +284,94 @@
                 @if (isPendingActivation(t)) {
                   <button
                     type="button"
-                    class="az-btn az-btn-primary small"
+                    class="super-ui-btn-primary"
                     [disabled]="activatingTenantId() === t.id"
                     (click)="confirmPaymentAndActivate(t)"
                   >
                     {{ activatingTenantId() === t.id ? 'Activando…' : 'Confirmar pago' }}
                   </button>
                 }
-                <button type="button" class="az-btn az-btn-ghost small danger" (click)="deleteApiTenant(t)">
+                <button type="button" class="super-ui-btn-ghost tenant-btn-danger" (click)="deleteApiTenant(t)">
                   Eliminar
                 </button>
-              </td>
-            </tr>
+              </div>
+            </article>
           }
-        </tbody>
-      </table>
-    </div>
+        </div>
+      }
+    </section>
   } @else {
-    <div class="az-table-wrap mt">
-      <table class="az-table tenants-table">
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Reserva pública</th>
-            <th>Plan</th>
-            <th>Estado</th>
-            <th>Módulos</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (t of data.tenants(); track t.id) {
-            <tr>
-              <td>
-                <strong>{{ t.name }}</strong><br /><span class="id-hint">mock: {{ t.id }}</span>
-              </td>
-              <td class="booking-cell">
-                <code class="slug-code">/{{ t.bookingSlug }}</code>
-                <a class="az-btn az-btn-secondary small" [routerLink]="['/reservar', t.bookingSlug]">Abrir</a>
-              </td>
-              <td>
-                <select
-                  class="az-select inline"
-                  [value]="t.plan"
-                  (change)="data.setTenantPlan(t.id, $any($event.target).value)"
-                >
-                  @for (p of plans; track p) {
-                    <option [value]="p">{{ p }}</option>
-                  }
-                </select>
-              </td>
-              <td>
-                @if (t.active) {
-                  <span class="az-badge success">Activo</span>
-                } @else {
-                  <span class="az-badge warn">Pausado</span>
-                }
-              </td>
-              <td>
-                <div class="mods">
-                  @for (key of moduleKeys; track key) {
-                    <label class="mod-label">
-                      <input
-                        type="checkbox"
-                        [checked]="t.modules.includes(key)"
-                        (change)="data.setTenantModule(t.id, key, $any($event.target).checked)"
-                      />
-                      {{ key }}
-                    </label>
-                  }
-                </div>
-              </td>
-              <td>
-                <button type="button" class="az-btn az-btn-secondary small" (click)="data.setTenantActive(t.id, !t.active)">
-                  {{ t.active ? 'Pausar' : 'Activar' }}
-                </button>
-              </td>
-            </tr>
+    <section class="super-ui-surface tenants-add-panel">
+      <h3 class="super-ui-surface-title">Nuevo negocio (simulado)</h3>
+      <form [formGroup]="addForm" (ngSubmit)="addTenant()" class="tenants-add-form">
+        <input class="az-input" type="text" formControlName="name" placeholder="Nombre del negocio" />
+        <select class="az-select" formControlName="plan">
+          @for (p of plans; track p) {
+            <option [value]="p">{{ p }}</option>
           }
-        </tbody>
-      </table>
+        </select>
+        <button type="submit" class="super-ui-btn-primary">Añadir</button>
+      </form>
+    </section>
+
+    <div class="tenants-card-list">
+      @for (t of data.tenants(); track t.id) {
+        <article class="tenant-card">
+          <div class="tenant-card-head">
+            <div class="tenant-identity">
+              <span class="tenant-avatar" aria-hidden="true">{{ tenantInitial(t.name) }}</span>
+              <div class="tenant-identity-text">
+                <strong class="tenant-name">{{ t.name }}</strong>
+                <span class="tenant-slug">/{{ t.bookingSlug }}</span>
+                <code class="tenant-id">{{ t.id }}</code>
+              </div>
+            </div>
+            <div class="tenant-badges">
+              @if (t.active) {
+                <span class="super-ui-status super-ui-status--success">Activo</span>
+              } @else {
+                <span class="super-ui-status super-ui-status--neutral">Pausado</span>
+              }
+            </div>
+          </div>
+          <div class="tenant-card-meta">
+            <div class="tenant-meta-block">
+              <span class="tenant-meta-label">Plan</span>
+              <select
+                class="az-select tenant-plan-select"
+                [value]="t.plan"
+                (change)="data.setTenantPlan(t.id, $any($event.target).value)"
+              >
+                @for (p of plans; track p) {
+                  <option [value]="p">{{ p }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="tenant-card-modules">
+            <span class="tenant-modules-label">Módulos</span>
+            <div class="super-ui-chip-group">
+              @for (key of moduleKeys; track key) {
+                <label class="super-ui-chip" [class.super-ui-chip--on]="t.modules.includes(key)">
+                  <input
+                    type="checkbox"
+                    class="super-ui-chip-input"
+                    [checked]="t.modules.includes(key)"
+                    (change)="data.setTenantModule(t.id, key, $any($event.target).checked)"
+                  />
+                  {{ key }}
+                </label>
+              }
+            </div>
+          </div>
+          <div class="tenant-card-actions">
+            <a class="super-ui-btn-ghost" [routerLink]="['/reservar', t.bookingSlug]">Reservas</a>
+            <button type="button" class="super-ui-btn-ghost" (click)="data.setTenantActive(t.id, !t.active)">
+              {{ t.active ? 'Pausar' : 'Activar' }}
+            </button>
+          </div>
+        </article>
+      }
     </div>
   }
 </div>

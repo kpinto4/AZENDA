@@ -66,4 +66,26 @@ __decorate([
     (0, class_validator_1.IsIn)(['MONTHLY', 'YEARLY']),
     __metadata("design:type", String)
 ], UpdateTenantDto.prototype, "billingCycle", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdateTenantDto.prototype, "planPriceMonthly", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdateTenantDto.prototype, "planPriceYearly", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateTenantDto.prototype, "billingCustomized", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateTenantDto.prototype, "billingNotes", void 0);
 //# sourceMappingURL=update-tenant.dto.js.map

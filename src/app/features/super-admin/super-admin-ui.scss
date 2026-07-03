@@ -7,6 +7,8 @@
   .super-ui-page {
     padding: 1.25rem 0 2.5rem;
     min-height: 100%;
+    max-width: 1120px;
+    margin-inline: auto;
   }
 
   /* Cabecera de página */
@@ -104,6 +106,104 @@
     color: #14532d;
     background: #dcfce7;
     border-color: #86efac;
+  }
+
+  .super-ui-badge--warn {
+    color: #92400e;
+    background: #fef3c7;
+    border-color: #fcd34d;
+  }
+
+  /* Estados y chips reutilizables */
+  .super-ui-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.22rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  .super-ui-status--success {
+    color: #166534;
+    background: #dcfce7;
+    border-color: #86efac;
+  }
+
+  .super-ui-status--warn {
+    color: #92400e;
+    background: #fef3c7;
+    border-color: #fcd34d;
+  }
+
+  .super-ui-status--neutral {
+    color: var(--az-muted);
+    background: var(--az-bg);
+    border-color: var(--az-border);
+  }
+
+  .super-ui-status--danger {
+    color: #991b1b;
+    background: #fee2e2;
+    border-color: #fecaca;
+  }
+
+  .super-ui-chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .super-ui-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    border: 1px solid var(--az-border);
+    background: var(--az-bg);
+    color: var(--az-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .super-ui-chip:hover:not(.super-ui-chip--disabled) {
+    border-color: color-mix(in srgb, var(--az-primary) 35%, var(--az-border));
+    color: var(--az-text);
+  }
+
+  .super-ui-chip--on {
+    border-color: var(--az-primary);
+    background: color-mix(in srgb, var(--az-primary) 12%, var(--az-surface));
+    color: var(--az-primary);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--az-primary) 15%, transparent);
+  }
+
+  .super-ui-chip--catalog {
+    font-style: italic;
+  }
+
+  .super-ui-chip--disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .super-ui-chip-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
   }
 
   .super-ui-lead {
@@ -527,6 +627,34 @@
     color: #bbf7d0;
     background: #14532d;
     border-color: #22c55e;
+  }
+
+  .super-ui-badge--warn {
+    color: #fde68a;
+    background: #78350f;
+    border-color: #d97706;
+  }
+
+  .super-ui-status--success {
+    color: #bbf7d0;
+    background: #14532d;
+    border-color: #166534;
+  }
+
+  .super-ui-status--warn {
+    color: #fde68a;
+    background: #78350f;
+    border-color: #92400e;
+  }
+
+  .super-ui-status--danger {
+    color: #fecaca;
+    background: #450a0a;
+    border-color: #991b1b;
+  }
+
+  .super-ui-chip--on {
+    background: color-mix(in srgb, var(--az-primary) 22%, var(--az-surface));
   }
 
   .super-ui-alert--error {

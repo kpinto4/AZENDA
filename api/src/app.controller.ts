@@ -11,4 +11,10 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+
+  @SkipThrottle()
+  @Get('health')
+  getHealth() {
+    return this.appService.getHealth();
+  }
 }

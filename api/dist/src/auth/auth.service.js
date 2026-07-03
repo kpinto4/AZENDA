@@ -17,6 +17,7 @@ const demo_tenant_snapshot_1 = require("../../scripts/demo-tenant.snapshot");
 const sql_db_service_1 = require("../infrastructure/sql-db/sql-db.service");
 const plan_modules_1 = require("../infrastructure/sql-db/plan-modules");
 const password_service_1 = require("./password.service");
+const env_util_1 = require("../common/env.util");
 let AuthService = class AuthService {
     constructor(jwtService, sqlDbService, passwordService) {
         this.jwtService = jwtService;
@@ -101,6 +102,9 @@ let AuthService = class AuthService {
         return this.toSafeUser(user);
     }
     async startDemoSession(dto = {}) {
+        if (!(0, env_util_1.isDemoFeaturesEnabled)()) {
+            throw new common_1.ForbiddenException('Demo desactivado en este entorno');
+        }
         const role = dto.role ?? 'admin';
         const email = role === 'employee' ? demo_tenant_snapshot_1.DEMO_EMPLOYEE_EMAIL : demo_tenant_snapshot_1.DEMO_ADMIN_EMAIL;
         const user = await this.sqlDbService.findUserByEmailNormalized(email);

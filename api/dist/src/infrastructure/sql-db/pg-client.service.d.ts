@@ -10,4 +10,5 @@ export declare class PgClientService implements OnModuleDestroy {
     exec(sql: string, params?: unknown[]): Promise<void>;
     execScript(sql: string): Promise<void>;
     ensureIndex(createSql: string): Promise<void>;
+    ping(): Promise<boolean>;
 }

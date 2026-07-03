@@ -85,6 +85,35 @@ export const CHECKOUT_PAYMENT_METHODS: CheckoutPaymentMethod[] = [
 /** Activar en `true` cuando la pasarela (Wompi/PayU) esté aprobada e integrada. */
 export const CHECKOUT_PASARELA_ENABLED = false;
 
+export interface ManualPaymentMethod {
+  id: string;
+  label: string;
+  accountDisplay: string;
+  holder: string;
+  note?: string;
+}
+
+/** Medios de pago para activación manual (sin pasarela). */
+export const CHECKOUT_MANUAL_PAYMENT = {
+  afterPayNote:
+    'Envía el comprobante por WhatsApp para activar tu panel en pocas horas hábiles.',
+  methods: [
+    {
+      id: 'nequi',
+      label: 'Nequi / Daviplata',
+      accountDisplay: '324 566 7724',
+      holder: 'Azenda',
+    },
+    {
+      id: 'bancolombia',
+      label: 'Transferencia Bancolombia',
+      accountDisplay: 'Te confirmamos el número de cuenta por WhatsApp',
+      holder: 'Azenda',
+      note: 'Cuenta de ahorros',
+    },
+  ] satisfies ManualPaymentMethod[],
+};
+
 /**
  * Enlaces de pago por plan y método. Solo se usan si CHECKOUT_PASARELA_ENABLED es true.
  */

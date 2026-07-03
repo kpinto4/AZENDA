@@ -78,8 +78,13 @@ export class TenantAppointmentsComponent {
     time: ['09:00', Validators.required],
   });
 
-  readonly showManualCreateCard = computed(() => false);
-  readonly canCreateManualAppointment = computed(() => false);
+  readonly showManualCreateCard = computed(
+    () =>
+      this.session.manualBookingEnabled() &&
+      this.session.modules().appointments &&
+      !this.session.isTenantRestricted(),
+  );
+  readonly canCreateManualAppointment = computed(() => this.showManualCreateCard());
   readonly appointmentsBlockedMessage = computed(() => this.session.tenantRestrictionMessage());
   readonly manualServiceOptions = computed(() => {
     if (this.apiAppointments.useRemote()) {

@@ -5,6 +5,7 @@ export declare class TenantRepository {
     constructor(pg: PgClientService);
     private computeCycleEnd;
     private mapTenantRow;
+    private tenantSelectColumns;
     private parseSubscriptionStatus;
     private mergeTenantWithCatalog;
     fetchPlanCatalogMap(): Promise<Map<string, {

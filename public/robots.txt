@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Paneles privados y flujo de contratación
+Disallow: /app/
+Disallow: /super/
+Disallow: /contratar/

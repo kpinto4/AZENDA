@@ -76,6 +76,15 @@ let PgClientService = PgClientService_1 = class PgClientService {
             throw e;
         }
     }
+    async ping() {
+        try {
+            await this.pool.query('SELECT 1');
+            return true;
+        }
+        catch {
+            return false;
+        }
+    }
 };
 exports.PgClientService = PgClientService;
 exports.PgClientService = PgClientService = PgClientService_1 = __decorate([

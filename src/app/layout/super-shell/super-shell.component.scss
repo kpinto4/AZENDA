@@ -162,6 +162,13 @@ nav a.active .nav-ico {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  padding: 0 1rem 1.5rem;
+}
+
+@media (min-width: 900px) {
+  .super-main-stage {
+    padding: 0 1.5rem 2rem;
+  }
 }
 
 [data-theme="dark"] .super-main {

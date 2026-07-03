@@ -56,6 +56,10 @@ export interface TenantEntity {
   /** Tenant showroom público (exploración sin contrato). */
   isDemoTenant?: boolean;
   subscriptionStatus?: SubscriptionStatus;
+  /** Si true, los precios no se sobrescriben con el catálogo global. */
+  billingCustomized?: boolean;
+  /** Notas de personalización (ej. empleados extra, módulos a medida). */
+  billingNotes?: string;
 }
 
 export interface UserEntity {

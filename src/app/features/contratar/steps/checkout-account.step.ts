@@ -45,7 +45,7 @@ import { CheckoutSessionService } from '../checkout-session.service';
           }
           <div class="checkout-actions">
             <button type="submit" class="az-btn az-btn-primary full" [disabled]="saving()">
-              {{ saving() ? 'Creando cuenta…' : 'Continuar al pago' }}
+              {{ saving() ? 'Creando cuenta…' : 'Crear cuenta y continuar' }}
             </button>
           </div>
         </form>

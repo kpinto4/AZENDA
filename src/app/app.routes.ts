@@ -174,8 +174,8 @@ export const routes: Routes = [
       {
         path: 'tenants/:tenantId/plan',
         loadComponent: () =>
-          import('./features/super-admin/pages/tenant-plan/super-tenant-plan.page').then(
-            (m) => m.SuperTenantPlanPageComponent,
+          import('./features/super-admin/pages/tenant-plan/super-tenant-plan-redirect.page').then(
+            (m) => m.SuperTenantPlanRedirectPageComponent,
           ),
       },
       {

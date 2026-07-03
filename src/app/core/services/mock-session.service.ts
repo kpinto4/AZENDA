@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import {
   Observable,
   catchError,
@@ -30,6 +31,7 @@ const AUTH_SESSION_KEY = 'azenda.auth.session.v1';
 export class MockSessionService {
   private readonly data = inject(MockDataService);
   private readonly apiAuth = inject(ApiAuthService);
+  private readonly router = inject(Router);
 
   /** JWT del backend; si existe, las peticiones HTTP llevan Authorization. */
   readonly accessToken = signal<string | null>(null);
@@ -291,6 +293,12 @@ export class MockSessionService {
     if (isJwtExpired(t)) {
       this.clearStoredAuth();
       this.logoutLocalState();
+      const path = this.router.url;
+      if (!path.includes('/auth/')) {
+        void this.router.navigate(['/auth/iniciar-sesion'], {
+          queryParams: { expired: '1' },
+        });
+      }
     }
   }
 

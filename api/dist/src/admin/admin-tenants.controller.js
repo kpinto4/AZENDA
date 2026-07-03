@@ -90,6 +90,10 @@ let AdminTenantsController = class AdminTenantsController {
             storefrontEnabled: body.storefrontEnabled,
             manualBookingEnabled: body.manualBookingEnabled,
             billingCycle: body.billingCycle,
+            planPriceMonthly: body.planPriceMonthly,
+            planPriceYearly: body.planPriceYearly,
+            billingCustomized: body.billingCustomized,
+            billingNotes: body.billingNotes,
             ...(Object.keys(modPatch).length ? { modules: modPatch } : {}),
         });
         if (!updated) {
