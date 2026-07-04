@@ -4,8 +4,13 @@
     <h1>Crear cuenta</h1>
     @if (environment.useLiveAuth) {
       <p class="hint live">
-        Tu negocio y credenciales se guardan en la base de datos. Tras crear la cuenta entrarás al panel con sesión
-        real.
+        Guardamos tu negocio y credenciales. Tras crear la cuenta tu solicitud queda
+        <strong>en espera de confirmación</strong>: coordinamos el pago por WhatsApp y activamos tu panel
+        manualmente (no es inmediato).
+      </p>
+      <p class="hint">
+        Si vas a contratar un plan, usa el
+        <a routerLink="/contratar">flujo de contratación</a> para elegir plan y precio.
       </p>
     } @else {
       <p class="hint">
@@ -46,7 +51,7 @@
         <p class="msg">{{ message }}</p>
       }
       <button type="submit" class="az-btn az-btn-primary full">
-        {{ environment.useLiveAuth ? 'Crear cuenta y entrar' : 'Crear y entrar (demo)' }}
+        {{ environment.useLiveAuth ? 'Crear cuenta' : 'Crear y entrar (demo)' }}
       </button>
     </form>
     <p class="footer">

@@ -7,6 +7,7 @@ import {
 } from './core/guards/auth.guards';
 import {
   checkoutAccountGuard,
+  checkoutConfirmationGuard,
   checkoutPaymentGuard,
   checkoutPlanGuard,
 } from './features/contratar/checkout-step.guards';
@@ -82,7 +83,7 @@ export const routes: Routes = [
       },
       {
         path: 'confirmacion',
-        canActivate: [checkoutAccountGuard],
+        canActivate: [checkoutConfirmationGuard],
         loadComponent: () =>
           import('./features/contratar/steps/checkout-confirmation.step').then(
             (m) => m.CheckoutConfirmationStepComponent,

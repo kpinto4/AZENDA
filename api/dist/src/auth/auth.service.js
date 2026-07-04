@@ -18,6 +18,7 @@ const sql_db_service_1 = require("../infrastructure/sql-db/sql-db.service");
 const plan_modules_1 = require("../infrastructure/sql-db/plan-modules");
 const password_service_1 = require("./password.service");
 const env_util_1 = require("../common/env.util");
+const billing_config_1 = require("../common/billing.config");
 let AuthService = class AuthService {
     constructor(jwtService, sqlDbService, passwordService) {
         this.jwtService = jwtService;
@@ -34,7 +35,7 @@ let AuthService = class AuthService {
         const tenantId = `tenant_${Date.now()}`;
         const slug = await this.uniqueTenantSlug(business, tenantId);
         const registrationPlan = dto.selectedPlan ?? 'Básico';
-        const billingCycle = dto.billingCycle ?? 'MONTHLY';
+        const billingCycle = (0, billing_config_1.normalizeBillingCycle)(dto.billingCycle);
         await this.sqlDbService.createTenant({
             id: tenantId,
             name: business,
@@ -63,6 +64,14 @@ let AuthService = class AuthService {
         const user = await this.sqlDbService.findUserByEmailNormalized(email);
         if (!user) {
             throw new common_1.UnauthorizedException('Credenciales invalidas');
+        }
+        if (!(0, env_util_1.isDemoFeaturesEnabled)()) {
+            const isDemoAccount = user.tenantId === demo_tenant_snapshot_1.DEMO_TENANT_ID ||
+                user.email === demo_tenant_snapshot_1.DEMO_ADMIN_EMAIL ||
+                user.email === demo_tenant_snapshot_1.DEMO_EMPLOYEE_EMAIL;
+            if (isDemoAccount) {
+                throw new common_1.UnauthorizedException('Credenciales invalidas');
+            }
         }
         const valid = await this.passwordService.verify(dto.password, user.password);
         if (!valid) {

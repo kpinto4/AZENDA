@@ -57,7 +57,9 @@ function resolveDayToken(token: string): number | null {
   return DAY_TO_NUM[normalizeDayText(token.trim())] ?? null;
 }
 
-export function parseLegacyPromoDays(promoLabel: string | null | undefined): number[] {
+export function parseLegacyPromoDays(
+  promoLabel: string | null | undefined,
+): number[] {
   const conditions = promoLabel?.trim();
   if (!conditions) {
     return [0, 1, 2, 3, 4, 5, 6];
@@ -91,7 +93,9 @@ export function parseLegacyPromoDays(promoLabel: string | null | undefined): num
   return days;
 }
 
-export function buildPromoSummaryLabel(fields: CatalogPromoFields): string | null {
+export function buildPromoSummaryLabel(
+  fields: CatalogPromoFields,
+): string | null {
   if (!fields.promoEnabled || fields.promoPrice == null) {
     return null;
   }
@@ -141,7 +145,9 @@ export function parsePromoDaysJson(raw: string | null | undefined): number[] {
 }
 
 export function serializePromoDays(days: number[]): string | null {
-  const normalized = [...new Set(days.filter((d) => d >= 0 && d <= 6))].sort((a, b) => a - b);
+  const normalized = [...new Set(days.filter((d) => d >= 0 && d <= 6))].sort(
+    (a, b) => a - b,
+  );
   return normalized.length ? JSON.stringify(normalized) : null;
 }
 
@@ -209,7 +215,9 @@ export function effectiveCatalogPrice(
 ): number {
   const base = Math.max(0, Number(basePrice) || 0);
   const promo =
-    fields.promoPrice != null ? Math.max(0, Number(fields.promoPrice) || 0) : null;
+    fields.promoPrice != null
+      ? Math.max(0, Number(fields.promoPrice) || 0)
+      : null;
   if (promo != null && isPromoActiveForDate(fields, when)) {
     return promo;
   }
@@ -239,13 +247,15 @@ export function normalizePromoFields(input: {
   }
 
   const promoPrice =
-    input.promoPrice == null ? null : Math.max(0, Number(input.promoPrice) || 0);
+    input.promoPrice == null
+      ? null
+      : Math.max(0, Number(input.promoPrice) || 0);
   const scheduleType = input.promoScheduleType ?? 'always';
   const promoDays =
     scheduleType === 'weekdays'
-      ? [...new Set((input.promoDays ?? []).filter((d) => d >= 0 && d <= 6))].sort(
-          (a, b) => a - b,
-        )
+      ? [
+          ...new Set((input.promoDays ?? []).filter((d) => d >= 0 && d <= 6)),
+        ].sort((a, b) => a - b)
       : [];
 
   const fields: CatalogPromoFields = {

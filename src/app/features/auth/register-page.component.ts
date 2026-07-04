@@ -47,14 +47,15 @@ export class RegisterPageComponent {
             next: () => {
               this.session.persistAuthIfRequested(res.accessToken, v.rememberMe);
               if (this.session.isTenantRestricted()) {
-                void this.router.navigateByUrl('/contratar/pago');
+                this.message =
+                  'Cuenta creada. Tu solicitud está en espera de confirmación: escríbenos por WhatsApp o completa el flujo en Contratar para coordinar el pago. El panel se activa cuando verifiquemos el pago.';
                 return;
               }
               void this.router.navigateByUrl('/app');
             },
             error: () => {
               this.message =
-                'Cuenta creada pero no se pudo cargar el panel. Inicia sesión manualmente.';
+                'Cuenta creada. Tu solicitud está en espera de confirmación; inicia sesión cuando te avisemos que el panel está activo.';
             },
           });
         },

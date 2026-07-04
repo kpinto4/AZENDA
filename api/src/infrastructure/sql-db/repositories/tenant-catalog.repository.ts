@@ -69,14 +69,18 @@ export class TenantCatalogRepository {
         patch.promoScheduleType !== undefined
           ? patch.promoScheduleType
           : current.promoScheduleType,
-      promoDays: patch.promoDays !== undefined ? patch.promoDays : current.promoDays,
+      promoDays:
+        patch.promoDays !== undefined ? patch.promoDays : current.promoDays,
       promoStartDate:
         patch.promoStartDate !== undefined
           ? patch.promoStartDate
           : current.promoStartDate,
       promoEndDate:
-        patch.promoEndDate !== undefined ? patch.promoEndDate : current.promoEndDate,
-      promoLabel: patch.promoLabel !== undefined ? patch.promoLabel : current.promoLabel,
+        patch.promoEndDate !== undefined
+          ? patch.promoEndDate
+          : current.promoEndDate,
+      promoLabel:
+        patch.promoLabel !== undefined ? patch.promoLabel : current.promoLabel,
     });
   }
 
@@ -325,7 +329,10 @@ export class TenantCatalogRepository {
 
   async createTenantService(
     tenantId: string,
-    data: Omit<TenantServiceEntity, 'id' | 'tenantId' | 'catalogOrder' | 'durationMinutes'> & {
+    data: Omit<
+      TenantServiceEntity,
+      'id' | 'tenantId' | 'catalogOrder' | 'durationMinutes'
+    > & {
       durationMinutes?: number;
     },
   ): Promise<TenantServiceEntity> {

@@ -12,9 +12,9 @@ import { Router } from '@angular/router';
         </p>
         <h1>Elige tu plan</h1>
         <ul class="checkout-bullets">
-          <li>Sin compromisos: cancela cuando quieras.</li>
-          <li>Todos los módulos según el plan que elijas.</li>
-          <li>Reservas en línea para tus clientes desde el primer día.</li>
+          <li>Compara planes y precios mensuales en pesos colombianos.</li>
+          <li>Módulos según el plan que elijas (citas, ventas, inventario).</li>
+          <li>Tras el pago y la activación podrás usar el panel y, cuando lo configures, la reserva en línea.</li>
         </ul>
         <div class="checkout-actions">
           <button type="button" class="az-btn az-btn-primary full" (click)="next()">

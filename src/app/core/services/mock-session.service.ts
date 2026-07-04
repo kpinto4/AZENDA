@@ -13,6 +13,7 @@ import { environment } from '../../../environments/environment';
 import { ApiAuthService, ApiAuthUser, ApiLoginResponse } from './api-auth.service';
 import { MockDataService, MockTenant } from './mock-data.service';
 import { decodeJwtPayload, isJwtExpired } from '../utils/jwt.util';
+import { CheckoutSessionService } from '../../features/contratar/checkout-session.service';
 
 export type DemoRole = 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'EMPLOYEE' | null;
 
@@ -32,6 +33,7 @@ export class MockSessionService {
   private readonly data = inject(MockDataService);
   private readonly apiAuth = inject(ApiAuthService);
   private readonly router = inject(Router);
+  private readonly checkout = inject(CheckoutSessionService);
 
   /** JWT del backend; si existe, las peticiones HTTP llevan Authorization. */
   readonly accessToken = signal<string | null>(null);
@@ -90,7 +92,7 @@ export class MockSessionService {
   readonly tenantRestrictionMessage = computed(() => {
     const status = this.tenantStatus();
     if (status === 'PAUSED') {
-      return 'Tu suscripcion esta pendiente de pago. Completa el pago o espera la activacion para usar el panel.';
+      return 'Tu solicitud está en espera de confirmación. Completa el pago o escríbenos por WhatsApp; activaremos tu panel cuando verifiquemos el pago.';
     }
     if (status === 'BLOCKED') {
       return 'Tu negocio esta bloqueado. Contacta a soporte para recuperar el acceso.';
@@ -380,6 +382,19 @@ export class MockSessionService {
           this.manualBookingEnabled.set(!!ctx.tenant.manualBookingEnabled);
           this.tenantStatus.set(ctx.tenant.status as TenantLifecycleStatus);
           this.syncDemoShowcase(token, ctx.tenant.isDemoTenant);
+
+          if (
+            role === 'TENANT_ADMIN' &&
+            ctx.tenant.status === 'PAUSED' &&
+            !ctx.tenant.isDemoTenant
+          ) {
+            this.checkout.syncPendingRegistration({
+              email: u.email,
+              plan: ctx.tenant.plan ?? 'Básico',
+              business: ctx.tenant.name,
+              accountCreated: true,
+            });
+          }
 
           return of(undefined);
         }),

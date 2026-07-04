@@ -95,7 +95,7 @@ export class TenantAppointmentsService {
     const weekly = parseWeeklyHoursJson(branding.publicBookingHoursJson);
     const latestClose = latestClosingMinuteForDate(weekly, datePart);
     const intervals = dayAppointmentIntervals(appointments, services, datePart);
-    let employeeId =
+    const employeeId =
       dto.employeeId?.trim() ||
       readEmployeeIdFromServiceText(dto.service) ||
       (user.role === UserRole.EMPLEADO ? user.id : '');

@@ -9,7 +9,9 @@ describe('phone-co.util', () => {
   });
 
   it('acepta prefijo +57', () => {
-    expect(normalizeColombiaMobileDigits('+57 300 123 4567')).toBe('573001234567');
+    expect(normalizeColombiaMobileDigits('+57 300 123 4567')).toBe(
+      '573001234567',
+    );
   });
 
   it('rechaza menos de 10 digitos o sin 3 inicial', () => {

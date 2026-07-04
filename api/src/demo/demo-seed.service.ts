@@ -56,14 +56,7 @@ export class DemoSeedService {
           VALUES (?, ?, ?, ?, ?, ?, 'PENDIENTE', NULL, false, NULL, 30)
           ON CONFLICT (id) DO NOTHING
         `,
-        [
-          appt.id,
-          DEMO_TENANT_ID,
-          appt.customer,
-          service,
-          when,
-          appt.status,
-        ],
+        [appt.id, DEMO_TENANT_ID, appt.customer, service, when, appt.status],
       );
     }
 
@@ -78,14 +71,7 @@ export class DemoSeedService {
           VALUES (?, ?, ?, ?, ?, NULL, NULL, ?)
           ON CONFLICT (id) DO NOTHING
         `,
-        [
-          sale.id,
-          DEMO_TENANT_ID,
-          saleDate,
-          sale.total,
-          sale.method,
-          createdAt,
-        ],
+        [sale.id, DEMO_TENANT_ID, saleDate, sale.total, sale.method, createdAt],
       );
     }
   }

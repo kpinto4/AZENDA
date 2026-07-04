@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { isDemoFeaturesEnabled } from '../common/env.util';
 import { DemoSeedService } from './demo-seed.service';
 
 @Injectable()
@@ -8,6 +9,9 @@ export class DemoBootstrapService implements OnModuleInit {
   constructor(private readonly demoSeed: DemoSeedService) {}
 
   async onModuleInit(): Promise<void> {
+    if (!isDemoFeaturesEnabled()) {
+      return;
+    }
     try {
       await this.demoSeed.ensureDemoTenantSeed();
     } catch (err: unknown) {

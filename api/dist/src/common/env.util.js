@@ -7,7 +7,7 @@ function isProductionEnv() {
 }
 function isDemoFeaturesEnabled() {
     if (isProductionEnv()) {
-        return (process.env.AZENDA_DEMO_ENABLED ?? '').trim().toLowerCase() === 'true';
+        return ((process.env.AZENDA_DEMO_ENABLED ?? '').trim().toLowerCase() === 'true');
     }
     return true;
 }

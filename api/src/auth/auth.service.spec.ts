@@ -72,7 +72,9 @@ describe('AuthService', () => {
     sqlDbService.findUserByEmailNormalized.mockResolvedValue(undefined);
     sqlDbService.createTenant.mockResolvedValue(undefined);
     sqlDbService.createUser.mockResolvedValue(undefined);
-    sqlDbService.findUserByEmailNormalized.mockResolvedValueOnce(undefined).mockResolvedValueOnce(activeUser);
+    sqlDbService.findUserByEmailNormalized
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(activeUser);
     passwordService.verify.mockResolvedValue(true);
 
     await service.register({

@@ -28,9 +28,7 @@ let TenantBrandingRepository = class TenantBrandingRepository {
         this.tenants = tenants;
     }
     async get(tenantId) {
-        const row = await this.pg.queryOne(`${BRANDING_SELECT} WHERE tenant_id = ?`, [
-            tenantId,
-        ]);
+        const row = await this.pg.queryOne(`${BRANDING_SELECT} WHERE tenant_id = ?`, [tenantId]);
         if (row) {
             return (0, tenant_branding_row_mapper_1.mapTenantBrandingRow)(row);
         }

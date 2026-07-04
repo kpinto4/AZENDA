@@ -24,6 +24,7 @@ const tenant_repository_1 = require("./repositories/tenant.repository");
 const user_repository_1 = require("./repositories/user.repository");
 const tenant_billing_service_1 = require("./tenant-billing.service");
 const env_util_1 = require("../../common/env.util");
+const seed_credentials_1 = require("./seed-credentials");
 let SqlDbService = SqlDbService_1 = class SqlDbService {
     constructor(pg, users, tenants, appointments, catalog, retail, tenantBranding, platformSite, tenantBilling) {
         this.pg = pg;
@@ -49,6 +50,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         await this.createSchema();
         await this.ensureSchemaMigrations();
         await this.users.migrateLegacyPlaintextPasswords();
+        await this.syncSuperAdminSeedPassword();
         if ((0, env_util_1.isDemoFeaturesEnabled)()) {
             await this.syncKnownSeedUsers();
         }
@@ -493,7 +495,6 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         }
         const legacyServices = await this.pg.queryRows(`SELECT id, promo_price, promo_label FROM tenant_services WHERE promo_price IS NOT NULL AND promo_enabled = false`);
         for (const row of legacyServices) {
-            const promoPrice = Math.max(0, Number(row.promo_price) || 0);
             const promoLabel = row.promo_label == null ? null : String(row.promo_label).trim();
             const labelNorm = (promoLabel ?? '').toLowerCase();
             const isWeekdays = !!promoLabel &&
@@ -547,17 +548,22 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             await this.pg.exec(`UPDATE tenants SET current_period_start = ?, current_period_end = ?, next_renewal_at = ? WHERE id = ?`, [start.toISOString(), end.toISOString(), nextRenewalAt, tenant.id]);
         }
     }
+    async syncSuperAdminSeedPassword() {
+        await this.users.syncSeedPasswordIfInvalid(seed_credentials_1.SUPER_ADMIN_SEED_USER_ID, (0, seed_credentials_1.getSuperAdminSeedPassword)());
+    }
     async syncKnownSeedUsers() {
         const seedPassword = 'azenda123';
-        const seedUserIds = [
-            'usr_super_1',
+        const demoSeedIds = ['usr_demo_admin', 'usr_demo_employee'];
+        const devSeedIds = [
             'usr_admin_spa',
             'usr_admin_clinica',
             'usr_employee_1',
-            'usr_demo_admin',
-            'usr_demo_employee',
+            ...demoSeedIds,
         ];
-        for (const userId of seedUserIds) {
+        for (const userId of devSeedIds) {
+            if (!(0, env_util_1.isDemoFeaturesEnabled)() && demoSeedIds.includes(userId)) {
+                continue;
+            }
             await this.users.syncSeedPasswordIfInvalid(userId, seedPassword);
         }
     }
@@ -608,7 +614,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         await this.ensureSeedUser({
             id: 'usr_super_1',
             email: 'super@azenda.dev',
-            password: 'azenda123',
+            password: (0, seed_credentials_1.getSuperAdminSeedPassword)(),
             role: auth_types_1.UserRole.SUPER_ADMIN,
             tenantId: null,
             systems: [

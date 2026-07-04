@@ -12,6 +12,7 @@ import {
   ApiPlanCatalogService,
 } from '../../../../core/services/api-plan-catalog.service';
 import { formatCop } from '../../../../core/format-currency';
+import { ANNUAL_BILLING_ENABLED } from '../../../../core/config/billing.config';
 import { MockSessionService } from '../../../../core/services/mock-session.service';
 import { environment } from '../../../../../environments/environment';
 
@@ -25,6 +26,7 @@ export class SuperPlansPageComponent {
   private readonly fb = inject(FormBuilder);
   private readonly api = inject(ApiPlanCatalogService);
   readonly session = inject(MockSessionService);
+  readonly annualBillingEnabled = ANNUAL_BILLING_ENABLED;
 
   readonly loading = signal(true);
   readonly saving = signal(false);

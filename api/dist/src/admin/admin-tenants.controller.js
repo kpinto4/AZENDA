@@ -21,6 +21,7 @@ const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
 const admin_tenants_service_1 = require("./admin-tenants.service");
 const plan_modules_1 = require("../infrastructure/sql-db/plan-modules");
+const billing_config_1 = require("../common/billing.config");
 const admin_upgrade_quote_dto_1 = require("./dto/admin-upgrade-quote.dto");
 const create_tenant_dto_1 = require("./dto/create-tenant.dto");
 const update_tenant_dto_1 = require("./dto/update-tenant.dto");
@@ -42,7 +43,7 @@ let AdminTenantsController = class AdminTenantsController {
         const quote = await this.adminTenants.getUpgradeQuote({
             tenantId,
             targetPlan: body.targetPlan,
-            targetCycle: body.targetCycle,
+            targetCycle: (0, billing_config_1.normalizeBillingCycle)(body.targetCycle),
         });
         if (!quote) {
             throw new common_1.NotFoundException('Tenant no encontrado');
@@ -60,7 +61,7 @@ let AdminTenantsController = class AdminTenantsController {
             plan,
             storefrontEnabled: body.storefrontEnabled ?? false,
             manualBookingEnabled: body.manualBookingEnabled ?? true,
-            billingCycle: body.billingCycle ?? 'MONTHLY',
+            billingCycle: (0, billing_config_1.normalizeBillingCycle)(body.billingCycle ?? 'MONTHLY'),
             modules: {
                 citas: body.citas ?? planModules.citas,
                 ventas: body.ventas ?? planModules.ventas,
@@ -89,7 +90,7 @@ let AdminTenantsController = class AdminTenantsController {
             plan: body.plan,
             storefrontEnabled: body.storefrontEnabled,
             manualBookingEnabled: body.manualBookingEnabled,
-            billingCycle: body.billingCycle,
+            billingCycle: (0, billing_config_1.normalizeBillingCycle)(body.billingCycle),
             planPriceMonthly: body.planPriceMonthly,
             planPriceYearly: body.planPriceYearly,
             billingCustomized: body.billingCustomized,

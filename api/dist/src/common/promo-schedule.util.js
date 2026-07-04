@@ -166,7 +166,9 @@ function isPromoActiveForDate(fields, when) {
 }
 function effectiveCatalogPrice(basePrice, fields, when) {
     const base = Math.max(0, Number(basePrice) || 0);
-    const promo = fields.promoPrice != null ? Math.max(0, Number(fields.promoPrice) || 0) : null;
+    const promo = fields.promoPrice != null
+        ? Math.max(0, Number(fields.promoPrice) || 0)
+        : null;
     if (promo != null && isPromoActiveForDate(fields, when)) {
         return promo;
     }
@@ -185,10 +187,14 @@ function normalizePromoFields(input) {
             promoLabel: null,
         };
     }
-    const promoPrice = input.promoPrice == null ? null : Math.max(0, Number(input.promoPrice) || 0);
+    const promoPrice = input.promoPrice == null
+        ? null
+        : Math.max(0, Number(input.promoPrice) || 0);
     const scheduleType = input.promoScheduleType ?? 'always';
     const promoDays = scheduleType === 'weekdays'
-        ? [...new Set((input.promoDays ?? []).filter((d) => d >= 0 && d <= 6))].sort((a, b) => a - b)
+        ? [
+            ...new Set((input.promoDays ?? []).filter((d) => d >= 0 && d <= 6)),
+        ].sort((a, b) => a - b)
         : [];
     const fields = {
         promoEnabled: true,

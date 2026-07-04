@@ -109,7 +109,9 @@ export class DemoResetService {
     return cnt;
   }
 
-  private async countCore(table: 'tenant_services' | 'tenant_products'): Promise<number> {
+  private async countCore(
+    table: 'tenant_services' | 'tenant_products',
+  ): Promise<number> {
     const row = await this.pg.queryOne(
       `SELECT COUNT(*) AS cnt FROM ${table} WHERE tenant_id = ? AND is_demo_core = true`,
       [DEMO_TENANT_ID],

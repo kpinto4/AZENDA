@@ -14,6 +14,10 @@ import {
   ApiTenantsAdminService,
   ApiTenantAdminDto,
 } from '../../../../core/services/api-tenants-admin.service';
+import {
+  ANNUAL_BILLING_ENABLED,
+  normalizeBillingCycle,
+} from '../../../../core/config/billing.config';
 import { MockDataService } from '../../../../core/services/mock-data.service';
 import { environment } from '../../../../../environments/environment';
 
@@ -35,6 +39,7 @@ export class SuperTenantPlanPageComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly plans = ['Trial', 'Básico', 'Pro', 'Negocio'];
+  readonly annualBillingEnabled = ANNUAL_BILLING_ENABLED;
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly error = signal('');
@@ -173,7 +178,7 @@ export class SuperTenantPlanPageComponent {
     this.api
       .patch(id, {
         plan: v.plan,
-        billingCycle: v.billingCycle,
+        billingCycle: normalizeBillingCycle(v.billingCycle),
       })
       .subscribe({
         next: (row) => {
@@ -244,7 +249,7 @@ export class SuperTenantPlanPageComponent {
         this.catalog.set(catalog);
         this.form.patchValue({
           plan: tenant.plan,
-          billingCycle: tenant.billingCycle,
+          billingCycle: normalizeBillingCycle(tenant.billingCycle),
         });
         this.updatePricePreview();
         this.loading.set(false);

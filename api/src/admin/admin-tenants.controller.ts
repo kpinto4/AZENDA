@@ -19,6 +19,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { AdminTenantsService } from './admin-tenants.service';
 import { defaultModulesForPlan } from '../infrastructure/sql-db/plan-modules';
 import { TenantEntity } from '../infrastructure/sql-db/sql-db.types';
+import { normalizeBillingCycle } from '../common/billing.config';
 import { AdminUpgradeQuoteDto } from './dto/admin-upgrade-quote.dto';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
@@ -52,7 +53,7 @@ export class AdminTenantsController {
     const quote = await this.adminTenants.getUpgradeQuote({
       tenantId,
       targetPlan: body.targetPlan,
-      targetCycle: body.targetCycle,
+      targetCycle: normalizeBillingCycle(body.targetCycle),
     });
     if (!quote) {
       throw new NotFoundException('Tenant no encontrado');
@@ -72,7 +73,7 @@ export class AdminTenantsController {
       plan,
       storefrontEnabled: body.storefrontEnabled ?? false,
       manualBookingEnabled: body.manualBookingEnabled ?? true,
-      billingCycle: body.billingCycle ?? 'MONTHLY',
+      billingCycle: normalizeBillingCycle(body.billingCycle ?? 'MONTHLY'),
       modules: {
         citas: body.citas ?? planModules.citas,
         ventas: body.ventas ?? planModules.ventas,
@@ -109,7 +110,7 @@ export class AdminTenantsController {
       plan: body.plan,
       storefrontEnabled: body.storefrontEnabled,
       manualBookingEnabled: body.manualBookingEnabled,
-      billingCycle: body.billingCycle,
+      billingCycle: normalizeBillingCycle(body.billingCycle),
       planPriceMonthly: body.planPriceMonthly,
       planPriceYearly: body.planPriceYearly,
       billingCustomized: body.billingCustomized,

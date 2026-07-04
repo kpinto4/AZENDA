@@ -23,7 +23,10 @@ const catalog: TenantServiceEntity[] = [
 describe('appointment-scheduling.util', () => {
   it('resuelve duracion desde catalogo', () => {
     expect(
-      resolveDurationForServiceLabel('Masaje descontracturante · $ 50.000', catalog),
+      resolveDurationForServiceLabel(
+        'Masaje descontracturante · $ 50.000',
+        catalog,
+      ),
     ).toBe(45);
   });
 
@@ -40,8 +43,14 @@ describe('appointment-scheduling.util', () => {
     ];
     const employeeIds = ['emp1'];
     const blocked0930 = employeesBlockedInRange(
-      appointmentInterval({ when: '2026-05-23 09:30', service: 'x', durationMinutes: 45 }, catalog)!.startMs,
-      appointmentInterval({ when: '2026-05-23 09:30', service: 'x', durationMinutes: 45 }, catalog)!.endMs,
+      appointmentInterval(
+        { when: '2026-05-23 09:30', service: 'x', durationMinutes: 45 },
+        catalog,
+      )!.startMs,
+      appointmentInterval(
+        { when: '2026-05-23 09:30', service: 'x', durationMinutes: 45 },
+        catalog,
+      )!.endMs,
       employeeIds,
       intervals,
     );
@@ -90,8 +99,7 @@ describe('appointment-scheduling.util', () => {
       appointmentInterval(
         {
           when: '2026-05-23 09:00',
-          service:
-            'Masaje relajante 60 min · $ 45.000 · EmpleadoId:emp1',
+          service: 'Masaje relajante 60 min · $ 45.000 · EmpleadoId:emp1',
           durationMinutes: null,
         },
         catalog60,

@@ -18,6 +18,10 @@ import { CheckoutSessionService } from '../checkout-session.service';
           Paso <strong>3</strong> de <strong>3</strong> · Cuenta
         </p>
         <h1>Crea tu cuenta</h1>
+        <p class="checkout-note">
+          Al continuar, tu solicitud queda <strong>en espera de confirmación</strong> hasta que verifiquemos el pago y
+          activemos el panel.
+        </p>
         <div class="checkout-summary">
           Plan <strong>{{ checkout.selectedPlan() }}</strong> ·
           {{ checkout.email() }}

@@ -135,6 +135,7 @@ export declare class SqlDbService implements OnModuleInit {
     private createSchema;
     private ensureCatalogPromoScheduleColumns;
     private normalizeTenantBillingPeriods;
+    private syncSuperAdminSeedPassword;
     private syncKnownSeedUsers;
     private seedIfEmpty;
     private ensureSeedTenant;

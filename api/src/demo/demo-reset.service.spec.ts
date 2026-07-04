@@ -25,10 +25,16 @@ describe('DemoResetService', () => {
       if (sql.includes('is_demo_tenant')) {
         return { id: DEMO_TENANT_ID };
       }
-      if (sql.includes('is_demo_core = true') && sql.includes('tenant_services')) {
+      if (
+        sql.includes('is_demo_core = true') &&
+        sql.includes('tenant_services')
+      ) {
         return { cnt: DEMO_CORE_SERVICES.length };
       }
-      if (sql.includes('is_demo_core = true') && sql.includes('tenant_products')) {
+      if (
+        sql.includes('is_demo_core = true') &&
+        sql.includes('tenant_products')
+      ) {
         return { cnt: DEMO_CORE_PRODUCTS.length };
       }
       return { cnt: 3 };

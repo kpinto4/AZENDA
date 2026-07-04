@@ -179,7 +179,8 @@ let TenantService = class TenantService {
         const tenantId = this.requireTenantId(currentUser);
         const patch = {
             ...dto,
-            posPaymentMethodsJson: dto.posPaymentMethodsJson === null || dto.posPaymentMethodsJson === undefined
+            posPaymentMethodsJson: dto.posPaymentMethodsJson === null ||
+                dto.posPaymentMethodsJson === undefined
                 ? undefined
                 : dto.posPaymentMethodsJson,
         };

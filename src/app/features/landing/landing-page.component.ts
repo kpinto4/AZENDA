@@ -1,6 +1,8 @@
 import { Component, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, EMPTY, retry, take, timer } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { DEMO_PUBLIC_BOOKING_SLUG } from '../../core/config/demo.config';
 import { formatCop } from '../../core/format-currency';
 import {
   ApiSiteConfig,
@@ -32,6 +34,7 @@ export class LandingPageComponent {
 
   /** Importes en COP (formato local) para la landing. */
   readonly formatCop = formatCop;
+  readonly showDemoBookingExample = environment.showDemoLoginHints;
 
   constructor() {
     if (!this.pricesFromApi()) {
@@ -74,9 +77,9 @@ export class LandingPageComponent {
     }
   }
 
-  /** Abre la reserva pública de ejemplo para mostrar el flujo al visitante. */
+  /** Abre la reserva pública del tenant demo (solo en entornos con demo habilitada). */
   openPublicBooking(): void {
-    void this.router.navigateByUrl('/reservar/barberia-centro');
+    void this.router.navigateByUrl(`/reservar/${DEMO_PUBLIC_BOOKING_SLUG}`);
   }
 
   private readInitialSiteConfigState(): LandingSiteConfigState {

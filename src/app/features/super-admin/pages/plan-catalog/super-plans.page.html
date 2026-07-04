@@ -9,8 +9,7 @@
         <span class="super-ui-badge super-ui-badge--neutral">Facturación</span>
       </div>
       <p class="super-ui-lead">
-        Referencia interna de costos y precios de venta. El ciclo (mensual/anual) se asigna en
-        <strong>Plan y facturación</strong> de cada tenant.
+        Precios de venta <strong>mensuales</strong>. El ciclo anual se habilitará en una próxima versión.
       </p>
     </div>
   </header>
@@ -41,7 +40,7 @@
             <th>Costo operación aprox</th>
             <th>
               <span class="th-copy-wrap">
-                Valor venta
+                Precio mensual COP
                 <button
                   type="button"
                   class="copy-col-btn"
@@ -53,7 +52,9 @@
                 </button>
               </span>
             </th>
-            <th>Precio anual COP</th>
+            @if (annualBillingEnabled) {
+              <th>Precio anual COP</th>
+            }
           </tr>
         </thead>
         <tbody formArrayName="rows">
@@ -70,9 +71,11 @@
               <td>
                 <input class="az-input compact-num" type="number" min="0" step="1" formControlName="priceMonthly" />
               </td>
-              <td>
-                <input class="az-input compact-num" type="number" min="0" step="1" formControlName="priceYearly" />
-              </td>
+              @if (annualBillingEnabled) {
+                <td>
+                  <input class="az-input compact-num" type="number" min="0" step="1" formControlName="priceYearly" />
+                </td>
+              }
             </tr>
           }
         </tbody>

@@ -27,7 +27,7 @@
       <a href="#planes">Planes</a>
       <a href="#preguntas">FAQ</a>
       <a routerLink="/auth/iniciar-sesion" class="nav-link-auth">Iniciar sesión</a>
-      <a routerLink="/auth/registro" class="az-btn az-btn-primary landing-btn-nav">Crear cuenta</a>
+      <a routerLink="/contratar" class="az-btn az-btn-primary landing-btn-nav">Crear cuenta</a>
     </nav>
   </div>
 </header>
@@ -189,9 +189,11 @@
         <li>Tu URL: <code>/reservar/tu-slug</code> con tu marca</li>
         <li>Servicio → hora → contacto. Sin cobro en esa página</li>
       </ul>
-      <button type="button" class="az-btn az-btn-secondary booking-cta" (click)="openPublicBooking()">
-        Ver ejemplo de reserva pública
-      </button>
+      @if (showDemoBookingExample) {
+        <button type="button" class="az-btn az-btn-secondary booking-cta" (click)="openPublicBooking()">
+          Ver ejemplo de reserva pública
+        </button>
+      }
     </div>
     <div class="az-card preview">
       <header>Flujo del cliente · Paso 2</header>
@@ -249,7 +251,7 @@
           <li>1 empleado</li>
           <li>WhatsApp (enlaces wa.me)</li>
         </ul>
-        <a routerLink="/contratar" class="az-btn az-btn-secondary full">Elegir</a>
+        <a routerLink="/contratar" [queryParams]="{ plan: 'Básico' }" class="az-btn az-btn-secondary full">Elegir</a>
       </article>
       <article class="az-card plan featured">
         <div class="ribbon">Popular</div>
@@ -265,7 +267,7 @@
           <li>Hasta 10 empleados</li>
           <li>Mensajes plantilla WA</li>
         </ul>
-        <a routerLink="/contratar" class="az-btn az-btn-primary full">Elegir</a>
+        <a routerLink="/contratar" [queryParams]="{ plan: 'Pro' }" class="az-btn az-btn-primary full">Elegir</a>
       </article>
       <article class="az-card plan">
         <p class="plan-tier">Plan</p>
@@ -280,7 +282,7 @@
           <li>Empleados amplios (uso razonable)</li>
           <li>Soporte prioritario</li>
         </ul>
-        <a routerLink="/contratar" class="az-btn az-btn-secondary full">Elegir</a>
+        <a routerLink="/contratar" [queryParams]="{ plan: 'Negocio' }" class="az-btn az-btn-secondary full">Elegir</a>
       </article>
     </div>
     @if (pricesFromApi()) {
@@ -345,7 +347,7 @@
       <a href="#reservas">Reservas</a>
       <a href="#planes">Planes</a>
       <a routerLink="/auth/iniciar-sesion">Iniciar sesión</a>
-      <a routerLink="/auth/registro">Registro</a>
+      <a routerLink="/contratar">Registro</a>
     </nav>
   </div>
 </footer>

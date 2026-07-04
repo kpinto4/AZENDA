@@ -12,6 +12,7 @@ var DemoBootstrapService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DemoBootstrapService = void 0;
 const common_1 = require("@nestjs/common");
+const env_util_1 = require("../common/env.util");
 const demo_seed_service_1 = require("./demo-seed.service");
 let DemoBootstrapService = DemoBootstrapService_1 = class DemoBootstrapService {
     constructor(demoSeed) {
@@ -19,6 +20,9 @@ let DemoBootstrapService = DemoBootstrapService_1 = class DemoBootstrapService {
         this.logger = new common_1.Logger(DemoBootstrapService_1.name);
     }
     async onModuleInit() {
+        if (!(0, env_util_1.isDemoFeaturesEnabled)()) {
+            return;
+        }
         try {
             await this.demoSeed.ensureDemoTenantSeed();
         }

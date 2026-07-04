@@ -29,6 +29,10 @@ import { TenantRepository } from './repositories/tenant.repository';
 import { UserRepository } from './repositories/user.repository';
 import { TenantBillingService } from './tenant-billing.service';
 import { isDemoFeaturesEnabled } from '../../common/env.util';
+import {
+  getSuperAdminSeedPassword,
+  SUPER_ADMIN_SEED_USER_ID,
+} from './seed-credentials';
 
 @Injectable()
 export class SqlDbService implements OnModuleInit {
@@ -60,6 +64,7 @@ export class SqlDbService implements OnModuleInit {
     await this.createSchema();
     await this.ensureSchemaMigrations();
     await this.users.migrateLegacyPlaintextPasswords();
+    await this.syncSuperAdminSeedPassword();
     if (isDemoFeaturesEnabled()) {
       await this.syncKnownSeedUsers();
     }
@@ -104,6 +109,7 @@ export class SqlDbService implements OnModuleInit {
       await this.createSchema();
       await this.ensureSchemaMigrations();
       await this.users.migrateLegacyPlaintextPasswords();
+      await this.syncSuperAdminSeedPassword();
       if (isDemoFeaturesEnabled()) {
         await this.syncKnownSeedUsers();
       }
@@ -461,7 +467,10 @@ export class SqlDbService implements OnModuleInit {
 
   async createTenantService(
     tenantId: string,
-    data: Omit<TenantServiceEntity, 'id' | 'tenantId' | 'catalogOrder' | 'durationMinutes'> & {
+    data: Omit<
+      TenantServiceEntity,
+      'id' | 'tenantId' | 'catalogOrder' | 'durationMinutes'
+    > & {
       durationMinutes?: number;
     },
   ): Promise<TenantServiceEntity> {
@@ -770,7 +779,9 @@ export class SqlDbService implements OnModuleInit {
         `ALTER TABLE tenant_branding ADD COLUMN reviews_url TEXT NULL`,
       );
     }
-    if (!(await this.columnExists('tenant_branding', 'pos_payment_methods_json'))) {
+    if (
+      !(await this.columnExists('tenant_branding', 'pos_payment_methods_json'))
+    ) {
       await this.pg.execScript(
         `ALTER TABLE tenant_branding ADD COLUMN pos_payment_methods_json TEXT NULL`,
       );
@@ -858,7 +869,6 @@ export class SqlDbService implements OnModuleInit {
       `SELECT id, promo_price, promo_label FROM tenant_services WHERE promo_price IS NOT NULL AND promo_enabled = false`,
     );
     for (const row of legacyServices) {
-      const promoPrice = Math.max(0, Number(row.promo_price) || 0);
       const promoLabel =
         row.promo_label == null ? null : String(row.promo_label).trim();
       const labelNorm = (promoLabel ?? '').toLowerCase();
@@ -940,17 +950,27 @@ export class SqlDbService implements OnModuleInit {
     }
   }
 
+  private async syncSuperAdminSeedPassword(): Promise<void> {
+    await this.users.syncSeedPasswordIfInvalid(
+      SUPER_ADMIN_SEED_USER_ID,
+      getSuperAdminSeedPassword(),
+    );
+  }
+
   private async syncKnownSeedUsers(): Promise<void> {
     const seedPassword = 'azenda123';
-    const seedUserIds = [
-      'usr_super_1',
+    const demoSeedIds = ['usr_demo_admin', 'usr_demo_employee'];
+    const devSeedIds = [
       'usr_admin_spa',
       'usr_admin_clinica',
       'usr_employee_1',
-      'usr_demo_admin',
-      'usr_demo_employee',
+      ...demoSeedIds,
     ];
-    for (const userId of seedUserIds) {
+
+    for (const userId of devSeedIds) {
+      if (!isDemoFeaturesEnabled() && demoSeedIds.includes(userId)) {
+        continue;
+      }
       await this.users.syncSeedPasswordIfInvalid(userId, seedPassword);
     }
   }
@@ -1006,7 +1026,7 @@ export class SqlDbService implements OnModuleInit {
     await this.ensureSeedUser({
       id: 'usr_super_1',
       email: 'super@azenda.dev',
-      password: 'azenda123',
+      password: getSuperAdminSeedPassword(),
       role: UserRole.SUPER_ADMIN,
       tenantId: null,
       systems: [

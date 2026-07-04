@@ -24,9 +24,10 @@ export class TenantBrandingRepository {
   ) {}
 
   async get(tenantId: string): Promise<TenantBrandingEntity> {
-    const row = await this.pg.queryOne(`${BRANDING_SELECT} WHERE tenant_id = ?`, [
-      tenantId,
-    ]);
+    const row = await this.pg.queryOne(
+      `${BRANDING_SELECT} WHERE tenant_id = ?`,
+      [tenantId],
+    );
     if (row) {
       return mapTenantBrandingRow(row);
     }

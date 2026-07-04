@@ -21,6 +21,8 @@ export function normalizeColombiaMobileDigits(
   return `57${d}`;
 }
 
-export function isValidColombiaMobileInput(raw: string | undefined | null): boolean {
+export function isValidColombiaMobileInput(
+  raw: string | undefined | null,
+): boolean {
   return normalizeColombiaMobileDigits(raw) != null;
 }

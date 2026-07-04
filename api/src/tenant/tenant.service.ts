@@ -236,7 +236,8 @@ export class TenantService {
     const patch: Partial<Omit<TenantBrandingEntity, 'tenantId'>> = {
       ...dto,
       posPaymentMethodsJson:
-        dto.posPaymentMethodsJson === null || dto.posPaymentMethodsJson === undefined
+        dto.posPaymentMethodsJson === null ||
+        dto.posPaymentMethodsJson === undefined
           ? undefined
           : dto.posPaymentMethodsJson,
     };

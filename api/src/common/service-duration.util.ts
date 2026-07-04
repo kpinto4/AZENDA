@@ -7,16 +7,26 @@ export function inferDurationMinutesFromServiceName(name: string): number {
   const m = /(\d{2,3})\s*min/i.exec(name.trim());
   if (m) {
     const n = Number(m[1]);
-    if (n >= MIN_SERVICE_DURATION_MINUTES && n <= MAX_SERVICE_DURATION_MINUTES) {
+    if (
+      n >= MIN_SERVICE_DURATION_MINUTES &&
+      n <= MAX_SERVICE_DURATION_MINUTES
+    ) {
       return n;
     }
   }
   return DEFAULT_SERVICE_DURATION_MINUTES;
 }
 
-export function normalizeServiceDurationMinutes(raw: unknown, nameFallback?: string): number {
+export function normalizeServiceDurationMinutes(
+  raw: unknown,
+  nameFallback?: string,
+): number {
   const n = Number(raw);
-  if (Number.isFinite(n) && n >= MIN_SERVICE_DURATION_MINUTES && n <= MAX_SERVICE_DURATION_MINUTES) {
+  if (
+    Number.isFinite(n) &&
+    n >= MIN_SERVICE_DURATION_MINUTES &&
+    n <= MAX_SERVICE_DURATION_MINUTES
+  ) {
     return Math.round(n);
   }
   if (nameFallback?.trim()) {
@@ -29,7 +39,11 @@ export function normalizeServiceDurationMinutes(raw: unknown, nameFallback?: str
 export function normalizeTotalBookingDurationMinutes(raw: unknown): number {
   const n = Number(raw);
   const maxTotal = MAX_SERVICE_DURATION_MINUTES * 4;
-  if (Number.isFinite(n) && n >= MIN_SERVICE_DURATION_MINUTES && n <= maxTotal) {
+  if (
+    Number.isFinite(n) &&
+    n >= MIN_SERVICE_DURATION_MINUTES &&
+    n <= maxTotal
+  ) {
     return Math.round(n);
   }
   return DEFAULT_SERVICE_DURATION_MINUTES;

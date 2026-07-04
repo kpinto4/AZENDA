@@ -42,14 +42,7 @@ let DemoSeedService = DemoSeedService_1 = class DemoSeedService {
           )
           VALUES (?, ?, ?, ?, ?, ?, 'PENDIENTE', NULL, false, NULL, 30)
           ON CONFLICT (id) DO NOTHING
-        `, [
-                appt.id,
-                demo_tenant_snapshot_1.DEMO_TENANT_ID,
-                appt.customer,
-                service,
-                when,
-                appt.status,
-            ]);
+        `, [appt.id, demo_tenant_snapshot_1.DEMO_TENANT_ID, appt.customer, service, when, appt.status]);
         }
         for (const sale of demo_tenant_snapshot_1.DEMO_VOLATILE_SALES) {
             const saleDate = (0, demo_tenant_snapshot_1.formatSaleDate)(sale.daysAgo, now);
@@ -58,14 +51,7 @@ let DemoSeedService = DemoSeedService_1 = class DemoSeedService {
           INSERT INTO tenant_sales (id, tenant_id, sale_date, total, method, linked_appointment_id, stock_note, created_at)
           VALUES (?, ?, ?, ?, ?, NULL, NULL, ?)
           ON CONFLICT (id) DO NOTHING
-        `, [
-                sale.id,
-                demo_tenant_snapshot_1.DEMO_TENANT_ID,
-                saleDate,
-                sale.total,
-                sale.method,
-                createdAt,
-            ]);
+        `, [sale.id, demo_tenant_snapshot_1.DEMO_TENANT_ID, saleDate, sale.total, sale.method, createdAt]);
         }
     }
     async restoreCoreCatalogFromSnapshot() {

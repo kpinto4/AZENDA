@@ -34,11 +34,12 @@ import { CheckoutSessionService } from '../checkout-session.service';
             · {{ checkout.email() }}.
           </li>
           <li>
-            Escríbenos por WhatsApp al <strong>{{ whatsappDisplay }}</strong> para confirmar el valor
-            (si necesitas personalización, por ejemplo más empleados), coordinar el pago y activar tu panel.
+            Tu cuenta está <strong>en espera de confirmación</strong>. Escríbenos al
+            <strong>{{ whatsappDisplay }}</strong> para confirmar el valor, coordinar el pago o pedir personalización.
           </li>
           <li>
-            Cuando verifiquemos el pago, te avisamos y podrás entrar a <strong>/app</strong> con tu correo y contraseña.
+            Cuando verifiquemos el pago, activamos tu panel y podrás entrar con tu correo y contraseña en
+            <strong>Iniciar sesión</strong>.
           </li>
         </ul>
 

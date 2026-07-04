@@ -25,6 +25,78 @@ No hace falta volver a implementarlo para el primer lanzamiento:
 
 ---
 
+## Arquitectura recomendada: front y API separados
+
+Es la opción que suelen recomendar en producción: **dos despliegues independientes**.
+
+```text
+Usuario
+   │
+   ▼
+https://app.tudominio.com     ← Angular (archivos estáticos)
+   │  llama a
+   ▼
+https://api.tudominio.com/api ← NestJS (Node)
+   │
+   ▼
+Neon PostgreSQL
+```
+
+| Pieza | Qué desplegar | Ejemplos de hosting |
+| --- | --- | --- |
+| **Front** | Carpeta `dist/azenda/browser` (HTML/JS/CSS) | Vercel, Netlify, Cloudflare Pages, S3, Nginx estático |
+| **API** | Carpeta `api/dist` + `node dist/main.js` | Railway, Render, Fly.io, VPS + PM2 |
+| **Base** | Solo `DATABASE_URL` en el API | Neon |
+
+### Configuración clave (separado)
+
+**1. Front** — antes del build, edita `src/environments/environment.prod.ts`:
+
+```typescript
+apiBaseUrl: 'https://api.tudominio.com/api',
+```
+
+Luego:
+
+```bash
+npm ci
+npm run build -- --configuration=production
+```
+
+Sube el contenido de `dist/azenda/browser` al hosting del front.
+
+**2. API** — variables en el servidor del API (`api/.env`):
+
+```env
+NODE_ENV=production
+DATABASE_URL=postgresql://...
+JWT_SECRET=...
+CORS_ORIGINS=https://app.tudominio.com
+PORT=3000
+```
+
+`CORS_ORIGINS` debe ser **exactamente** la URL del front (sin `/` final). Si tienes `www` y sin `www`, pon ambas separadas por coma.
+
+**3. Builds del API:**
+
+```bash
+cd api && npm ci && npm run build
+NODE_ENV=production node dist/main.js
+```
+
+**4. Comprobaciones:**
+
+```bash
+curl https://api.tudominio.com/api/health
+# Abrir https://app.tudominio.com y probar login
+```
+
+### Alternativa: mismo dominio (un solo servidor)
+
+Si prefieres un solo VPS con Nginx sirviendo el SPA y haciendo proxy a `/api`, usa `apiBaseUrl: '/api'` en `environment.prod.ts` y la sección 4 más abajo. Funciona, pero escala peor que separar.
+
+---
+
 ## Tareas pendientes (obligatorias para producción)
 
 Marca cada ítem al completarlo.
@@ -67,13 +139,20 @@ npm run build:api                             # genera api/dist/
 - [ ] Build de producción Angular verificado (`dist/azenda/`).
 - [ ] Build del API verificado (`api/dist/`).
 
-### 4. Reverse proxy (front + API en el mismo dominio)
+### 4. Reverse proxy
 
-El front llama al API en **`/api`** (`environment.prod.ts`). En producción hace falta un proxy que:
+#### Opción A — Separado (recomendado)
 
-1. Sirva los archivos de `dist/azenda/` (HTML, JS, CSS).
-2. Reenvíe `/api/*` al proceso Nest (puerto interno, ej. `3000`).
-3. Para rutas del SPA (`/app`, `/super`, `/contratar`, …), devuelva `index.html` (fallback).
+- **Front:** el hosting estático solo necesita fallback SPA → `index.html` para rutas `/app`, `/contratar`, etc.
+- **API:** expuesto en su propio dominio; sin Nginx obligatorio si usas Railway/Render.
+
+#### Opción B — Mismo dominio (un VPS)
+
+El front llama al API en **`/api`** (`apiBaseUrl: '/api'` en `environment.prod.ts`). Nginx:
+
+1. Sirve los archivos de `dist/azenda/browser`.
+2. Reenvía `/api/*` al proceso Nest (puerto interno, ej. `3000`).
+3. Devuelve `index.html` en rutas del SPA.
 
 **Ejemplo mínimo Nginx** (adaptar rutas y dominio):
 
@@ -113,7 +192,7 @@ NODE_ENV=production node dist/main.js
 Recomendado con **PM2** o **systemd** para reinicio automático.
 
 - [ ] API corriendo como servicio persistente.
-- [ ] `GET https://app.tudominio.com/api/health` responde `{"status":"ok","checks":{"database":"up"},...}`.
+- [ ] `GET https://api.tudominio.com/api/health` responde `{"status":"ok",...}` (o la URL de tu API).
 
 ### 6. Base de datos (primera vez en producción)
 

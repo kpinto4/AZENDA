@@ -37,3 +37,12 @@ export const checkoutPaymentGuard: CanActivateFn = () => {
   }
   return router.createUrlTree(['/contratar/cuenta']);
 };
+
+export const checkoutConfirmationGuard: CanActivateFn = () => {
+  const checkout = inject(CheckoutSessionService);
+  const router = inject(Router);
+  if (checkout.canShowConfirmation()) {
+    return true;
+  }
+  return router.createUrlTree([checkout.resolveRegisterEntryUrl()]);
+};

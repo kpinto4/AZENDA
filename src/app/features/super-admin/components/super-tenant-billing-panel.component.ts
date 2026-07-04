@@ -20,6 +20,10 @@ import {
   ApiTenantsAdminService,
   ApiTenantAdminDto,
 } from '../../../core/services/api-tenants-admin.service';
+import {
+  ANNUAL_BILLING_ENABLED,
+  normalizeBillingCycle,
+} from '../../../core/config/billing.config';
 
 type PlanMods = { citas: boolean; ventas: boolean; inventario: boolean };
 
@@ -50,23 +54,29 @@ type PlanMods = { citas: boolean; ventas: boolean; inventario: boolean };
 
         @if (pricePreview(); as pp) {
           <p class="billing-prices-hint">
-            Precios de lista (globales): mensual {{ pp.monthly | number : '1.0-0' }} · anual
-            {{ pp.yearly | number : '1.0-0' }}
+            Precio de lista (global): mensual {{ pp.monthly | number : '1.0-0' }}
+            @if (annualBillingEnabled) {
+              · anual {{ pp.yearly | number : '1.0-0' }}
+            }
           </p>
         }
 
         <fieldset class="billing-cycle-field">
           <legend class="billing-label">Ciclo de cobro</legend>
-          <div class="billing-cycle-radios">
-            <label class="billing-radio-pill">
-              <input type="radio" formControlName="billingCycle" value="MONTHLY" />
-              <span>Mensual</span>
-            </label>
-            <label class="billing-radio-pill">
-              <input type="radio" formControlName="billingCycle" value="YEARLY" />
-              <span>Anual</span>
-            </label>
-          </div>
+          @if (annualBillingEnabled) {
+            <div class="billing-cycle-radios">
+              <label class="billing-radio-pill">
+                <input type="radio" formControlName="billingCycle" value="MONTHLY" />
+                <span>Mensual</span>
+              </label>
+              <label class="billing-radio-pill">
+                <input type="radio" formControlName="billingCycle" value="YEARLY" />
+                <span>Anual</span>
+              </label>
+            </div>
+          } @else {
+            <p class="billing-panel-muted billing-cycle-fixed">Mensual (plan anual en próxima versión).</p>
+          }
         </fieldset>
 
         <div class="billing-plan-functions">
@@ -128,10 +138,12 @@ type PlanMods = { citas: boolean; ventas: boolean; inventario: boolean };
               <span class="billing-label">Cobro mensual (COP)</span>
               <input class="az-input" type="number" min="0" formControlName="planPriceMonthly" />
             </label>
-            <label class="billing-field-row">
-              <span class="billing-label">Cobro anual (COP)</span>
-              <input class="az-input" type="number" min="0" formControlName="planPriceYearly" />
-            </label>
+            @if (annualBillingEnabled) {
+              <label class="billing-field-row">
+                <span class="billing-label">Cobro anual (COP)</span>
+                <input class="az-input" type="number" min="0" formControlName="planPriceYearly" />
+              </label>
+            }
           </div>
           <label class="billing-field-row">
             <span class="billing-label">Notas de personalización</span>
@@ -354,6 +366,7 @@ export class SuperTenantBillingPanelComponent {
   readonly saved = output<ApiTenantAdminDto>();
 
   readonly plans = ['Trial', 'Básico', 'Pro', 'Negocio'];
+  readonly annualBillingEnabled = ANNUAL_BILLING_ENABLED;
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly loadError = signal('');
@@ -525,7 +538,7 @@ export class SuperTenantBillingPanelComponent {
 
     const patch: Parameters<ApiTenantsAdminService['patch']>[1] = {
       plan: v.plan,
-      billingCycle: v.billingCycle,
+      billingCycle: normalizeBillingCycle(v.billingCycle),
     };
     if (this.applyPlanModules()) {
       const mods = this.planDefaults(v.plan);
@@ -549,7 +562,7 @@ export class SuperTenantBillingPanelComponent {
   private syncFormFromTenant(): void {
     const t = this.tenant();
     this.form.patchValue(
-      { plan: t.plan, billingCycle: t.billingCycle },
+      { plan: t.plan, billingCycle: normalizeBillingCycle(t.billingCycle) },
       { emitEvent: false },
     );
     this.syncCustomFormFromTenant(t);

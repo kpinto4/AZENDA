@@ -1,1 +1,1 @@
-export { RegisterPageComponent } from '../../register-page.component';
+export { RegisterRedirectPageComponent as RegisterPageComponent } from './register-redirect.page';

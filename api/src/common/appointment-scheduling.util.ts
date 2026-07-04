@@ -1,4 +1,7 @@
-import type { AppointmentEntity, TenantServiceEntity } from '../infrastructure/sql-db/sql-db.types';
+import type {
+  AppointmentEntity,
+  TenantServiceEntity,
+} from '../infrastructure/sql-db/sql-db.types';
 import {
   DEFAULT_SERVICE_DURATION_MINUTES,
   inferDurationMinutesFromServiceName,
@@ -16,7 +19,9 @@ export interface ScheduledInterval {
 export const MULTI_SERVICE_LABEL_SEPARATOR = ' || ';
 
 export function stripPublicServiceName(raw: string): string {
-  const withoutEmp = raw.replace(/\s*·\s*EmpleadoId:[A-Za-z0-9_-]+.*$/i, '').trim();
+  const withoutEmp = raw
+    .replace(/\s*·\s*EmpleadoId:[A-Za-z0-9_-]+.*$/i, '')
+    .trim();
   const first = withoutEmp.split(' · ')[0]?.trim();
   return first || withoutEmp;
 }
@@ -103,7 +108,10 @@ export function appointmentInterval(
   };
 }
 
-function intervalsOverlap(a: ScheduledInterval | { startMs: number; endMs: number }, b: ScheduledInterval): boolean {
+function intervalsOverlap(
+  a: ScheduledInterval | { startMs: number; endMs: number },
+  b: ScheduledInterval,
+): boolean {
   return a.startMs < b.endMs && b.startMs < a.endMs;
 }
 

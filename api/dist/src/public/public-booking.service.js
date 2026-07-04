@@ -241,7 +241,8 @@ let PublicBookingService = class PublicBookingService {
         }
         const datePart = dto.when.slice(0, 10);
         const timePart = dto.when.slice(11, 16);
-        const durationMinutes = dto.durationMinutes != null && Number.isFinite(Number(dto.durationMinutes))
+        const durationMinutes = dto.durationMinutes != null &&
+            Number.isFinite(Number(dto.durationMinutes))
             ? (0, service_duration_util_1.normalizeTotalBookingDurationMinutes)(Number(dto.durationMinutes))
             : (0, appointment_scheduling_util_1.resolveDurationForServiceLabel)(dto.service, services);
         const openSlots = this.computeOpenSlotsForDate(datePart, branding.publicBookingHoursJson);

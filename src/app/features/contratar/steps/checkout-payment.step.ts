@@ -42,9 +42,9 @@ import { CheckoutSessionService } from '../checkout-session.service';
         @if (!pasarelaEnabled) {
           <div class="checkout-pasarela-pending">
             <p>
-              El pago en línea estará disponible pronto. Por ahora activamos cada negocio de forma
-              <strong>manual</strong>: escríbenos por WhatsApp, confirmamos el valor (puedes pedir
-              personalización, por ejemplo más empleados en el plan Básico) y activamos tu panel.
+              El pago en línea estará disponible pronto. Por ahora cada negocio queda
+              <strong>en espera de confirmación</strong>: escríbenos por WhatsApp, confirmamos el valor (puedes pedir
+              personalización) y activamos tu panel cuando verifiquemos el pago.
             </p>
           </div>
 

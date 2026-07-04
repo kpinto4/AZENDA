@@ -138,7 +138,10 @@ export interface TenantBrandingEntity {
   gradientAngleDeg: number;
 }
 
-import type { CatalogPromoFields, PromoScheduleType } from '../../common/promo-schedule.util';
+import type {
+  CatalogPromoFields,
+  PromoScheduleType,
+} from '../../common/promo-schedule.util';
 
 export type TenantCatalogPromoFields = CatalogPromoFields;
 

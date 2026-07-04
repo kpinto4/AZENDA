@@ -16,7 +16,9 @@ const service_duration_util_1 = require("./service-duration.util");
 exports.BOOKING_SLOT_STEP_MINUTES = 30;
 exports.MULTI_SERVICE_LABEL_SEPARATOR = ' || ';
 function stripPublicServiceName(raw) {
-    const withoutEmp = raw.replace(/\s*·\s*EmpleadoId:[A-Za-z0-9_-]+.*$/i, '').trim();
+    const withoutEmp = raw
+        .replace(/\s*·\s*EmpleadoId:[A-Za-z0-9_-]+.*$/i, '')
+        .trim();
     const first = withoutEmp.split(' · ')[0]?.trim();
     return first || withoutEmp;
 }

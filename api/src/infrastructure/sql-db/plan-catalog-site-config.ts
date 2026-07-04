@@ -22,10 +22,12 @@ function normalizePlanKey(key: string): string {
 
 function sitePriceFieldForPlanKey(
   planKey: string,
-): keyof Pick<
-  PlatformSiteConfig,
-  'planPriceBasic' | 'planPricePro' | 'planPriceBusiness'
-> | undefined {
+):
+  | keyof Pick<
+      PlatformSiteConfig,
+      'planPriceBasic' | 'planPricePro' | 'planPriceBusiness'
+    >
+  | undefined {
   const direct = PLAN_KEY_TO_SITE_PRICE[planKey];
   if (direct) {
     return direct;

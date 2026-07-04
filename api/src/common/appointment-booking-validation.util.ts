@@ -1,4 +1,8 @@
-import type { AppointmentEntity, TenantServiceEntity, UserEntity } from '../infrastructure/sql-db/sql-db.types';
+import type {
+  AppointmentEntity,
+  TenantServiceEntity,
+  UserEntity,
+} from '../infrastructure/sql-db/sql-db.types';
 import {
   appointmentInterval,
   isSlotAvailableForEmployee,
@@ -15,7 +19,10 @@ import {
 
 export function activeEmployeeIds(users: UserEntity[]): string[] {
   return users
-    .filter((u) => u.status === 'ACTIVE' && (u.role === 'ADMIN' || u.role === 'EMPLEADO'))
+    .filter(
+      (u) =>
+        u.status === 'ACTIVE' && (u.role === 'ADMIN' || u.role === 'EMPLEADO'),
+    )
     .map((u) => u.id);
 }
 

@@ -66,27 +66,32 @@
         @if (pricePreview(); as pp) {
           <div class="az-card global-prices-hint">
             <p class="muted small mb0">
-              <strong>Precios de lista</strong> para el plan seleccionado (globales):
-              <span class="nowrap"
-                >mensual {{ pp.monthly | number : '1.0-2' }} · anual {{ pp.yearly | number : '1.0-2' }}</span
-              >
+              <strong>Precio de lista</strong> para el plan seleccionado (global):
+              <span class="nowrap">mensual {{ pp.monthly | number : '1.0-2' }}</span>
+              @if (annualBillingEnabled) {
+                <span class="nowrap"> · anual {{ pp.yearly | number : '1.0-2' }}</span>
+              }
             </p>
           </div>
         }
 
         <fieldset class="field cycle-field">
           <legend class="field-label">Ciclo de facturación de este negocio</legend>
-          <div class="cycle-radios">
-            <label class="radio-pill">
-              <input type="radio" formControlName="billingCycle" value="MONTHLY" />
-              <span>Mensual</span>
-            </label>
-            <label class="radio-pill">
-              <input type="radio" formControlName="billingCycle" value="YEARLY" />
-              <span>Anual</span>
-            </label>
-          </div>
-          <p class="muted tiny">El negocio verá el periodo y fechas según este ciclo en su panel de configuración.</p>
+          @if (annualBillingEnabled) {
+            <div class="cycle-radios">
+              <label class="radio-pill">
+                <input type="radio" formControlName="billingCycle" value="MONTHLY" />
+                <span>Mensual</span>
+              </label>
+              <label class="radio-pill">
+                <input type="radio" formControlName="billingCycle" value="YEARLY" />
+                <span>Anual</span>
+              </label>
+            </div>
+            <p class="muted tiny">El negocio verá el periodo y fechas según este ciclo en su panel de configuración.</p>
+          } @else {
+            <p class="muted tiny">Mensual (plan anual disponible en una próxima versión).</p>
+          }
         </fieldset>
 
         @if (formDiffersFromSaved()) {

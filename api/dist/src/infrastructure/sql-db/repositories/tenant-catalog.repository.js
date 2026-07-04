@@ -53,7 +53,9 @@ let TenantCatalogRepository = class TenantCatalogRepository {
             promoStartDate: patch.promoStartDate !== undefined
                 ? patch.promoStartDate
                 : current.promoStartDate,
-            promoEndDate: patch.promoEndDate !== undefined ? patch.promoEndDate : current.promoEndDate,
+            promoEndDate: patch.promoEndDate !== undefined
+                ? patch.promoEndDate
+                : current.promoEndDate,
             promoLabel: patch.promoLabel !== undefined ? patch.promoLabel : current.promoLabel,
         });
     }

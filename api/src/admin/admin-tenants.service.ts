@@ -118,8 +118,7 @@ export class AdminTenantsService {
     tenantId: string;
     targetPlan: string;
     targetCycle: BillingCycle;
-  })
-  {
+  }) {
     return this.billing.getUpgradeQuote(params);
   }
 }

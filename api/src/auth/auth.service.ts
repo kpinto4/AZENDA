@@ -18,6 +18,7 @@ import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
 import { defaultModulesForPlan } from '../infrastructure/sql-db/plan-modules';
 import { PasswordService } from './password.service';
 import { isDemoFeaturesEnabled } from '../common/env.util';
+import { normalizeBillingCycle } from '../common/billing.config';
 
 @Injectable()
 export class AuthService {
@@ -39,7 +40,7 @@ export class AuthService {
     const slug = await this.uniqueTenantSlug(business, tenantId);
 
     const registrationPlan = dto.selectedPlan ?? 'Básico';
-    const billingCycle = dto.billingCycle ?? 'MONTHLY';
+    const billingCycle = normalizeBillingCycle(dto.billingCycle);
 
     await this.sqlDbService.createTenant({
       id: tenantId,
@@ -73,6 +74,16 @@ export class AuthService {
 
     if (!user) {
       throw new UnauthorizedException('Credenciales invalidas');
+    }
+
+    if (!isDemoFeaturesEnabled()) {
+      const isDemoAccount =
+        user.tenantId === DEMO_TENANT_ID ||
+        user.email === DEMO_ADMIN_EMAIL ||
+        user.email === DEMO_EMPLOYEE_EMAIL;
+      if (isDemoAccount) {
+        throw new UnauthorizedException('Credenciales invalidas');
+      }
     }
 
     const valid = await this.passwordService.verify(
@@ -126,8 +137,7 @@ export class AuthService {
       throw new ForbiddenException('Demo desactivado en este entorno');
     }
     const role = dto.role ?? 'admin';
-    const email =
-      role === 'employee' ? DEMO_EMPLOYEE_EMAIL : DEMO_ADMIN_EMAIL;
+    const email = role === 'employee' ? DEMO_EMPLOYEE_EMAIL : DEMO_ADMIN_EMAIL;
     const user = await this.sqlDbService.findUserByEmailNormalized(email);
     if (!user || user.tenantId !== DEMO_TENANT_ID) {
       throw new UnauthorizedException('Demo no disponible');

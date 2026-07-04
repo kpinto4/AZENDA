@@ -65,7 +65,7 @@ let TenantAppointmentsService = class TenantAppointmentsService {
         const weekly = (0, public_booking_hours_util_1.parseWeeklyHoursJson)(branding.publicBookingHoursJson);
         const latestClose = (0, public_booking_hours_util_1.latestClosingMinuteForDate)(weekly, datePart);
         const intervals = (0, appointment_booking_validation_util_1.dayAppointmentIntervals)(appointments, services, datePart);
-        let employeeId = dto.employeeId?.trim() ||
+        const employeeId = dto.employeeId?.trim() ||
             (0, appointment_scheduling_util_1.readEmployeeIdFromServiceText)(dto.service) ||
             (user.role === auth_types_1.UserRole.EMPLEADO ? user.id : '');
         if (employeeId && !employeeIds.includes(employeeId)) {

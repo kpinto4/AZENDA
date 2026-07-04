@@ -24,7 +24,10 @@ import {
   parseWeeklyHoursJson,
   slotsForPublicBookingDate,
 } from '../common/public-booking-hours.util';
-import { normalizeServiceDurationMinutes, normalizeTotalBookingDurationMinutes } from '../common/service-duration.util';
+import {
+  normalizeServiceDurationMinutes,
+  normalizeTotalBookingDurationMinutes,
+} from '../common/service-duration.util';
 import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
 import {
   AppointmentEntity,
@@ -377,7 +380,8 @@ export class PublicBookingService {
     const datePart = dto.when.slice(0, 10);
     const timePart = dto.when.slice(11, 16);
     const durationMinutes =
-      dto.durationMinutes != null && Number.isFinite(Number(dto.durationMinutes))
+      dto.durationMinutes != null &&
+      Number.isFinite(Number(dto.durationMinutes))
         ? normalizeTotalBookingDurationMinutes(Number(dto.durationMinutes))
         : resolveDurationForServiceLabel(dto.service, services);
     const openSlots = this.computeOpenSlotsForDate(
