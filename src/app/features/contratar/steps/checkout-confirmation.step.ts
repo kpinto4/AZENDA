@@ -2,11 +2,9 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { retry, timer } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { formatCop } from '../../../core/format-currency';
 import { ApiPlanCatalogService } from '../../../core/services/api-plan-catalog.service';
 import { mapPublicPlanCatalogPrices } from '../../../core/services/public-plan-prices.util';
-import { CHECKOUT_PASARELA_ENABLED } from '../checkout.config';
-import { CheckoutManualPaymentCardComponent } from '../components/checkout-manual-payment-card.component';
+import { CheckoutPlanSummaryComponent } from '../components/checkout-plan-summary.component';
 import {
   AZENDA_WHATSAPP_DISPLAY,
   buildRegistrationWhatsAppMessage,
@@ -16,7 +14,7 @@ import { CheckoutSessionService } from '../checkout-session.service';
 
 @Component({
   selector: 'app-checkout-confirmation-step',
-  imports: [RouterLink, CheckoutManualPaymentCardComponent],
+  imports: [RouterLink, CheckoutPlanSummaryComponent],
   template: `
     <section class="checkout-panel">
       <div class="checkout-panel-inner">
@@ -24,30 +22,27 @@ import { CheckoutSessionService } from '../checkout-session.service';
           <span class="checkout-kicker-icon" aria-hidden="true">✓</span>
           Solicitud recibida
         </p>
-        <h1>Un paso más: confirma por WhatsApp</h1>
+        <h1>Solicitud en espera de confirmación</h1>
+
+        <app-checkout-plan-summary />
+
         <ul class="checkout-bullets">
           <li>
-            Registro para el plan <strong>{{ checkout.selectedPlan() }}</strong>
-            @if (priceMonthly() > 0) {
-              (referencia <strong>{{ formatCop(priceMonthly()) }}/mes</strong>)
-            }
-            · {{ checkout.email() }}.
+            Si ya pagaste con <strong>Wompi</strong>, avísanos por WhatsApp al
+            <strong>{{ whatsappDisplay }}</strong> (puedes usar el botón de abajo).
           </li>
           <li>
-            Tu cuenta está <strong>en espera de confirmación</strong>. Escríbenos al
-            <strong>{{ whatsappDisplay }}</strong> para confirmar el valor, coordinar el pago o pedir personalización.
+            Tu cuenta queda <strong>en espera de confirmación</strong> hasta que verifiquemos el pago y activemos el
+            panel (no es inmediato).
           </li>
           <li>
-            Cuando verifiquemos el pago, activamos tu panel y podrás entrar con tu correo y contraseña en
-            <strong>Iniciar sesión</strong>.
+            Cuando esté activo, entra con tu correo y contraseña en <strong>Iniciar sesión</strong>.
           </li>
         </ul>
 
-        <app-checkout-manual-payment-card />
-
         <div class="checkout-wa-card">
           <p class="checkout-wa-lead">
-            Toca el botón para abrir WhatsApp con un mensaje listo. Solo envíalo y te respondemos pronto.
+            Mensaje listo con tu plan y datos. Envíalo para que confirmemos el pago.
           </p>
           <a
             class="az-btn checkout-wa-btn full"
@@ -76,7 +71,6 @@ export class CheckoutConfirmationStepComponent implements OnInit {
   readonly checkout = inject(CheckoutSessionService);
   private readonly planCatalogApi = inject(ApiPlanCatalogService);
 
-  readonly formatCop = formatCop;
   readonly whatsappDisplay = AZENDA_WHATSAPP_DISPLAY;
   readonly showDemoLink = environment.showDemoLoginHints;
   readonly priceMonthly = signal(0);
@@ -94,7 +88,7 @@ export class CheckoutConfirmationStepComponent implements OnInit {
 
   ngOnInit(): void {
     const plan = this.checkout.selectedPlan();
-    if (!plan || CHECKOUT_PASARELA_ENABLED) {
+    if (!plan) {
       return;
     }
     this.planCatalogApi

@@ -79,9 +79,9 @@ export class SuperSiteConfigPageComponent {
   readonly form = this.fb.nonNullable.group({
     currencyCode: ['COP', [Validators.required, Validators.maxLength(12)]],
     currencySymbol: ['$', [Validators.required, Validators.maxLength(8)]],
-    planPriceBasic: [79_000, [Validators.required, Validators.min(0)]],
-    planPricePro: [199_000, [Validators.required, Validators.min(0)]],
-    planPriceBusiness: [399_000, [Validators.required, Validators.min(0)]],
+    planPriceBasic: [39_900, [Validators.required, Validators.min(0)]],
+    planPricePro: [69_900, [Validators.required, Validators.min(0)]],
+    planPriceBusiness: [99_900, [Validators.required, Validators.min(0)]],
     landing: this.fb.nonNullable.group({
       navBrand: ['', [Validators.required, Validators.maxLength(120)]],
       eyebrow: ['', [Validators.required, Validators.maxLength(200)]],

@@ -486,6 +486,37 @@
   font-size: 0.9rem;
 }
 
+.checkout-plan-summary-label {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--az-muted);
+}
+
+.checkout-plan-summary-plan {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
+.checkout-plan-summary-price {
+  font-weight: 700;
+  color: var(--az-primary);
+  font-size: 1.05rem;
+}
+
+.checkout-plan-summary-meta {
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
+  color: var(--az-muted);
+}
+
 .checkout-actions {
   display: flex;
   flex-wrap: wrap;

@@ -5,11 +5,12 @@ import { Router } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { ApiAuthService } from '../../../core/services/api-auth.service';
 import { MockSessionService } from '../../../core/services/mock-session.service';
+import { CheckoutPlanSummaryComponent } from '../components/checkout-plan-summary.component';
 import { CheckoutSessionService } from '../checkout-session.service';
 
 @Component({
   selector: 'app-checkout-account-step',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, CheckoutPlanSummaryComponent],
   template: `
     <section class="checkout-panel">
       <div class="checkout-panel-inner">
@@ -22,10 +23,7 @@ import { CheckoutSessionService } from '../checkout-session.service';
           Al continuar, tu solicitud queda <strong>en espera de confirmación</strong> hasta que verifiquemos el pago y
           activemos el panel.
         </p>
-        <div class="checkout-summary">
-          Plan <strong>{{ checkout.selectedPlan() }}</strong> ·
-          {{ checkout.email() }}
-        </div>
+        <app-checkout-plan-summary [showBusiness]="false" />
 
         <form class="checkout-form" [formGroup]="form" (ngSubmit)="submit()">
           <label>

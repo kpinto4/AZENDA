@@ -236,9 +236,9 @@ export interface PlatformSiteConfig {
 export const DEFAULT_PLATFORM_SITE_CONFIG: PlatformSiteConfig = {
   currencyCode: 'COP',
   currencySymbol: '$',
-  planPriceBasic: 79_000,
-  planPricePro: 199_000,
-  planPriceBusiness: 399_000,
+  planPriceBasic: 39_900,
+  planPricePro: 69_900,
+  planPriceBusiness: 99_900,
   landing: {
     navBrand: 'Azenda',
     eyebrow: 'Gestión para negocios con citas',

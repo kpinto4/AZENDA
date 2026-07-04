@@ -395,6 +395,28 @@ export class TenantRepository {
     if (!existing) {
       return false;
     }
+    // Orden explícito: users no tiene ON DELETE CASCADE hacia tenants.
+    await this.pg.exec(`DELETE FROM users WHERE tenant_id = ?`, [tenantId]);
+    await this.pg.exec(`DELETE FROM appointments WHERE tenant_id = ?`, [tenantId]);
+    await this.pg.exec(`DELETE FROM store_visit_logs WHERE tenant_id = ?`, [
+      tenantId,
+    ]);
+    await this.pg.exec(
+      `DELETE FROM tenant_stock_movements WHERE tenant_id = ?`,
+      [tenantId],
+    );
+    await this.pg.exec(`DELETE FROM tenant_sales WHERE tenant_id = ?`, [
+      tenantId,
+    ]);
+    await this.pg.exec(`DELETE FROM tenant_products WHERE tenant_id = ?`, [
+      tenantId,
+    ]);
+    await this.pg.exec(`DELETE FROM tenant_services WHERE tenant_id = ?`, [
+      tenantId,
+    ]);
+    await this.pg.exec(`DELETE FROM tenant_branding WHERE tenant_id = ?`, [
+      tenantId,
+    ]);
     await this.pg.exec(`DELETE FROM tenants WHERE id = ?`, [tenantId]);
     return true;
   }
@@ -505,14 +527,16 @@ export class TenantRepository {
     await this.pg.execScript(
       `ALTER TABLE plan_catalog ADD COLUMN IF NOT EXISTS operating_cost_approx NUMERIC(12,2) NOT NULL DEFAULT 0`,
     );
-    await this.pg.execScript(`
-      INSERT INTO plan_catalog (plan_key, price_monthly, price_yearly, operating_cost_approx) VALUES
-        ('Trial', 0, 0, 0),
-        ('Básico', 39900, 399000, 3800),
-        ('Pro', 69900, 699000, 4500),
-        ('Negocio', 99900, 999000, 6000)
-      ON CONFLICT (plan_key) DO NOTHING
-    `);
+    for (const e of DEFAULT_PLAN_CATALOG_SEED) {
+      await this.pg.exec(
+        `INSERT INTO plan_catalog (plan_key, price_monthly, price_yearly, operating_cost_approx) VALUES (?, ?, ?, ?)
+         ON CONFLICT (plan_key) DO UPDATE SET
+           price_monthly = EXCLUDED.price_monthly,
+           price_yearly = EXCLUDED.price_yearly,
+           operating_cost_approx = EXCLUDED.operating_cost_approx`,
+        [e.planKey, e.priceMonthly, e.priceYearly, e.operatingCostApprox],
+      );
+    }
   }
 
   async syncTenantPlanPricesFromCatalog(): Promise<void> {

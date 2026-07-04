@@ -41,6 +41,9 @@ export class SuperTenantsComponent implements OnInit {
   readonly apiRows = signal<ApiTenantAdminDto[]>([]);
   readonly apiError = signal<string>('');
   readonly activatingTenantId = signal<string | null>(null);
+  readonly deletingTenantId = signal<string | null>(null);
+  /** Segundo clic para confirmar borrado (evita `window.confirm`, a veces bloqueado). */
+  readonly deleteConfirmId = signal<string | null>(null);
   readonly searchQuery = signal('');
   readonly statusFilter = signal<TenantStatusFilter>('all');
   readonly showAddForm = signal(false);
@@ -268,13 +271,61 @@ export class SuperTenantsComponent implements OnInit {
     });
   }
 
-  deleteApiTenant(row: ApiTenantAdminDto): void {
-    if (!confirm(`Eliminar tenant "${row.name}" (${row.id})?`)) {
+  requestDeleteTenant(row: ApiTenantAdminDto): void {
+    if (this.deletingTenantId()) {
       return;
     }
+    this.apiError.set('');
+    this.deleteConfirmId.set(row.id);
+  }
+
+  cancelDeleteTenant(): void {
+    this.deleteConfirmId.set(null);
+  }
+
+  deleteApiTenant(row: ApiTenantAdminDto): void {
+    if (this.deletingTenantId()) {
+      return;
+    }
+    this.apiError.set('');
+    this.deleteConfirmId.set(null);
+    this.deletingTenantId.set(row.id);
     this.apiTenantsAdmin.delete(row.id).subscribe({
-      next: () => this.reloadApiTenants(),
-      error: () => this.apiError.set('Error al eliminar.'),
+      next: () => {
+        this.deletingTenantId.set(null);
+        if (this.expandedBillingId() === row.id) {
+          this.expandedBillingId.set(null);
+        }
+        this.apiRows.update((rows) => rows.filter((r) => r.id !== row.id));
+        this.reloadApiTenants();
+      },
+      error: (err: unknown) => {
+        this.deletingTenantId.set(null);
+        const status =
+          err && typeof err === 'object' && 'status' in err
+            ? Number((err as { status: number }).status)
+            : 0;
+        let detail = '';
+        if (err && typeof err === 'object' && 'error' in err) {
+          const body = (err as { error?: unknown }).error;
+          if (typeof body === 'string' && body.trim()) {
+            detail = body.trim();
+          } else if (body && typeof body === 'object' && 'message' in body) {
+            const msg = (body as { message?: unknown }).message;
+            detail = Array.isArray(msg)
+              ? msg.join(', ')
+              : typeof msg === 'string'
+                ? msg
+                : '';
+          }
+        }
+        this.apiError.set(
+          detail ||
+            (status
+              ? `No se pudo eliminar el negocio (HTTP ${status}).`
+              : 'No se pudo eliminar el negocio. Revisa la consola de red.'),
+        );
+      },
     });
   }
 

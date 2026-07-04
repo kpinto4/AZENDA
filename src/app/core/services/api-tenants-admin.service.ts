@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export type ApiTenantStatus = 'ACTIVE' | 'PAUSED' | 'BLOCKED';
@@ -139,8 +139,12 @@ export class ApiTenantsAdminService {
   }
 
   delete(tenantId: string): Observable<void> {
-    return this.http.delete<void>(
-      `${environment.apiBaseUrl}/admin/tenants/${tenantId}`,
-    );
+    // 204 sin cuerpo: evitar parseo JSON vacío de HttpClient
+    return this.http
+      .delete(`${environment.apiBaseUrl}/admin/tenants/${encodeURIComponent(tenantId)}`, {
+        observe: 'response',
+        responseType: 'text',
+      })
+      .pipe(map(() => undefined));
   }
 }

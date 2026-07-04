@@ -79,8 +79,14 @@ let AdminTenantsService = class AdminTenantsService {
         }
         return updated;
     }
-    deleteTenant(tenantId) {
-        return this.tenants.deleteTenant(tenantId);
+    async deleteTenant(tenantId) {
+        try {
+            return await this.tenants.deleteTenant(tenantId);
+        }
+        catch (err) {
+            const message = err instanceof Error ? err.message : 'Error al eliminar el tenant';
+            throw new common_1.InternalServerErrorException(`No se pudo eliminar el negocio: ${message}`);
+        }
     }
     getUpgradeQuote(params) {
         return this.billing.getUpgradeQuote(params);

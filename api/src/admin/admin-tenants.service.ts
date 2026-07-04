@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { UserRole } from '../auth/auth.types';
 import { defaultModulesForPlan } from '../infrastructure/sql-db/plan-modules';
 import {
@@ -110,8 +114,16 @@ export class AdminTenantsService {
     return updated;
   }
 
-  deleteTenant(tenantId: string): Promise<boolean> {
-    return this.tenants.deleteTenant(tenantId);
+  async deleteTenant(tenantId: string): Promise<boolean> {
+    try {
+      return await this.tenants.deleteTenant(tenantId);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Error al eliminar el tenant';
+      throw new InternalServerErrorException(
+        `No se pudo eliminar el negocio: ${message}`,
+      );
+    }
   }
 
   getUpgradeQuote(params: {

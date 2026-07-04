@@ -4,6 +4,7 @@ import { retry, timer } from 'rxjs';
 import { formatCop } from '../../../core/format-currency';
 import { ApiPlanCatalogService } from '../../../core/services/api-plan-catalog.service';
 import {
+  DEFAULT_PUBLIC_PLAN_PRICES,
   mapPublicPlanCatalogPrices,
   PublicPlanPriceRow,
 } from '../../../core/services/public-plan-prices.util';
@@ -14,10 +15,10 @@ import {
 } from '../checkout.config';
 import { CheckoutSessionService } from '../checkout-session.service';
 
-const EMPTY_PRICES: Record<CommercialPlanKey, PublicPlanPriceRow> = {
-  Básico: { monthly: 0, yearly: 0 },
-  Pro: { monthly: 0, yearly: 0 },
-  Negocio: { monthly: 0, yearly: 0 },
+const FALLBACK_PRICES: Record<CommercialPlanKey, PublicPlanPriceRow> = {
+  Básico: { ...DEFAULT_PUBLIC_PLAN_PRICES.Básico },
+  Pro: { ...DEFAULT_PUBLIC_PLAN_PRICES.Pro },
+  Negocio: { ...DEFAULT_PUBLIC_PLAN_PRICES.Negocio },
 };
 
 @Component({
@@ -111,7 +112,7 @@ export class CheckoutPlanSelectStepComponent implements OnInit {
   readonly loadError = signal('');
 
   private readonly prices = signal<Record<CommercialPlanKey, PublicPlanPriceRow>>(
-    EMPTY_PRICES,
+    FALLBACK_PRICES,
   );
 
   readonly plansWithPrices = computed(() => {
@@ -120,6 +121,7 @@ export class CheckoutPlanSelectStepComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.pricesReady.set(true);
     this.planCatalogApi
       .getPublic()
       .pipe(
@@ -135,10 +137,9 @@ export class CheckoutPlanSelectStepComponent implements OnInit {
           this.loadError.set('');
         },
         error: () => {
-          this.loadError.set(
-            'No se pudieron cargar los precios desde el servidor. Revisa que el API esté activo.',
-          );
-          this.pricesReady.set(false);
+          this.prices.set(FALLBACK_PRICES);
+          this.pricesReady.set(true);
+          this.loadError.set('');
         },
       });
   }

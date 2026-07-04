@@ -84,6 +84,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             await this.createSchema();
             await this.ensureSchemaMigrations();
             await this.users.migrateLegacyPlaintextPasswords();
+            await this.syncSuperAdminSeedPassword();
             if ((0, env_util_1.isDemoFeaturesEnabled)()) {
                 await this.syncKnownSeedUsers();
             }
@@ -329,6 +330,11 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
         }
         await this.tenants.ensurePlanCatalogTable();
         await this.platformSite.ensureTableAndDefaultRow();
+        const catalog = await this.tenants.listPlanCatalog();
+        const pricePatch = (0, plan_catalog_site_config_1.planCatalogPricePatch)(catalog);
+        if (Object.keys(pricePatch).length > 0) {
+            await this.platformSite.patch(pricePatch);
+        }
         await this.retail.ensureSalesTable();
         await this.tenants.syncTenantPlanPricesFromCatalog();
         await this.normalizeTenantBillingPeriods();

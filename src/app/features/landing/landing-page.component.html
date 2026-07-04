@@ -241,11 +241,7 @@
       <article class="az-card plan">
         <p class="plan-tier">Plan</p>
         <h3>Básico</h3>
-        @if (pricesFromApi()) {
-          <p class="price">{{ formatCop(cfg.planPriceBasic) }}<span>/mes</span></p>
-        } @else {
-          <div class="price-spacer" aria-hidden="true"></div>
-        }
+        <p class="price">{{ formatCop(cfg.planPriceBasic) }}<span>/mes</span></p>
         <ul>
           <li>Citas y reserva pública</li>
           <li>1 empleado</li>
@@ -257,14 +253,10 @@
         <div class="ribbon">Popular</div>
         <p class="plan-tier">Plan</p>
         <h3>Pro</h3>
-        @if (pricesFromApi()) {
-          <p class="price">{{ formatCop(cfg.planPricePro) }}<span>/mes</span></p>
-        } @else {
-          <div class="price-spacer" aria-hidden="true"></div>
-        }
+        <p class="price">{{ formatCop(cfg.planPricePro) }}<span>/mes</span></p>
         <ul>
           <li>Registro de ventas (sin cobro online)</li>
-          <li>Hasta 10 empleados</li>
+          <li>Hasta 4 empleados</li>
           <li>Mensajes plantilla WA</li>
         </ul>
         <a routerLink="/contratar" [queryParams]="{ plan: 'Pro' }" class="az-btn az-btn-primary full">Elegir</a>
@@ -272,24 +264,18 @@
       <article class="az-card plan">
         <p class="plan-tier">Plan</p>
         <h3>Negocio</h3>
-        @if (pricesFromApi()) {
-          <p class="price">{{ formatCop(cfg.planPriceBusiness) }}<span>/mes</span></p>
-        } @else {
-          <div class="price-spacer" aria-hidden="true"></div>
-        }
+        <p class="price">{{ formatCop(cfg.planPriceBusiness) }}<span>/mes</span></p>
         <ul>
           <li>Incluye inventario</li>
-          <li>Empleados amplios (uso razonable)</li>
+          <li>Hasta 8 empleados</li>
           <li>Soporte prioritario</li>
         </ul>
         <a routerLink="/contratar" [queryParams]="{ plan: 'Negocio' }" class="az-btn az-btn-secondary full">Elegir</a>
       </article>
     </div>
-    @if (pricesFromApi()) {
-      <p class="muted plan-currency-note">
-        Valores en <strong>COP</strong>. Límites concretos (empleados, módulos) según contrato y configuración.
-      </p>
-    }
+    <p class="muted plan-currency-note">
+      Valores en <strong>COP</strong>. Límites concretos (empleados, módulos) según contrato y configuración.
+    </p>
   </div>
 </section>
 

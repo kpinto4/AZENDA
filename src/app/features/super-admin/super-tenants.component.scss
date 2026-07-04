@@ -365,6 +365,20 @@
   background: color-mix(in srgb, var(--az-danger) 6%, var(--az-surface)) !important;
 }
 
+.tenant-btn-danger-solid {
+  background: var(--az-danger) !important;
+  border-color: var(--az-danger) !important;
+  color: #fff !important;
+}
+
+.tenant-delete-confirm-msg {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--az-danger);
+  font-weight: 600;
+}
+
 .tenant-plan-select {
   max-width: 140px;
   font-size: 0.88rem;

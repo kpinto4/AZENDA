@@ -43,7 +43,7 @@ export const CHECKOUT_PLANS: PlanCheckoutMeta[] = [
     features: [
       { label: 'Precio mensual', value: '—' },
       { label: 'Módulos', value: 'Citas + ventas POS' },
-      { label: 'Equipo', value: 'Hasta 10 empleados' },
+      { label: 'Equipo', value: 'Hasta 4 empleados' },
       { label: 'Catálogo', value: 'Servicios y productos' },
     ],
   },
@@ -53,7 +53,7 @@ export const CHECKOUT_PLANS: PlanCheckoutMeta[] = [
     features: [
       { label: 'Precio mensual', value: '—' },
       { label: 'Módulos', value: 'Citas + ventas + inventario' },
-      { label: 'Equipo', value: 'Uso amplio del equipo' },
+      { label: 'Equipo', value: 'Hasta 8 empleados' },
       { label: 'Soporte', value: 'Prioritario' },
     ],
   },
@@ -82,8 +82,8 @@ export const CHECKOUT_PAYMENT_METHODS: CheckoutPaymentMethod[] = [
   },
 ];
 
-/** Activar en `true` cuando la pasarela (Wompi/PayU) esté aprobada e integrada. */
-export const CHECKOUT_PASARELA_ENABLED = false;
+/** Pago en línea con links de Wompi (un link por plan, monto fijo). */
+export const CHECKOUT_PASARELA_ENABLED = true;
 
 export interface ManualPaymentMethod {
   id: string;
@@ -93,10 +93,10 @@ export interface ManualPaymentMethod {
   note?: string;
 }
 
-/** Medios de pago para activación manual (sin pasarela). */
+/** Medios de pago alternativos (personalización o si Wompi no aplica). */
 export const CHECKOUT_MANUAL_PAYMENT = {
   afterPayNote:
-    'Envía el comprobante por WhatsApp para activar tu panel en pocas horas hábiles.',
+    'Si pagaste por otro medio, envía el comprobante por WhatsApp para activar tu panel.',
   methods: [
     {
       id: 'nequi',
@@ -115,28 +115,28 @@ export const CHECKOUT_MANUAL_PAYMENT = {
 };
 
 /**
- * Enlaces de pago por plan y método. Solo se usan si CHECKOUT_PASARELA_ENABLED es true.
+ * Link de pago Wompi por plan (monto fijo en el panel de Wompi).
+ * Un solo enlace acepta los medios que configures en Wompi.
  */
+export const PLAN_WOMPI_LINKS: Record<CommercialPlanKey, string> = {
+  Básico: 'https://checkout.wompi.co/l/MJJ4K7',
+  Pro: 'https://checkout.wompi.co/l/7ojDEk',
+  Negocio: 'https://checkout.wompi.co/l/u6ZpcG',
+};
+
+/** @deprecated Usar PLAN_WOMPI_LINKS. Se mantiene por compatibilidad. */
 export const PLAN_PAYMENT_LINKS: Record<
   CommercialPlanKey,
   Partial<Record<CheckoutPaymentMethodId, string>>
 > = {
-  Básico: {
-    tarjeta: 'https://checkout.wompi.co/l/azenda-basico-tarjeta',
-    nequi: 'https://checkout.wompi.co/l/azenda-basico-nequi',
-    transferencia: 'https://checkout.wompi.co/l/azenda-basico-transferencia',
-    efecty: 'https://checkout.wompi.co/l/azenda-basico-efecty',
-  },
-  Pro: {
-    tarjeta: 'https://checkout.wompi.co/l/azenda-pro-tarjeta',
-    nequi: 'https://checkout.wompi.co/l/azenda-pro-nequi',
-    transferencia: 'https://checkout.wompi.co/l/azenda-pro-transferencia',
-    efecty: 'https://checkout.wompi.co/l/azenda-pro-efecty',
-  },
-  Negocio: {
-    tarjeta: 'https://checkout.wompi.co/l/azenda-negocio-tarjeta',
-    nequi: 'https://checkout.wompi.co/l/azenda-negocio-nequi',
-    transferencia: 'https://checkout.wompi.co/l/azenda-negocio-transferencia',
-    efecty: 'https://checkout.wompi.co/l/azenda-negocio-efecty',
-  },
+  Básico: { tarjeta: PLAN_WOMPI_LINKS.Básico },
+  Pro: { tarjeta: PLAN_WOMPI_LINKS.Pro },
+  Negocio: { tarjeta: PLAN_WOMPI_LINKS.Negocio },
 };
+
+export function wompiLinkForPlan(plan: CommercialPlanKey | string | null | undefined): string | undefined {
+  if (!plan) {
+    return undefined;
+  }
+  return PLAN_WOMPI_LINKS[plan as CommercialPlanKey];
+}

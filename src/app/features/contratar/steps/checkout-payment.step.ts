@@ -3,14 +3,16 @@ import { Router, RouterLink } from '@angular/router';
 import { retry, timer } from 'rxjs';
 import { formatCop } from '../../../core/format-currency';
 import { ApiPlanCatalogService } from '../../../core/services/api-plan-catalog.service';
-import { mapPublicPlanCatalogPrices } from '../../../core/services/public-plan-prices.util';
+import {
+  DEFAULT_PUBLIC_PLAN_PRICES,
+  mapPublicPlanCatalogPrices,
+} from '../../../core/services/public-plan-prices.util';
 import {
   CHECKOUT_PASARELA_ENABLED,
-  CHECKOUT_PAYMENT_METHODS,
-  CheckoutPaymentMethodId,
-  PLAN_PAYMENT_LINKS,
+  wompiLinkForPlan,
 } from '../checkout.config';
 import { CheckoutManualPaymentCardComponent } from '../components/checkout-manual-payment-card.component';
+import { CheckoutPlanSummaryComponent } from '../components/checkout-plan-summary.component';
 import {
   AZENDA_WHATSAPP_DISPLAY,
   buildRegistrationWhatsAppMessage,
@@ -20,31 +22,62 @@ import { CheckoutSessionService } from '../checkout-session.service';
 
 @Component({
   selector: 'app-checkout-payment-step',
-  imports: [RouterLink, CheckoutManualPaymentCardComponent],
+  imports: [RouterLink, CheckoutManualPaymentCardComponent, CheckoutPlanSummaryComponent],
   template: `
     <section class="checkout-panel">
       <div class="checkout-panel-inner">
         <p class="checkout-kicker">
-          <span class="checkout-kicker-icon" aria-hidden="true">💬</span>
+          <span class="checkout-kicker-icon" aria-hidden="true">💳</span>
           Activación del plan
         </p>
-        <h1>{{ pasarelaEnabled ? 'Elige cómo pagas' : 'Confirma tu registro por WhatsApp' }}</h1>
+        <h1>{{ pasarelaEnabled ? 'Paga tu plan' : 'Confirma tu registro por WhatsApp' }}</h1>
 
-        <div class="checkout-summary">
-          Plan <strong>{{ checkout.selectedPlan() }}</strong>
-          @if (priceMonthly() > 0) {
-            · referencia {{ formatCop(priceMonthly()) }}/mes
-          }
-          <br />
-          {{ checkout.business() || 'Tu negocio' }} · {{ checkout.email() }}
-        </div>
+        <app-checkout-plan-summary />
 
-        @if (!pasarelaEnabled) {
+        @if (pasarelaEnabled && wompiUrl()) {
+          <p class="checkout-note">
+            Paga el valor de tu plan con Wompi (tarjeta, Nequi, PSE y otros medios).
+            Cuando verifiquemos el pago, activamos tu panel (no es inmediato).
+          </p>
+
+          <div class="checkout-actions">
+            <a
+              class="az-btn az-btn-primary full"
+              [href]="wompiUrl()!"
+              target="_blank"
+              rel="noopener noreferrer"
+              (click)="onWompiClick()"
+            >
+              @if (priceMonthly() > 0) {
+                Pagar {{ formatCop(priceMonthly()) }}/mes con Wompi
+              } @else {
+                Pagar con Wompi
+              }
+            </a>
+            <a routerLink="/contratar/confirmacion" class="az-btn az-btn-secondary full">
+              Ya pagué — continuar
+            </a>
+          </div>
+
+          <div class="checkout-wa-card">
+            <p class="checkout-wa-lead">
+              ¿Precio personalizado o dudas? Escríbenos al {{ whatsappDisplay }}.
+            </p>
+            <a
+              class="az-btn checkout-wa-btn full"
+              [href]="whatsappUrl()"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              WhatsApp · {{ whatsappDisplay }}
+            </a>
+          </div>
+        } @else {
           <div class="checkout-pasarela-pending">
             <p>
               El pago en línea estará disponible pronto. Por ahora cada negocio queda
-              <strong>en espera de confirmación</strong>: escríbenos por WhatsApp, confirmamos el valor (puedes pedir
-              personalización) y activamos tu panel cuando verifiquemos el pago.
+              <strong>en espera de confirmación</strong>: escríbenos por WhatsApp, confirmamos el valor y activamos tu
+              panel cuando verifiquemos el pago.
             </p>
           </div>
 
@@ -69,34 +102,6 @@ import { CheckoutSessionService } from '../checkout-session.service';
               Ya envié el mensaje — continuar
             </a>
           </div>
-        } @else {
-          <p class="checkout-note">
-            Tu pago activa el plan <strong>{{ checkout.selectedPlan() }}</strong>.
-          </p>
-
-          <div class="checkout-pay-list" role="list">
-            @for (method of methods; track method.id) {
-              <button
-                type="button"
-                class="checkout-pay-item"
-                role="listitem"
-                [disabled]="!paymentUrl(method.id)"
-                (click)="openPayment(method.id)"
-              >
-                <div>
-                  <strong>{{ method.label }}</strong>
-                  @if (method.hint) {
-                    <span>{{ method.hint }}</span>
-                  }
-                </div>
-                <span class="checkout-pay-chevron" aria-hidden="true">›</span>
-              </button>
-            }
-          </div>
-
-          <div class="checkout-actions">
-            <a routerLink="/contratar/confirmacion" class="az-btn az-btn-secondary">Ya pagué</a>
-          </div>
         }
       </div>
     </section>
@@ -109,12 +114,13 @@ export class CheckoutPaymentStepComponent implements OnInit {
   private readonly planCatalogApi = inject(ApiPlanCatalogService);
 
   readonly pasarelaEnabled = CHECKOUT_PASARELA_ENABLED;
-  readonly methods = CHECKOUT_PAYMENT_METHODS;
   readonly formatCop = formatCop;
   readonly whatsappDisplay = AZENDA_WHATSAPP_DISPLAY;
   readonly priceMonthly = signal(0);
 
   readonly plan = computed(() => this.checkout.selectedPlan());
+
+  readonly wompiUrl = computed(() => wompiLinkForPlan(this.plan()));
 
   readonly whatsappUrl = computed(() =>
     buildWhatsAppSupportUrl(
@@ -132,32 +138,21 @@ export class CheckoutPaymentStepComponent implements OnInit {
     if (!plan) {
       return;
     }
+    const fallback = DEFAULT_PUBLIC_PLAN_PRICES[plan]?.monthly ?? 0;
+    this.priceMonthly.set(fallback);
     this.planCatalogApi
       .getPublic()
       .pipe(retry({ count: 2, delay: () => timer(800) }))
       .subscribe({
         next: (entries) => {
           const map = mapPublicPlanCatalogPrices(entries);
-          this.priceMonthly.set(map[plan].monthly);
+          this.priceMonthly.set(map[plan]?.monthly ?? fallback);
         },
-        error: () => this.priceMonthly.set(0),
+        error: () => this.priceMonthly.set(fallback),
       });
   }
 
-  paymentUrl(methodId: CheckoutPaymentMethodId): string | undefined {
-    const plan = this.plan();
-    if (!plan) {
-      return undefined;
-    }
-    return PLAN_PAYMENT_LINKS[plan]?.[methodId];
-  }
-
-  openPayment(methodId: CheckoutPaymentMethodId): void {
-    const url = this.paymentUrl(methodId);
-    if (!url) {
-      return;
-    }
-    window.open(url, '_blank', 'noopener');
+  onWompiClick(): void {
     void this.router.navigateByUrl('/contratar/confirmacion');
   }
 }

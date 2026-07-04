@@ -1,4 +1,8 @@
-import { CommercialPlanKey, CHECKOUT_MANUAL_PAYMENT } from './checkout.config';
+import {
+  CHECKOUT_MANUAL_PAYMENT,
+  CHECKOUT_PASARELA_ENABLED,
+  CommercialPlanKey,
+} from './checkout.config';
 
 /** Soporte Azenda (Colombia +57). */
 export const AZENDA_WHATSAPP_E164 = '573245667724';
@@ -29,14 +33,19 @@ export function buildRegistrationWhatsAppMessage(params: {
     params.priceMonthly != null && params.priceMonthly > 0
       ? `\nValor referencia plan: $${params.priceMonthly.toLocaleString('es-CO')} COP/mes`
       : '';
+  const paymentBlock = CHECKOUT_PASARELA_ENABLED
+    ? `\n\nPagué (o voy a pagar) por Wompi el plan ${params.plan}.\n` +
+      `Por favor confirmen el pago y activen mi panel.`
+    : `\n\nMedios de pago:\n${buildManualPaymentLines()}\n\n` +
+      `Quiero confirmar el valor, coordinar el pago y activar mi panel. ` +
+      `Adjuntaré el comprobante cuando realice el pago.`;
   return (
     `Hola, acabo de registrarme en Azenda.\n\n` +
     `Negocio: ${params.business}\n` +
     `Correo: ${params.email}\n` +
     `Plan elegido: ${params.plan}` +
     priceLine +
-    `\n\nMedios de pago:\n${buildManualPaymentLines()}\n\n` +
-    `Quiero confirmar el valor, coordinar el pago y activar mi panel. ` +
-    `Adjuntaré el comprobante cuando realice el pago. Gracias.`
+    paymentBlock +
+    ` Gracias.`
   );
 }

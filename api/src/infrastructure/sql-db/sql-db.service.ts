@@ -18,7 +18,10 @@ import {
   TenantStockMovementEntity,
   UserEntity,
 } from './sql-db.types';
-import { applyPlanCatalogPricesToSiteConfig } from './plan-catalog-site-config';
+import {
+  applyPlanCatalogPricesToSiteConfig,
+  planCatalogPricePatch,
+} from './plan-catalog-site-config';
 import { AppointmentRepository } from './repositories/appointment.repository';
 import { PlatformSiteConfigRepository } from './repositories/platform-site-config.repository';
 import { TenantBrandingRepository } from './repositories/tenant-branding.repository';
@@ -651,6 +654,11 @@ export class SqlDbService implements OnModuleInit {
     }
     await this.tenants.ensurePlanCatalogTable();
     await this.platformSite.ensureTableAndDefaultRow();
+    const catalog = await this.tenants.listPlanCatalog();
+    const pricePatch = planCatalogPricePatch(catalog);
+    if (Object.keys(pricePatch).length > 0) {
+      await this.platformSite.patch(pricePatch);
+    }
     await this.retail.ensureSalesTable();
     await this.tenants.syncTenantPlanPricesFromCatalog();
     await this.normalizeTenantBillingPeriods();

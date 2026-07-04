@@ -72,7 +72,8 @@
             <span class="super-ui-badge super-ui-badge--warn">{{ pendingActivationRows().length }}</span>
           </h2>
           <p class="tenants-queue-lead">
-            Verifica el pago, ajusta módulos y confirma para habilitar el panel del negocio.
+            Verifica el pago, ajusta módulos y confirma para habilitar el panel. Si no pagó o es una prueba, puedes
+            eliminarlo.
           </p>
         </div>
         <div class="tenants-queue-list">
@@ -111,14 +112,46 @@
                     }
                   </div>
                 </div>
-                <button
-                  type="button"
-                  class="super-ui-btn-primary"
-                  [disabled]="activatingTenantId() === t.id"
-                  (click)="confirmPaymentAndActivate(t)"
-                >
-                  {{ activatingTenantId() === t.id ? 'Activando…' : 'Confirmar pago y activar' }}
-                </button>
+              </div>
+              <div class="tenant-card-actions">
+                @if (deleteConfirmId() === t.id) {
+                  <p class="tenant-delete-confirm-msg">
+                    ¿Eliminar este registro? Se borra el negocio y su cuenta.
+                  </p>
+                  <button
+                    type="button"
+                    class="super-ui-btn-primary tenant-btn-danger-solid"
+                    [disabled]="deletingTenantId() === t.id"
+                    (click)="deleteApiTenant(t)"
+                  >
+                    {{ deletingTenantId() === t.id ? 'Eliminando…' : 'Sí, eliminar' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="super-ui-btn-ghost"
+                    [disabled]="deletingTenantId() === t.id"
+                    (click)="cancelDeleteTenant()"
+                  >
+                    Cancelar
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="super-ui-btn-primary"
+                    [disabled]="activatingTenantId() === t.id || deletingTenantId() === t.id"
+                    (click)="confirmPaymentAndActivate(t)"
+                  >
+                    {{ activatingTenantId() === t.id ? 'Activando…' : 'Confirmar pago y activar' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="super-ui-btn-ghost tenant-btn-danger"
+                    [disabled]="activatingTenantId() === t.id || deletingTenantId() === t.id"
+                    (click)="requestDeleteTenant(t)"
+                  >
+                    Eliminar
+                  </button>
+                }
               </div>
             </article>
           }
@@ -291,9 +324,33 @@
                     {{ activatingTenantId() === t.id ? 'Activando…' : 'Confirmar pago' }}
                   </button>
                 }
-                <button type="button" class="super-ui-btn-ghost tenant-btn-danger" (click)="deleteApiTenant(t)">
-                  Eliminar
-                </button>
+                @if (deleteConfirmId() === t.id) {
+                  <button
+                    type="button"
+                    class="super-ui-btn-primary tenant-btn-danger-solid"
+                    [disabled]="deletingTenantId() === t.id"
+                    (click)="deleteApiTenant(t)"
+                  >
+                    {{ deletingTenantId() === t.id ? 'Eliminando…' : 'Sí, eliminar' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="super-ui-btn-ghost"
+                    [disabled]="deletingTenantId() === t.id"
+                    (click)="cancelDeleteTenant()"
+                  >
+                    Cancelar
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="super-ui-btn-ghost tenant-btn-danger"
+                    [disabled]="activatingTenantId() === t.id || deletingTenantId() === t.id"
+                    (click)="requestDeleteTenant(t)"
+                  >
+                    Eliminar
+                  </button>
+                }
               </div>
             </article>
           }
