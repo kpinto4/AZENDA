@@ -1,5 +1,5 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { retry, timer } from 'rxjs';
 import { formatCop } from '../../../core/format-currency';
 import { ApiPlanCatalogService } from '../../../core/services/api-plan-catalog.service';
@@ -46,7 +46,6 @@ import { CheckoutSessionService } from '../checkout-session.service';
               [href]="wompiUrl()!"
               target="_blank"
               rel="noopener noreferrer"
-              (click)="onWompiClick()"
             >
               @if (priceMonthly() > 0) {
                 Pagar {{ formatCop(priceMonthly()) }}/mes con Wompi
@@ -110,7 +109,6 @@ import { CheckoutSessionService } from '../checkout-session.service';
 })
 export class CheckoutPaymentStepComponent implements OnInit {
   readonly checkout = inject(CheckoutSessionService);
-  private readonly router = inject(Router);
   private readonly planCatalogApi = inject(ApiPlanCatalogService);
 
   readonly pasarelaEnabled = CHECKOUT_PASARELA_ENABLED;
@@ -152,7 +150,4 @@ export class CheckoutPaymentStepComponent implements OnInit {
       });
   }
 
-  onWompiClick(): void {
-    void this.router.navigateByUrl('/contratar/confirmacion');
-  }
 }
