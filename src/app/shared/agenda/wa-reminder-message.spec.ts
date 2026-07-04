@@ -22,6 +22,7 @@ describe('wa reminder message', () => {
       when: '2026-05-23T10:00:00',
       businessName: 'Spa Azenda',
       employeeName: 'abc123xyz789012',
+      now: new Date(2026, 4, 22, 8, 0, 0),
     });
     expect(text).toContain('¡Hola, María!');
     expect(text).toContain('Spa Azenda');

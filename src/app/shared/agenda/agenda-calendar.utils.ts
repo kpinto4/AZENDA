@@ -277,6 +277,8 @@ export interface WaReminderMessageInput {
   when: string;
   businessName: string;
   employeeName?: string | null;
+  /** Solo tests: fija «hoy»/«mañana» sin depender del reloj del CI. */
+  now?: Date;
 }
 
 function firstNameFromCustomer(full: string): string {
@@ -327,7 +329,7 @@ export function buildWaReminderMessage(input: WaReminderMessageInput): string {
   const biz = input.businessName.trim() || 'Tu negocio';
   const name = firstNameFromCustomer(input.customerName);
   const greeting = name ? `¡Hola, ${name}!` : '¡Hola!';
-  const whenLine = formatWhenForWaReminder(input.when);
+  const whenLine = formatWhenForWaReminder(input.when, input.now);
   const serviceLine = formatServiceForClientMessage(input.service, input.when);
 
   const lines = [
