@@ -6,6 +6,14 @@ import {
 } from './appointment-scheduling.util';
 import type { TenantServiceEntity } from '../infrastructure/sql-db/sql-db.types';
 
+const noPromo = {
+  promoEnabled: false,
+  promoScheduleType: null,
+  promoDays: [] as number[],
+  promoStartDate: null,
+  promoEndDate: null,
+} as const;
+
 const catalog: TenantServiceEntity[] = [
   {
     id: 's1',
@@ -15,6 +23,7 @@ const catalog: TenantServiceEntity[] = [
     price: 50,
     promoPrice: null,
     promoLabel: null,
+    ...noPromo,
     durationMinutes: 45,
     catalogOrder: 0,
   },
@@ -91,6 +100,7 @@ describe('appointment-scheduling.util', () => {
         price: 45,
         promoPrice: null,
         promoLabel: null,
+        ...noPromo,
         durationMinutes: 30,
         catalogOrder: 0,
       },
@@ -154,6 +164,7 @@ describe('appointment-scheduling.util', () => {
         price: 40,
         promoPrice: null,
         promoLabel: null,
+        ...noPromo,
         durationMinutes: 25,
         catalogOrder: 1,
       },
