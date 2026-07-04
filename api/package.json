@@ -20,6 +20,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:bootstrap": "ts-node -r tsconfig-paths/register scripts/run-db-bootstrap.ts",
+    "db:cleanup-keep-core": "ts-node -r tsconfig-paths/register scripts/run-db-cleanup-keep-core.ts",
     "demo:reset": "ts-node -r tsconfig-paths/register scripts/run-demo-reset.ts"
   },
   "dependencies": {

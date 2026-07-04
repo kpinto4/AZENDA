@@ -303,7 +303,9 @@ let TenantRepository = class TenantRepository {
             return false;
         }
         await this.pg.exec(`DELETE FROM users WHERE tenant_id = ?`, [tenantId]);
-        await this.pg.exec(`DELETE FROM appointments WHERE tenant_id = ?`, [tenantId]);
+        await this.pg.exec(`DELETE FROM appointments WHERE tenant_id = ?`, [
+            tenantId,
+        ]);
         await this.pg.exec(`DELETE FROM store_visit_logs WHERE tenant_id = ?`, [
             tenantId,
         ]);
