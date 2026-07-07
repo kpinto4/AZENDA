@@ -9,10 +9,10 @@ describe('defaultModulesForPlan', () => {
     });
   });
 
-  it('Básico incluye citas y ventas', () => {
+  it('Básico solo incluye citas (servicios), sin ventas ni inventario', () => {
     expect(defaultModulesForPlan('Básico')).toEqual({
       citas: true,
-      ventas: true,
+      ventas: false,
       inventario: false,
     });
   });
