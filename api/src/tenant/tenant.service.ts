@@ -290,7 +290,9 @@ export class TenantService {
       throw new NotFoundException('Empleado no encontrado');
     }
     if (current.role === UserRole.ADMIN) {
-      throw new NotFoundException('El admin del negocio no se gestiona como empleado');
+      throw new NotFoundException(
+        'El admin del negocio no se gestiona como empleado',
+      );
     }
     const pwd = dto.password?.trim();
     const updated = await this.sqlDbService.updateUser(userId, {
@@ -318,7 +320,9 @@ export class TenantService {
       throw new NotFoundException('Empleado no encontrado');
     }
     if (current.role === UserRole.ADMIN) {
-      throw new NotFoundException('No se puede eliminar al admin del negocio desde empleados');
+      throw new NotFoundException(
+        'No se puede eliminar al admin del negocio desde empleados',
+      );
     }
     const ok = await this.sqlDbService.deleteUserByTenant(userId, tenantId);
     if (!ok) {
