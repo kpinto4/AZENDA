@@ -113,6 +113,11 @@
           <strong>Productos y servicios</strong>
           <span>Inventario, catálogo y promociones</span>
         </a>
+      } @else if (session.modules().appointments) {
+        <a class="quick-card" routerLink="/app/inventario">
+          <strong>Servicios</strong>
+          <span>Precios y duración para citas y reservas</span>
+        </a>
       }
       @if (session.role() === 'TENANT_ADMIN') {
         <a class="quick-card" routerLink="/app/empleados">

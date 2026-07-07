@@ -1,5 +1,7 @@
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
+  IsEmail,
   IsIn,
   IsOptional,
   IsString,
@@ -21,6 +23,16 @@ export class CreateTenantDto {
 
   @IsIn(['ACTIVE', 'PAUSED', 'BLOCKED'])
   status!: 'ACTIVE' | 'PAUSED' | 'BLOCKED';
+
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
+  @IsEmail()
+  adminEmail!: string;
+
+  @IsString()
+  @MinLength(6)
+  adminPassword!: string;
 
   @IsOptional()
   @IsBoolean()

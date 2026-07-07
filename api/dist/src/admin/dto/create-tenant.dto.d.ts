@@ -3,6 +3,8 @@ export declare class CreateTenantDto {
     name: string;
     slug: string;
     status: 'ACTIVE' | 'PAUSED' | 'BLOCKED';
+    adminEmail: string;
+    adminPassword: string;
     citas?: boolean;
     ventas?: boolean;
     inventario?: boolean;

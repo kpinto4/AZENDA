@@ -50,16 +50,30 @@
       <section class="super-ui-surface tenants-add-panel">
         <h3 class="super-ui-surface-title">Alta manual de negocio</h3>
         <p class="tenants-add-hint">
-          El slug de reservas se genera automáticamente. El plan define los módulos iniciales.
+          Se crea el negocio y su usuario admin (correo + contraseña) para que pueda entrar al panel.
         </p>
-        <form [formGroup]="addForm" (ngSubmit)="addTenant()" class="tenants-add-form">
+        <form [formGroup]="addForm" (ngSubmit)="addTenant()" class="tenants-add-form tenants-add-form--grid">
           <input class="az-input" type="text" formControlName="name" placeholder="Nombre del negocio" />
           <select class="az-select" formControlName="plan">
             @for (p of plans; track p) {
               <option [value]="p">{{ p }}</option>
             }
           </select>
-          <button type="submit" class="super-ui-btn-primary">Crear negocio</button>
+          <input
+            class="az-input"
+            type="email"
+            formControlName="adminEmail"
+            placeholder="Correo del admin"
+            autocomplete="off"
+          />
+          <input
+            class="az-input"
+            type="password"
+            formControlName="adminPassword"
+            placeholder="Contraseña (mín. 6)"
+            autocomplete="new-password"
+          />
+          <button type="submit" class="super-ui-btn-primary">Crear negocio y acceso</button>
         </form>
       </section>
     }
@@ -87,14 +101,60 @@
                     <span class="tenant-slug">/{{ t.slug }}</span>
                     @if (t.adminEmail) {
                       <span class="tenant-email">{{ t.adminEmail }}</span>
+                    } @else {
+                      <span class="tenant-email tenant-email--missing">Sin usuario de acceso</span>
                     }
                   </div>
                 </div>
                 <div class="tenant-badges">
                   <span class="super-ui-status super-ui-status--warn">Pago pendiente</span>
                   <span class="super-ui-status super-ui-status--neutral">{{ t.plan }}</span>
+                  @if (!t.adminEmail) {
+                    <span class="super-ui-status super-ui-status--danger">Sin acceso</span>
+                  }
                 </div>
               </div>
+              @if (!t.adminEmail) {
+                <div class="tenant-access-panel">
+                  @if (accessFormTenantId() === t.id) {
+                    <form
+                      class="tenant-access-form"
+                      [formGroup]="accessForm"
+                      (ngSubmit)="submitAccessForm(t)"
+                    >
+                      <input
+                        class="az-input"
+                        type="email"
+                        formControlName="adminEmail"
+                        placeholder="Correo del admin"
+                        autocomplete="off"
+                      />
+                      <input
+                        class="az-input"
+                        type="password"
+                        formControlName="adminPassword"
+                        placeholder="Contraseña (mín. 6)"
+                        autocomplete="new-password"
+                      />
+                      <button type="submit" class="super-ui-btn-primary" [disabled]="accessSaving()">
+                        {{ accessSaving() ? 'Guardando…' : 'Crear acceso' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="super-ui-btn-ghost"
+                        [disabled]="accessSaving()"
+                        (click)="cancelAccessForm()"
+                      >
+                        Cancelar
+                      </button>
+                    </form>
+                  } @else {
+                    <button type="button" class="super-ui-btn-primary" (click)="openAccessForm(t)">
+                      Crear usuario admin
+                    </button>
+                  }
+                </div>
+              }
               <div class="tenant-card-body">
                 <div class="tenant-modules">
                   <span class="tenant-modules-label">Módulos</span>
@@ -205,6 +265,8 @@
                     <code class="tenant-id">{{ t.id }}</code>
                     @if (t.adminEmail) {
                       <span class="tenant-email">{{ t.adminEmail }}</span>
+                    } @else {
+                      <span class="tenant-email tenant-email--missing">Sin usuario de acceso</span>
                     }
                   </div>
                 </div>
@@ -219,8 +281,63 @@
                   @if (isPendingActivation(t)) {
                     <span class="super-ui-status super-ui-status--warn">Pago pendiente</span>
                   }
+                  @if (!t.adminEmail) {
+                    <span class="super-ui-status super-ui-status--danger">Sin acceso</span>
+                  }
                 </div>
               </div>
+
+              @if (!t.adminEmail) {
+                <div class="tenant-access-panel">
+                  @if (accessFormTenantId() === t.id) {
+                    <p class="tenant-access-lead">
+                      Crea el usuario admin para que este negocio pueda iniciar sesión en el panel.
+                    </p>
+                    <form
+                      class="tenant-access-form"
+                      [formGroup]="accessForm"
+                      (ngSubmit)="submitAccessForm(t)"
+                    >
+                      <input
+                        class="az-input"
+                        type="email"
+                        formControlName="adminEmail"
+                        placeholder="Correo del admin"
+                        autocomplete="off"
+                      />
+                      <input
+                        class="az-input"
+                        type="password"
+                        formControlName="adminPassword"
+                        placeholder="Contraseña (mín. 6)"
+                        autocomplete="new-password"
+                      />
+                      <button
+                        type="submit"
+                        class="super-ui-btn-primary"
+                        [disabled]="accessSaving()"
+                      >
+                        {{ accessSaving() ? 'Guardando…' : 'Crear acceso' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="super-ui-btn-ghost"
+                        [disabled]="accessSaving()"
+                        (click)="cancelAccessForm()"
+                      >
+                        Cancelar
+                      </button>
+                    </form>
+                  } @else {
+                    <p class="tenant-access-lead">
+                      Este negocio no tiene usuario. Sin correo no pueden entrar al panel.
+                    </p>
+                    <button type="button" class="super-ui-btn-primary" (click)="openAccessForm(t)">
+                      Crear usuario admin
+                    </button>
+                  }
+                </div>
+              }
 
               <div class="tenant-card-meta">
                 <div class="tenant-meta-block">

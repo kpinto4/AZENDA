@@ -1,8 +1,14 @@
 <div class="az-container az-page tenant-page">
   <div class="az-page-head tenant-page-head">
     <div>
-      <h1 class="az-page-title">Productos y servicios</h1>
-      <p class="az-page-sub">Un solo panel para administrar catálogo comercial e inventario operativo.</p>
+      <h1 class="az-page-title">{{ servicesOnly() ? 'Servicios' : 'Productos y servicios' }}</h1>
+      <p class="az-page-sub">
+        @if (servicesOnly()) {
+          Define los servicios de citas y reservas (precio y duración).
+        } @else {
+          Un solo panel para administrar catálogo comercial e inventario operativo.
+        }
+      </p>
     </div>
   </div>
   @if (inventoryBlockedMessage(); as msg) {
@@ -12,15 +18,27 @@
   }
 
   <div class="az-card toolbar-card tenant-toolbar-card az-section az-adaptive-toolbar">
-    <div class="view-switch">
-      <button type="button" class="az-btn small" [class.az-btn-primary]="activeView() === 'products'" [class.az-btn-secondary]="activeView() !== 'products'" (click)="setActiveView('products')">Productos</button>
-      <button type="button" class="az-btn small" [class.az-btn-primary]="activeView() === 'services'" [class.az-btn-secondary]="activeView() !== 'services'" (click)="setActiveView('services')">Servicios</button>
-    </div>
+    @if (!servicesOnly()) {
+      <div class="view-switch">
+        <button type="button" class="az-btn small" [class.az-btn-primary]="activeView() === 'products'" [class.az-btn-secondary]="activeView() !== 'products'" (click)="setActiveView('products')">Productos</button>
+        <button type="button" class="az-btn small" [class.az-btn-primary]="activeView() === 'services'" [class.az-btn-secondary]="activeView() !== 'services'" (click)="setActiveView('services')">Servicios</button>
+      </div>
+    }
     <div class="toolbar-actions">
-      @if (canManageCatalog()) {
-        <button type="button" class="az-btn az-btn-primary small" (click)="openCreateProduct()">Nuevo producto</button>
+    @if (canManageCatalog()) {
+        @if (!servicesOnly()) {
+          <button type="button" class="az-btn az-btn-primary small" (click)="openCreateProduct()">Nuevo producto</button>
+        }
         @if (session.publicBookingSlug() || isInventoryLiveApi()) {
-          <button type="button" class="az-btn az-btn-secondary small" (click)="openCreateService()">Nuevo servicio</button>
+          <button
+            type="button"
+            class="az-btn small"
+            [class.az-btn-primary]="servicesOnly()"
+            [class.az-btn-secondary]="!servicesOnly()"
+            (click)="openCreateService()"
+          >
+            Nuevo servicio
+          </button>
         }
       }
     </div>
@@ -140,7 +158,7 @@
     </div>
   </div>
 
-  @if (canManageCatalog()) {
+  @if (canManageCatalog() && !servicesOnly()) {
     <div class="az-card tenant-inventory-ops az-section">
       <div class="inventory-ops-grid">
         <div class="inventory-move-form">

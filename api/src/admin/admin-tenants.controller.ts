@@ -21,6 +21,7 @@ import { defaultModulesForPlan } from '../infrastructure/sql-db/plan-modules';
 import { TenantEntity } from '../infrastructure/sql-db/sql-db.types';
 import { normalizeBillingCycle } from '../common/billing.config';
 import { AdminUpgradeQuoteDto } from './dto/admin-upgrade-quote.dto';
+import { CreateTenantAdminDto } from './dto/create-tenant-admin.dto';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 
@@ -79,7 +80,21 @@ export class AdminTenantsController {
         ventas: body.ventas ?? planModules.ventas,
         inventario: body.inventario ?? planModules.inventario,
       },
+      adminEmail: body.adminEmail,
+      adminPassword: body.adminPassword,
     });
+  }
+
+  @Post(':tenantId/admin-access')
+  ensureAdminAccess(
+    @Param('tenantId') tenantId: string,
+    @Body() body: CreateTenantAdminDto,
+  ) {
+    return this.adminTenants.ensureAdminAccess(
+      tenantId,
+      body.adminEmail,
+      body.adminPassword,
+    );
   }
 
   @Post(':tenantId/activate-subscription')

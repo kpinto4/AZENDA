@@ -373,21 +373,25 @@ export class PublicBookingPageComponent {
       { id: 'any', name: 'Cualquiera', subtitle: 'Mayor disponibilidad' },
     ];
     if (environment.useLiveAuth) {
-      const fromApi = (this.publicCatalog()?.employees ?? []).map((e) => ({
+      const fromApi = (this.publicCatalog()?.employees ?? [])
+        .filter((e) => e.role !== 'ADMIN')
+        .map((e) => ({
+          id: e.id,
+          name: e.name,
+          subtitle: 'Profesional · Disponible',
+        }));
+      // Solo "Cualquiera" si no hay empleados (el admin no se lista).
+      return fromApi.length ? [...base, ...fromApi] : base;
+    }
+    const fromMock = this.data
+      .employees()
+      .filter((e) => e.panelRole === 'EMPLEADO')
+      .map((e) => ({
         id: e.id,
         name: e.name,
-        subtitle: e.role === 'ADMIN' ? 'Director · Disponible' : 'Profesional · Disponible',
+        subtitle: 'Profesional · Disponible',
       }));
-      if (fromApi.length) {
-        return [...base, ...fromApi];
-      }
-    }
-    const fromMock = this.data.employees().map((e) => ({
-      id: e.id,
-      name: e.name,
-      subtitle: e.panelRole === 'ADMIN' ? 'Director · Disponible' : 'Profesional · Disponible',
-    }));
-    return [...base, ...fromMock];
+    return fromMock.length ? [...base, ...fromMock] : base;
   });
   readonly selectedEmployeeLabel = computed(
     () =>

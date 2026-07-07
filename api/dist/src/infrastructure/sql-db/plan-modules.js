@@ -6,7 +6,7 @@ function defaultModulesForPlan(plan) {
         case 'Trial':
             return { citas: true, ventas: false, inventario: false };
         case 'Básico':
-            return { citas: true, ventas: true, inventario: false };
+            return { citas: true, ventas: false, inventario: false };
         case 'Pro':
         case 'Negocio':
             return { citas: true, ventas: true, inventario: true };

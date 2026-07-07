@@ -23,6 +23,7 @@ const admin_tenants_service_1 = require("./admin-tenants.service");
 const plan_modules_1 = require("../infrastructure/sql-db/plan-modules");
 const billing_config_1 = require("../common/billing.config");
 const admin_upgrade_quote_dto_1 = require("./dto/admin-upgrade-quote.dto");
+const create_tenant_admin_dto_1 = require("./dto/create-tenant-admin.dto");
 const create_tenant_dto_1 = require("./dto/create-tenant.dto");
 const update_tenant_dto_1 = require("./dto/update-tenant.dto");
 let AdminTenantsController = class AdminTenantsController {
@@ -67,7 +68,12 @@ let AdminTenantsController = class AdminTenantsController {
                 ventas: body.ventas ?? planModules.ventas,
                 inventario: body.inventario ?? planModules.inventario,
             },
+            adminEmail: body.adminEmail,
+            adminPassword: body.adminPassword,
         });
+    }
+    ensureAdminAccess(tenantId, body) {
+        return this.adminTenants.ensureAdminAccess(tenantId, body.adminEmail, body.adminPassword);
     }
     async activateSubscription(tenantId) {
         return this.adminTenants.activateSubscription(tenantId);
@@ -138,6 +144,14 @@ __decorate([
     __metadata("design:paramtypes", [create_tenant_dto_1.CreateTenantDto]),
     __metadata("design:returntype", void 0)
 ], AdminTenantsController.prototype, "createTenant", null);
+__decorate([
+    (0, common_1.Post)(':tenantId/admin-access'),
+    __param(0, (0, common_1.Param)('tenantId')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, create_tenant_admin_dto_1.CreateTenantAdminDto]),
+    __metadata("design:returntype", void 0)
+], AdminTenantsController.prototype, "ensureAdminAccess", null);
 __decorate([
     (0, common_1.Post)(':tenantId/activate-subscription'),
     __param(0, (0, common_1.Param)('tenantId')),

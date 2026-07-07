@@ -5,24 +5,29 @@ import { SqlDbService } from '../infrastructure/sql-db/sql-db.service';
 export interface AdminTenantListRow extends TenantEntity {
     adminEmail: string | null;
 }
+export type CreateTenantInput = Omit<TenantEntity, 'manualBookingEnabled' | 'billingCycle' | 'planPriceMonthly' | 'planPriceYearly' | 'subscriptionStartedAt' | 'currentPeriodStart' | 'currentPeriodEnd' | 'nextRenewalAt'> & {
+    manualBookingEnabled?: boolean;
+    billingCycle?: BillingCycle;
+    planPriceMonthly?: number;
+    planPriceYearly?: number;
+    subscriptionStartedAt?: string;
+    currentPeriodStart?: string;
+    currentPeriodEnd?: string;
+    nextRenewalAt?: string;
+    adminEmail: string;
+    adminPassword: string;
+};
 export declare class AdminTenantsService {
     private readonly tenants;
     private readonly billing;
     private readonly sqlDb;
     constructor(tenants: TenantRepository, billing: TenantBillingService, sqlDb: SqlDbService);
     private computeCycleEnd;
+    private enrichTenant;
     listTenants(): Promise<AdminTenantListRow[]>;
-    findById(tenantId: string): Promise<TenantEntity | undefined>;
-    createTenant(data: Omit<TenantEntity, 'manualBookingEnabled' | 'billingCycle' | 'planPriceMonthly' | 'planPriceYearly' | 'subscriptionStartedAt' | 'currentPeriodStart' | 'currentPeriodEnd' | 'nextRenewalAt'> & {
-        manualBookingEnabled?: boolean;
-        billingCycle?: BillingCycle;
-        planPriceMonthly?: number;
-        planPriceYearly?: number;
-        subscriptionStartedAt?: string;
-        currentPeriodStart?: string;
-        currentPeriodEnd?: string;
-        nextRenewalAt?: string;
-    }): Promise<TenantEntity>;
+    findById(tenantId: string): Promise<AdminTenantListRow | undefined>;
+    createTenant(data: CreateTenantInput): Promise<AdminTenantListRow>;
+    ensureAdminAccess(tenantId: string, adminEmail: string, adminPassword: string): Promise<AdminTenantListRow>;
     updateTenant(tenantId: string, patch: Omit<Partial<TenantEntity>, 'modules'> & {
         modules?: Partial<TenantEntity['modules']>;
     }): Promise<TenantEntity | undefined>;

@@ -30,7 +30,7 @@
         </div>
       </div>
 
-      @if (session.modules().sales || session.modules().inventory) {
+      @if (session.modules().sales || session.modules().inventory || session.modules().appointments) {
         <div class="nav-group">
           <p class="nav-group-title">Comercial</p>
           <div class="nav-links-grid">
@@ -42,6 +42,10 @@
             @if (session.modules().inventory) {
               <a routerLink="/app/inventario" routerLinkActive="active"
                 ><span class="nav-ico" aria-hidden="true">☰</span> Catálogo</a
+              >
+            } @else if (session.modules().appointments) {
+              <a routerLink="/app/inventario" routerLinkActive="active"
+                ><span class="nav-ico" aria-hidden="true">☰</span> Servicios</a
               >
             }
           </div>

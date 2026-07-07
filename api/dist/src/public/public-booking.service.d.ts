@@ -12,6 +12,7 @@ export declare class PublicBookingService {
     private readonly bookingNotifications;
     constructor(sqlDb: SqlDbService, bookingNotifications: BookingNotificationService);
     private listActivePublicEmployees;
+    private isSlotFreeForBusiness;
     private computeOpenSlotsForDate;
     private dayIntervals;
     private assertSlotFitsBusinessHours;

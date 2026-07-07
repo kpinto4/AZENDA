@@ -31,8 +31,9 @@ __decorate([
     __metadata("design:type", String)
 ], CreateTenantEmployeeDto.prototype, "password", void 0);
 __decorate([
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsIn)(['ADMIN', 'EMPLEADO']),
+    (0, class_validator_1.IsIn)(['EMPLEADO']),
     __metadata("design:type", String)
 ], CreateTenantEmployeeDto.prototype, "role", void 0);
 //# sourceMappingURL=create-tenant-employee.dto.js.map

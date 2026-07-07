@@ -9,33 +9,20 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UpdateTenantEmployeeDto = void 0;
+exports.CreateTenantAdminDto = void 0;
+const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
-class UpdateTenantEmployeeDto {
+class CreateTenantAdminDto {
 }
-exports.UpdateTenantEmployeeDto = UpdateTenantEmployeeDto;
+exports.CreateTenantAdminDto = CreateTenantAdminDto;
 __decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(120),
-    __metadata("design:type", String)
-], UpdateTenantEmployeeDto.prototype, "name", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Transform)(({ value }) => typeof value === 'string' ? value.trim().toLowerCase() : value),
     (0, class_validator_1.IsEmail)(),
     __metadata("design:type", String)
-], UpdateTenantEmployeeDto.prototype, "email", void 0);
+], CreateTenantAdminDto.prototype, "adminEmail", void 0);
 __decorate([
-    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.MinLength)(6),
-    (0, class_validator_1.MaxLength)(120),
     __metadata("design:type", String)
-], UpdateTenantEmployeeDto.prototype, "password", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsIn)(['EMPLEADO']),
-    __metadata("design:type", String)
-], UpdateTenantEmployeeDto.prototype, "role", void 0);
-//# sourceMappingURL=update-tenant-employee.dto.js.map
+], CreateTenantAdminDto.prototype, "adminPassword", void 0);
+//# sourceMappingURL=create-tenant-admin.dto.js.map

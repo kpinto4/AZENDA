@@ -336,6 +336,7 @@ let SqlDbService = SqlDbService_1 = class SqlDbService {
             await this.platformSite.patch(pricePatch);
         }
         await this.retail.ensureSalesTable();
+        await this.pg.exec(`UPDATE tenants SET ventas_enabled = false, inventario_enabled = false WHERE plan = ?`, ['Básico']);
         await this.tenants.syncTenantPlanPricesFromCatalog();
         await this.normalizeTenantBillingPeriods();
     }

@@ -121,17 +121,36 @@ export class PublicBookingService {
   ) {}
 
   private listActivePublicEmployees(users: UserEntity[]) {
+    // El admin del negocio no es profesional de agenda: solo EMPLEADO.
     return users
-      .filter(
-        (u) =>
-          u.status === 'ACTIVE' &&
-          (u.role === UserRole.ADMIN || u.role === UserRole.EMPLEADO),
-      )
+      .filter((u) => u.status === 'ACTIVE' && u.role === UserRole.EMPLEADO)
       .map((u) => ({
         id: u.id,
         name: displayNameFromEmail(u.email),
         role: u.role,
       }));
+  }
+
+  /** Sin empleados: capacidad del negocio (cualquier cita ocupa el hueco). */
+  private isSlotFreeForBusiness(
+    dateYmd: string,
+    slotHhmm: string,
+    durationMinutes: number,
+    intervals: ScheduledInterval[],
+    latestClose: number | null,
+  ): boolean {
+    return isSlotAvailableForEmployee(
+      dateYmd,
+      slotHhmm,
+      durationMinutes,
+      '__business__',
+      ['__business__'],
+      intervals.map((iv) => ({
+        ...iv,
+        employeeId: iv.employeeId || '__business__',
+      })),
+      latestClose,
+    );
   }
 
   private computeOpenSlotsForDate(
@@ -196,6 +215,27 @@ export class PublicBookingService {
     intervals: ScheduledInterval[],
     latestClose: number | null,
   ): string {
+    if (employees.length === 0) {
+      if (requestedEmployeeId) {
+        throw new ForbiddenException(
+          'Empleado invalido o no disponible para este negocio',
+        );
+      }
+      if (
+        !this.isSlotFreeForBusiness(
+          dateYmd,
+          timePart,
+          durationMinutes,
+          intervals,
+          latestClose,
+        )
+      ) {
+        throw new ConflictException(
+          'Ese horario ya fue tomado. Elige otro horario.',
+        );
+      }
+      return '';
+    }
     const employeeIds = employees.map((e) => e.id);
     if (requestedEmployeeId) {
       const available = isSlotAvailableForEmployee(
@@ -327,19 +367,30 @@ export class PublicBookingService {
         ),
       );
     }
-    const allSlots = openSlots.filter((slot) =>
-      employees.some((e) =>
-        isSlotAvailableForEmployee(
-          normalizedDate,
-          slot,
-          durationMinutes,
-          e.id,
-          employeeIds,
-          intervals,
-          latestClose,
-        ),
-      ),
-    );
+    const allSlots =
+      employees.length === 0
+        ? openSlots.filter((slot) =>
+            this.isSlotFreeForBusiness(
+              normalizedDate,
+              slot,
+              durationMinutes,
+              intervals,
+              latestClose,
+            ),
+          )
+        : openSlots.filter((slot) =>
+            employees.some((e) =>
+              isSlotAvailableForEmployee(
+                normalizedDate,
+                slot,
+                durationMinutes,
+                e.id,
+                employeeIds,
+                intervals,
+                latestClose,
+              ),
+            ),
+          );
     return {
       date: normalizedDate,
       durationMinutes,

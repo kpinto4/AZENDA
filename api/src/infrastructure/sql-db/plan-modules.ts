@@ -11,7 +11,8 @@ export function defaultModulesForPlan(plan: string): TenantModuleFlags {
     case 'Trial':
       return { citas: true, ventas: false, inventario: false };
     case 'Básico':
-      return { citas: true, ventas: true, inventario: false };
+      // Solo citas/reservas y servicios (sin POS ni inventario de productos).
+      return { citas: true, ventas: false, inventario: false };
     case 'Pro':
     case 'Negocio':
       return { citas: true, ventas: true, inventario: true };

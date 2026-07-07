@@ -21,7 +21,9 @@ export class CreateTenantEmployeeDto {
   @MaxLength(120)
   password?: string;
 
+  /** Solo empleados; el admin del negocio se crea en el alta del tenant. */
+  @IsOptional()
   @IsString()
-  @IsIn(['ADMIN', 'EMPLEADO'])
-  role!: 'ADMIN' | 'EMPLEADO';
+  @IsIn(['EMPLEADO'])
+  role?: 'EMPLEADO';
 }

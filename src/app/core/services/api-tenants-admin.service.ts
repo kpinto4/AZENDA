@@ -50,6 +50,13 @@ export interface ApiCreateTenantBody {
   ventas?: boolean;
   inventario?: boolean;
   billingCycle?: 'MONTHLY' | 'YEARLY';
+  adminEmail: string;
+  adminPassword: string;
+}
+
+export interface ApiCreateTenantAdminBody {
+  adminEmail: string;
+  adminPassword: string;
 }
 
 export interface ApiPatchTenantBody {
@@ -117,6 +124,16 @@ export class ApiTenantsAdminService {
   create(body: ApiCreateTenantBody): Observable<ApiTenantAdminDto> {
     return this.http.post<ApiTenantAdminDto>(
       `${environment.apiBaseUrl}/admin/tenants`,
+      body,
+    );
+  }
+
+  createAdminAccess(
+    tenantId: string,
+    body: ApiCreateTenantAdminBody,
+  ): Observable<ApiTenantAdminDto> {
+    return this.http.post<ApiTenantAdminDto>(
+      `${environment.apiBaseUrl}/admin/tenants/${encodeURIComponent(tenantId)}/admin-access`,
       body,
     );
   }

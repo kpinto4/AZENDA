@@ -70,6 +70,10 @@ export class TenantInventoryComponent {
   readonly canManageCatalog = computed(
     () => this.session.role() === 'TENANT_ADMIN' && !this.session.isTenantRestricted(),
   );
+  /** Plan Básico (citas sin inventario): solo servicios, sin productos ni stock. */
+  readonly servicesOnly = computed(
+    () => this.session.modules().appointments && !this.session.modules().inventory,
+  );
   readonly inventoryBlockedMessage = computed(() => this.session.tenantRestrictionMessage());
 
   readonly isInventoryLiveApi = computed(
@@ -152,6 +156,12 @@ export class TenantInventoryComponent {
   });
 
   constructor() {
+    effect(() => {
+      if (this.servicesOnly() && this.activeView() !== 'services') {
+        untracked(() => this.activeView.set('services'));
+      }
+    });
+
     effect((onCleanup) => {
       if (!this.isInventoryLiveApi()) {
         untracked(() => {
@@ -192,6 +202,10 @@ export class TenantInventoryComponent {
   });
 
   setActiveView(view: InventoryView): void {
+    if (this.servicesOnly() && view === 'products') {
+      this.activeView.set('services');
+      return;
+    }
     this.activeView.set(view);
   }
 
@@ -231,6 +245,9 @@ export class TenantInventoryComponent {
   }
 
   openCreateProduct(): void {
+    if (this.servicesOnly()) {
+      return;
+    }
     if (!this.canManageCatalog()) {
       this.notifyRestriction();
       return;

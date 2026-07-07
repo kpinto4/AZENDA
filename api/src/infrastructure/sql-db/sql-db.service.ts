@@ -660,6 +660,11 @@ export class SqlDbService implements OnModuleInit {
       await this.platformSite.patch(pricePatch);
     }
     await this.retail.ensureSalesTable();
+    // Plan Básico: solo citas/servicios (sin POS ni inventario de productos).
+    await this.pg.exec(
+      `UPDATE tenants SET ventas_enabled = false, inventario_enabled = false WHERE plan = ?`,
+      ['Básico'],
+    );
     await this.tenants.syncTenantPlanPricesFromCatalog();
     await this.normalizeTenantBillingPeriods();
   }

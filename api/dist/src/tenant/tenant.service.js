@@ -190,12 +190,12 @@ let TenantService = class TenantService {
         const tenantId = this.requireTenantId(currentUser);
         const users = await this.sqlDbService.listUsersByTenantId(tenantId);
         return users
-            .filter((u) => u.role === auth_types_1.UserRole.ADMIN || u.role === auth_types_1.UserRole.EMPLEADO)
+            .filter((u) => u.role === auth_types_1.UserRole.EMPLEADO)
             .map((u) => ({
             id: u.id,
             name: u.email.split('@')[0],
             email: u.email,
-            role: u.role === auth_types_1.UserRole.ADMIN ? 'ADMIN' : 'EMPLEADO',
+            role: 'EMPLEADO',
             status: u.status,
         }));
     }
@@ -205,18 +205,16 @@ let TenantService = class TenantService {
             id: `usr_${Date.now()}`,
             email: dto.email.trim().toLowerCase(),
             password: dto.password?.trim() || 'azenda123',
-            role: dto.role === 'ADMIN' ? auth_types_1.UserRole.ADMIN : auth_types_1.UserRole.EMPLEADO,
+            role: auth_types_1.UserRole.EMPLEADO,
             tenantId,
-            systems: dto.role === 'ADMIN'
-                ? [auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING]
-                : [auth_types_1.AppSystem.TENANT],
+            systems: [auth_types_1.AppSystem.TENANT],
             status: 'ACTIVE',
         });
         return {
             id: created.id,
             name: dto.name.trim(),
             email: created.email,
-            role: created.role === auth_types_1.UserRole.ADMIN ? 'ADMIN' : 'EMPLEADO',
+            role: 'EMPLEADO',
             status: created.status,
         };
     }
@@ -226,19 +224,15 @@ let TenantService = class TenantService {
         if (!current || current.tenantId !== tenantId) {
             throw new common_1.NotFoundException('Empleado no encontrado');
         }
-        const role = dto.role
-            ? dto.role === 'ADMIN'
-                ? auth_types_1.UserRole.ADMIN
-                : auth_types_1.UserRole.EMPLEADO
-            : current.role;
+        if (current.role === auth_types_1.UserRole.ADMIN) {
+            throw new common_1.NotFoundException('El admin del negocio no se gestiona como empleado');
+        }
         const pwd = dto.password?.trim();
         const updated = await this.sqlDbService.updateUser(userId, {
             email: dto.email?.trim().toLowerCase(),
             ...(pwd ? { password: pwd } : {}),
-            role,
-            systems: role === auth_types_1.UserRole.ADMIN
-                ? [auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING]
-                : [auth_types_1.AppSystem.TENANT],
+            role: auth_types_1.UserRole.EMPLEADO,
+            systems: [auth_types_1.AppSystem.TENANT],
         });
         if (!updated) {
             throw new common_1.NotFoundException('Empleado no encontrado');
@@ -247,12 +241,19 @@ let TenantService = class TenantService {
             id: updated.id,
             name: dto.name?.trim() || updated.email.split('@')[0],
             email: updated.email,
-            role: updated.role === auth_types_1.UserRole.ADMIN ? 'ADMIN' : 'EMPLEADO',
+            role: 'EMPLEADO',
             status: updated.status,
         };
     }
     async deleteEmployee(currentUser, userId) {
         const tenantId = this.requireTenantId(currentUser);
+        const current = await this.sqlDbService.findUserById(userId);
+        if (!current || current.tenantId !== tenantId) {
+            throw new common_1.NotFoundException('Empleado no encontrado');
+        }
+        if (current.role === auth_types_1.UserRole.ADMIN) {
+            throw new common_1.NotFoundException('No se puede eliminar al admin del negocio desde empleados');
+        }
         const ok = await this.sqlDbService.deleteUserByTenant(userId, tenantId);
         if (!ok) {
             throw new common_1.NotFoundException('Empleado no encontrado');

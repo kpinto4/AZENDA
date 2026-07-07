@@ -10,8 +10,14 @@
     <div class="tenant-warn az-section" role="status">
       <strong>Ventas deshabilitadas:</strong> {{ msg }}
     </div>
+  } @else if (!session.modules().sales) {
+    <div class="tenant-warn az-section" role="status">
+      <strong>Ventas no incluidas en tu plan.</strong>
+      El plan Básico incluye citas y servicios. Para POS e inventario, sube a Pro o Negocio.
+    </div>
   }
 
+  @if (session.modules().sales) {
   <div class="tenant-compact-grid az-section">
     <div class="az-card tenant-pos-card">
     <div class="pos-search-block" data-tour="ventas-buscar">
@@ -230,5 +236,6 @@
         </table>
       </div>
     </div>
+  }
   }
 </div>

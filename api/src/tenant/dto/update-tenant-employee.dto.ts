@@ -25,6 +25,6 @@ export class UpdateTenantEmployeeDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(['ADMIN', 'EMPLEADO'])
-  role?: 'ADMIN' | 'EMPLEADO';
+  @IsIn(['EMPLEADO'])
+  role?: 'EMPLEADO';
 }

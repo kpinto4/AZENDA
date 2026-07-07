@@ -379,6 +379,47 @@
   font-weight: 600;
 }
 
+.tenant-email--missing {
+  color: var(--az-danger);
+  font-weight: 600;
+}
+
+.tenant-access-panel {
+  padding: 0.85rem 1.15rem;
+  border-bottom: 1px solid var(--az-border);
+  background: color-mix(in srgb, var(--az-danger) 6%, var(--az-surface));
+}
+
+.tenant-access-lead {
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+  color: var(--az-muted);
+}
+
+.tenant-access-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.tenant-access-form .az-input {
+  min-width: 180px;
+  flex: 1 1 160px;
+}
+
+.tenants-add-form--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.tenants-add-form--grid .super-ui-btn-primary {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
 .tenant-plan-select {
   max-width: 140px;
   font-size: 0.88rem;

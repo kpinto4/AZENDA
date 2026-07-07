@@ -32,24 +32,73 @@ let AdminTenantsService = class AdminTenantsService {
         }
         return d.toISOString();
     }
+    async enrichTenant(t) {
+        const users = await this.sqlDb.listUsersByTenantId(t.id);
+        const admin = users.find((u) => u.role === auth_types_1.UserRole.ADMIN);
+        return {
+            ...t,
+            adminEmail: admin?.email ?? null,
+        };
+    }
     async listTenants() {
         const rows = await this.tenants.listTenants();
         const enriched = [];
         for (const t of rows) {
-            const users = await this.sqlDb.listUsersByTenantId(t.id);
-            const admin = users.find((u) => u.role === auth_types_1.UserRole.ADMIN);
-            enriched.push({
-                ...t,
-                adminEmail: admin?.email ?? null,
-            });
+            enriched.push(await this.enrichTenant(t));
         }
         return enriched;
     }
-    findById(tenantId) {
-        return this.tenants.findById(tenantId);
+    async findById(tenantId) {
+        const t = await this.tenants.findById(tenantId);
+        if (!t) {
+            return undefined;
+        }
+        return this.enrichTenant(t);
     }
-    createTenant(data) {
-        return this.tenants.createTenant(data);
+    async createTenant(data) {
+        const adminEmail = data.adminEmail.trim().toLowerCase();
+        const existing = await this.sqlDb.findUserByEmailNormalized(adminEmail);
+        if (existing) {
+            throw new common_1.ConflictException('Ya existe una cuenta con ese correo');
+        }
+        const { adminEmail: _e, adminPassword, ...tenantData } = data;
+        const tenant = await this.tenants.createTenant(tenantData);
+        await this.sqlDb.createUser({
+            id: `usr_${Date.now()}`,
+            email: adminEmail,
+            password: adminPassword,
+            role: auth_types_1.UserRole.ADMIN,
+            tenantId: tenant.id,
+            systems: [auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING],
+            status: 'ACTIVE',
+        });
+        return this.enrichTenant(tenant);
+    }
+    async ensureAdminAccess(tenantId, adminEmail, adminPassword) {
+        const tenant = await this.tenants.findById(tenantId);
+        if (!tenant) {
+            throw new common_1.NotFoundException('Tenant no encontrado');
+        }
+        const users = await this.sqlDb.listUsersByTenantId(tenantId);
+        const hasAdmin = users.some((u) => u.role === auth_types_1.UserRole.ADMIN);
+        if (hasAdmin) {
+            throw new common_1.ConflictException('Este negocio ya tiene un usuario admin');
+        }
+        const email = adminEmail.trim().toLowerCase();
+        const existing = await this.sqlDb.findUserByEmailNormalized(email);
+        if (existing) {
+            throw new common_1.ConflictException('Ya existe una cuenta con ese correo');
+        }
+        await this.sqlDb.createUser({
+            id: `usr_${Date.now()}`,
+            email,
+            password: adminPassword,
+            role: auth_types_1.UserRole.ADMIN,
+            tenantId,
+            systems: [auth_types_1.AppSystem.TENANT, auth_types_1.AppSystem.PUBLIC_BOOKING],
+            status: 'ACTIVE',
+        });
+        return this.enrichTenant(tenant);
     }
     updateTenant(tenantId, patch) {
         return this.tenants.updateTenant(tenantId, patch);

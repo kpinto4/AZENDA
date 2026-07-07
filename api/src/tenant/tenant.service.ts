@@ -247,13 +247,14 @@ export class TenantService {
   async listEmployees(currentUser: AuthUser) {
     const tenantId = this.requireTenantId(currentUser);
     const users = await this.sqlDbService.listUsersByTenantId(tenantId);
+    // El admin del negocio no es un empleado: solo listamos EMPLEADO.
     return users
-      .filter((u) => u.role === UserRole.ADMIN || u.role === UserRole.EMPLEADO)
+      .filter((u) => u.role === UserRole.EMPLEADO)
       .map((u) => ({
         id: u.id,
         name: u.email.split('@')[0],
         email: u.email,
-        role: u.role === UserRole.ADMIN ? 'ADMIN' : 'EMPLEADO',
+        role: 'EMPLEADO' as const,
         status: u.status,
       }));
   }
@@ -264,19 +265,16 @@ export class TenantService {
       id: `usr_${Date.now()}`,
       email: dto.email.trim().toLowerCase(),
       password: dto.password?.trim() || 'azenda123',
-      role: dto.role === 'ADMIN' ? UserRole.ADMIN : UserRole.EMPLEADO,
+      role: UserRole.EMPLEADO,
       tenantId,
-      systems:
-        dto.role === 'ADMIN'
-          ? [AppSystem.TENANT, AppSystem.PUBLIC_BOOKING]
-          : [AppSystem.TENANT],
+      systems: [AppSystem.TENANT],
       status: 'ACTIVE',
     });
     return {
       id: created.id,
       name: dto.name.trim(),
       email: created.email,
-      role: created.role === UserRole.ADMIN ? 'ADMIN' : 'EMPLEADO',
+      role: 'EMPLEADO' as const,
       status: created.status,
     };
   }
@@ -291,20 +289,15 @@ export class TenantService {
     if (!current || current.tenantId !== tenantId) {
       throw new NotFoundException('Empleado no encontrado');
     }
-    const role = dto.role
-      ? dto.role === 'ADMIN'
-        ? UserRole.ADMIN
-        : UserRole.EMPLEADO
-      : current.role;
+    if (current.role === UserRole.ADMIN) {
+      throw new NotFoundException('El admin del negocio no se gestiona como empleado');
+    }
     const pwd = dto.password?.trim();
     const updated = await this.sqlDbService.updateUser(userId, {
       email: dto.email?.trim().toLowerCase(),
       ...(pwd ? { password: pwd } : {}),
-      role,
-      systems:
-        role === UserRole.ADMIN
-          ? [AppSystem.TENANT, AppSystem.PUBLIC_BOOKING]
-          : [AppSystem.TENANT],
+      role: UserRole.EMPLEADO,
+      systems: [AppSystem.TENANT],
     });
     if (!updated) {
       throw new NotFoundException('Empleado no encontrado');
@@ -313,13 +306,20 @@ export class TenantService {
       id: updated.id,
       name: dto.name?.trim() || updated.email.split('@')[0],
       email: updated.email,
-      role: updated.role === UserRole.ADMIN ? 'ADMIN' : 'EMPLEADO',
+      role: 'EMPLEADO' as const,
       status: updated.status,
     };
   }
 
   async deleteEmployee(currentUser: AuthUser, userId: string) {
     const tenantId = this.requireTenantId(currentUser);
+    const current = await this.sqlDbService.findUserById(userId);
+    if (!current || current.tenantId !== tenantId) {
+      throw new NotFoundException('Empleado no encontrado');
+    }
+    if (current.role === UserRole.ADMIN) {
+      throw new NotFoundException('No se puede eliminar al admin del negocio desde empleados');
+    }
     const ok = await this.sqlDbService.deleteUserByTenant(userId, tenantId);
     if (!ok) {
       throw new NotFoundException('Empleado no encontrado');

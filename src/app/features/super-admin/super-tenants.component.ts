@@ -100,7 +100,17 @@ export class SuperTenantsComponent implements OnInit {
   readonly addForm = this.fb.nonNullable.group({
     name: ['', Validators.required],
     plan: ['Trial', Validators.required],
+    adminEmail: ['', [Validators.required, Validators.email]],
+    adminPassword: ['', [Validators.required, Validators.minLength(6)]],
   });
+
+  /** Tenant al que se le está creando acceso admin (huérfano sin usuario). */
+  readonly accessFormTenantId = signal<string | null>(null);
+  readonly accessForm = this.fb.nonNullable.group({
+    adminEmail: ['', [Validators.required, Validators.email]],
+    adminPassword: ['', [Validators.required, Validators.minLength(6)]],
+  });
+  readonly accessSaving = signal(false);
 
   constructor() {
     effect(() => {
@@ -128,12 +138,12 @@ export class SuperTenantsComponent implements OnInit {
       case 'Trial':
         return { citas: true, ventas: false, inventario: false };
       case 'Básico':
-        return { citas: true, ventas: true, inventario: false };
+        return { citas: true, ventas: false, inventario: false };
       case 'Pro':
       case 'Negocio':
         return { citas: true, ventas: true, inventario: true };
       default:
-        return { citas: true, ventas: true, inventario: false };
+        return { citas: true, ventas: false, inventario: false };
     }
   }
 
@@ -200,23 +210,90 @@ export class SuperTenantsComponent implements OnInit {
           citas: mods.citas,
           ventas: mods.ventas,
           inventario: mods.inventario,
+          adminEmail: v.adminEmail.trim().toLowerCase(),
+          adminPassword: v.adminPassword,
         })
         .subscribe({
           next: () => {
-            this.addForm.reset({ name: '', plan: 'Trial' });
+            this.addForm.reset({
+              name: '',
+              plan: 'Trial',
+              adminEmail: '',
+              adminPassword: '',
+            });
             this.showAddForm.set(false);
             this.reloadApiTenants();
           },
-          error: () =>
+          error: (err: unknown) => {
+            const status =
+              err && typeof err === 'object' && 'status' in err
+                ? Number((err as { status: number }).status)
+                : 0;
             this.apiError.set(
-              'No se pudo crear el tenant (slug duplicado o error de API).',
-            ),
+              status === 409
+                ? 'Ese correo ya está en uso. Elige otro para el admin del negocio.'
+                : 'No se pudo crear el negocio (slug/correo duplicado o error de API).',
+            );
+          },
         });
       return;
     }
     this.data.addTenant(v.name, v.plan);
-    this.addForm.reset({ name: '', plan: 'Trial' });
+    this.addForm.reset({
+      name: '',
+      plan: 'Trial',
+      adminEmail: '',
+      adminPassword: '',
+    });
     this.showAddForm.set(false);
+  }
+
+  openAccessForm(t: ApiTenantAdminDto): void {
+    this.apiError.set('');
+    this.accessFormTenantId.set(t.id);
+    this.accessForm.reset({ adminEmail: '', adminPassword: '' });
+  }
+
+  cancelAccessForm(): void {
+    this.accessFormTenantId.set(null);
+    this.accessForm.reset({ adminEmail: '', adminPassword: '' });
+  }
+
+  submitAccessForm(t: ApiTenantAdminDto): void {
+    if (this.accessForm.invalid) {
+      this.accessForm.markAllAsTouched();
+      return;
+    }
+    const v = this.accessForm.getRawValue();
+    this.accessSaving.set(true);
+    this.apiError.set('');
+    this.apiTenantsAdmin
+      .createAdminAccess(t.id, {
+        adminEmail: v.adminEmail.trim().toLowerCase(),
+        adminPassword: v.adminPassword,
+      })
+      .subscribe({
+        next: (row) => {
+          this.accessSaving.set(false);
+          this.accessFormTenantId.set(null);
+          this.apiRows.update((rows) =>
+            rows.map((r) => (r.id === row.id ? row : r)),
+          );
+          this.reloadApiTenants();
+        },
+        error: (err: unknown) => {
+          this.accessSaving.set(false);
+          const status =
+            err && typeof err === 'object' && 'status' in err
+              ? Number((err as { status: number }).status)
+              : 0;
+          this.apiError.set(
+            status === 409
+              ? 'Ese correo ya está en uso o el negocio ya tiene admin.'
+              : 'No se pudo crear el acceso del negocio.',
+          );
+        },
+      });
   }
 
   setApiTenantActive(t: ApiTenantAdminDto, active: boolean): void {

@@ -30,22 +30,21 @@ export class TenantEmployeesComponent {
     role: ['EMPLEADO' as 'ADMIN' | 'EMPLEADO', Validators.required],
   });
 
+  /** Solo empleados del equipo (el admin del negocio no aparece aquí). */
   readonly employees = computed(() => {
     if (environment.useLiveAuth && this.session.accessToken()) {
-      return this.employeesApi().map((e) => ({
-        id: e.id,
-        name: e.name,
-        email: e.email,
-        password: e.password ?? '',
-        panelRole: e.role,
-      }));
+      return this.employeesApi()
+        .filter((e) => e.role === 'EMPLEADO')
+        .map((e) => ({
+          id: e.id,
+          name: e.name,
+          email: e.email,
+          password: e.password ?? '',
+          panelRole: 'EMPLEADO' as const,
+        }));
     }
-    return this.data.employees();
+    return this.data.employees().filter((e) => e.panelRole === 'EMPLEADO');
   });
-
-  readonly adminCount = computed(
-    () => this.employees().filter((e) => e.panelRole === 'ADMIN').length,
-  );
 
   constructor() {
     effect(() => {
@@ -71,8 +70,16 @@ export class TenantEmployeesComponent {
     password?: string;
     panelRole: 'ADMIN' | 'EMPLEADO';
   }): void {
+    if (e.panelRole === 'ADMIN') {
+      return;
+    }
     this.editingId.set(e.id);
-    this.form.reset({ name: e.name, email: e.email, password: e.password ?? '', role: e.panelRole });
+    this.form.reset({
+      name: e.name,
+      email: e.email,
+      password: e.password ?? '',
+      role: 'EMPLEADO',
+    });
     this.msg.set('');
     this.showPassword.set(true);
     this.isEditorOpen.set(true);
@@ -100,7 +107,7 @@ export class TenantEmployeesComponent {
         name: v.name,
         email: v.email,
         password: v.password?.trim() || undefined,
-        role: v.role,
+        role: 'EMPLEADO' as const,
       };
       const editing = this.editingId();
       const req = editing ? this.apiEmployees.patch(editing, payload) : this.apiEmployees.create(payload);

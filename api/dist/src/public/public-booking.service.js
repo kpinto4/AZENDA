@@ -81,13 +81,18 @@ let PublicBookingService = class PublicBookingService {
     }
     listActivePublicEmployees(users) {
         return users
-            .filter((u) => u.status === 'ACTIVE' &&
-            (u.role === auth_types_1.UserRole.ADMIN || u.role === auth_types_1.UserRole.EMPLEADO))
+            .filter((u) => u.status === 'ACTIVE' && u.role === auth_types_1.UserRole.EMPLEADO)
             .map((u) => ({
             id: u.id,
             name: displayNameFromEmail(u.email),
             role: u.role,
         }));
+    }
+    isSlotFreeForBusiness(dateYmd, slotHhmm, durationMinutes, intervals, latestClose) {
+        return (0, appointment_scheduling_util_1.isSlotAvailableForEmployee)(dateYmd, slotHhmm, durationMinutes, '__business__', ['__business__'], intervals.map((iv) => ({
+            ...iv,
+            employeeId: iv.employeeId || '__business__',
+        })), latestClose);
     }
     computeOpenSlotsForDate(dateYmd, publicBookingHoursJson) {
         const selected = parseYmd(dateYmd);
@@ -122,6 +127,15 @@ let PublicBookingService = class PublicBookingService {
         }
     }
     pickEmployeeForSlot(dateYmd, timePart, durationMinutes, requestedEmployeeId, employees, intervals, latestClose) {
+        if (employees.length === 0) {
+            if (requestedEmployeeId) {
+                throw new common_1.ForbiddenException('Empleado invalido o no disponible para este negocio');
+            }
+            if (!this.isSlotFreeForBusiness(dateYmd, timePart, durationMinutes, intervals, latestClose)) {
+                throw new common_1.ConflictException('Ese horario ya fue tomado. Elige otro horario.');
+            }
+            return '';
+        }
         const employeeIds = employees.map((e) => e.id);
         if (requestedEmployeeId) {
             const available = (0, appointment_scheduling_util_1.isSlotAvailableForEmployee)(dateYmd, timePart, durationMinutes, requestedEmployeeId, employeeIds, intervals, latestClose);
@@ -208,7 +222,9 @@ let PublicBookingService = class PublicBookingService {
         for (const e of employees) {
             slotsByEmployee[e.id] = openSlots.filter((slot) => (0, appointment_scheduling_util_1.isSlotAvailableForEmployee)(normalizedDate, slot, durationMinutes, e.id, employeeIds, intervals, latestClose));
         }
-        const allSlots = openSlots.filter((slot) => employees.some((e) => (0, appointment_scheduling_util_1.isSlotAvailableForEmployee)(normalizedDate, slot, durationMinutes, e.id, employeeIds, intervals, latestClose)));
+        const allSlots = employees.length === 0
+            ? openSlots.filter((slot) => this.isSlotFreeForBusiness(normalizedDate, slot, durationMinutes, intervals, latestClose))
+            : openSlots.filter((slot) => employees.some((e) => (0, appointment_scheduling_util_1.isSlotAvailableForEmployee)(normalizedDate, slot, durationMinutes, e.id, employeeIds, intervals, latestClose)));
         return {
             date: normalizedDate,
             durationMinutes,

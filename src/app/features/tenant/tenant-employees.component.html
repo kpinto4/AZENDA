@@ -2,16 +2,15 @@
   <div class="az-page-head tenant-page-head">
     <div>
       <h1 class="az-page-title">Empleados</h1>
-      <p class="az-page-sub">Gestiona el acceso del equipo al mini panel con correo, rol y credenciales.</p>
+      <p class="az-page-sub">
+        Equipo con acceso al panel (el admin del negocio no cuenta como empleado).
+      </p>
     </div>
   </div>
 
   <div class="az-card toolbar-card tenant-toolbar-card az-section az-adaptive-toolbar">
     <div class="tenant-metric-row no-margin">
-      <span class="tenant-metric-pill">Activos: <strong>{{ employees().length }}</strong></span>
-      @if (employees().length) {
-        <span class="tenant-metric-pill">Admin: {{ adminCount() }}</span>
-      }
+      <span class="tenant-metric-pill">Empleados: <strong>{{ employees().length }}</strong></span>
     </div>
     <button type="button" class="az-btn az-btn-primary" (click)="openCreate()">Nuevo empleado</button>
   </div>
@@ -29,7 +28,6 @@
           <tr>
             <th>Nombre</th>
             <th>Correo</th>
-            <th>Función panel</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -38,7 +36,6 @@
             <tr>
               <td data-label="Nombre">{{ e.name }}</td>
               <td data-label="Correo">{{ e.email }}</td>
-              <td data-label="Función">{{ e.panelRole }}</td>
               <td class="row-actions" data-label="Acciones">
                 <button type="button" class="az-btn az-btn-secondary small" (click)="openEdit(e)">Editar</button>
                 <button type="button" class="az-btn az-btn-ghost small" (click)="requestDelete(e)">Eliminar</button>
@@ -46,7 +43,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="4">Aún no hay empleados cargados.</td>
+              <td colspan="3">Aún no hay empleados. El admin del negocio no aparece aquí.</td>
             </tr>
           }
         </tbody>
@@ -66,13 +63,6 @@
       <div>
         <label class="az-label" for="nm">Nombre</label>
         <input id="nm" class="az-input wide" formControlName="name" />
-      </div>
-      <div>
-        <label class="az-label" for="rl">Función en panel</label>
-        <select id="rl" class="az-select wide" formControlName="role">
-          <option value="EMPLEADO">Empleado</option>
-          <option value="ADMIN">Admin</option>
-        </select>
       </div>
       <div class="full">
         <label class="az-label" for="em">Correo de acceso</label>

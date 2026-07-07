@@ -10,6 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateTenantDto = void 0;
+const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
 class CreateTenantDto {
 }
@@ -33,6 +34,16 @@ __decorate([
     (0, class_validator_1.IsIn)(['ACTIVE', 'PAUSED', 'BLOCKED']),
     __metadata("design:type", String)
 ], CreateTenantDto.prototype, "status", void 0);
+__decorate([
+    (0, class_transformer_1.Transform)(({ value }) => typeof value === 'string' ? value.trim().toLowerCase() : value),
+    (0, class_validator_1.IsEmail)(),
+    __metadata("design:type", String)
+], CreateTenantDto.prototype, "adminEmail", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MinLength)(6),
+    __metadata("design:type", String)
+], CreateTenantDto.prototype, "adminPassword", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsBoolean)(),

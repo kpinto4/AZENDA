@@ -74,21 +74,21 @@ export declare class TenantService {
         id: string;
         name: string;
         email: string;
-        role: string;
+        role: "EMPLEADO";
         status: import("../auth/auth.types").UserStatus;
     }[]>;
     createEmployee(currentUser: AuthUser, dto: CreateTenantEmployeeDto): Promise<{
         id: string;
         name: string;
         email: string;
-        role: string;
+        role: "EMPLEADO";
         status: import("../auth/auth.types").UserStatus;
     }>;
     updateEmployee(currentUser: AuthUser, userId: string, dto: UpdateTenantEmployeeDto): Promise<{
         id: string;
         name: string;
         email: string;
-        role: string;
+        role: "EMPLEADO";
         status: import("../auth/auth.types").UserStatus;
     }>;
     deleteEmployee(currentUser: AuthUser, userId: string): Promise<{
