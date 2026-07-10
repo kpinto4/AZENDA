@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import { config as loadEnv } from 'dotenv';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import {
   json,
   static as expressStatic,
@@ -79,15 +79,23 @@ function shouldServeSpaInProduction(): boolean {
   if ((process.env.AZENDA_SERVE_SPA ?? '').trim().toLowerCase() === 'false') {
     return false;
   }
-  return (
-    (process.env.NODE_ENV ?? '').trim().toLowerCase() === 'production' &&
-    resolveSpaBrowserRoot() != null
-  );
+  /** Sirve el SPA si existe el build, aunque falte NODE_ENV=production en .env. */
+  return resolveSpaBrowserRoot() != null;
 }
 
 function mountSpaFallback(expressApp: Application, spaRoot: string): void {
+  const configPath = join(spaRoot, 'app-config.json');
+  expressApp.get('/app-config.json', (_req: Request, res: Response) => {
+    res.type('application/json');
+    res.sendFile(configPath, (err) => {
+      if (err) {
+        res.status(404).json({ apiBaseUrl: '/api' });
+      }
+    });
+  });
   expressApp.use(expressStatic(spaRoot, { index: false, maxAge: '1h' }));
   expressApp.get(/^(?!\/api(\/|$)).*/, (_req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-store');
     res.sendFile(join(spaRoot, 'index.html'));
   });
 }
@@ -143,7 +151,12 @@ async function bootstrap() {
 
   const spaRoot = resolveSpaBrowserRoot();
   if (shouldServeSpaInProduction() && spaRoot) {
+    new Logger('Bootstrap').log(`Sirviendo SPA Angular desde ${spaRoot}`);
     mountSpaFallback(expressApp, spaRoot);
+  } else {
+    new Logger('Bootstrap').warn(
+      'SPA no montado: falta dist/azenda/browser. Ejecuta npm run build:prod',
+    );
   }
 
   await app.listen(process.env.PORT ?? 3000);

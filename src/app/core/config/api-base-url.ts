@@ -1,6 +1,21 @@
 import { environment } from '../../../environments/environment';
 
-let resolved = environment.apiBaseUrl.replace(/\/$/, '');
+declare global {
+  interface Window {
+    __AZENDA_API_BASE__?: string;
+  }
+}
+
+function readWindowApiBase(): string | null {
+  const fromWindow = window.__AZENDA_API_BASE__?.trim();
+  if (!fromWindow || fromWindow.includes('tu-dominio')) {
+    return null;
+  }
+  return fromWindow.replace(/\/$/, '');
+}
+
+let resolved =
+  readWindowApiBase() ?? environment.apiBaseUrl.replace(/\/$/, '');
 
 /** URL base del API (sin barra final). Prioriza `/app-config.json` en producción. */
 export function apiBaseUrl(): string {

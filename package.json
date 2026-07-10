@@ -9,6 +9,7 @@
     "dev:apps": "concurrently -n api,web -c blue,green \"npm run start:api\" \"wait-on -t 120000 http-get://127.0.0.1:3000/api && npm run start:web\"",
     "dev": "npm run dev:apps",
     "postinstall": "npm --prefix api install",
+    "prebuild:prod": "node -e \"try{require('fs').rmSync('dist/azenda',{recursive:true,force:true})}catch(e){}\"",
     "prod": "npm run build:prod && npm --prefix api run start:prod",
     "build:prod": "npm run build:api && ng build --configuration=production",
     "db:bootstrap": "npm --prefix api run db:bootstrap",

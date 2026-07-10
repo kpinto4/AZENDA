@@ -59,12 +59,21 @@ function shouldServeSpaInProduction() {
     if ((process.env.AZENDA_SERVE_SPA ?? '').trim().toLowerCase() === 'false') {
         return false;
     }
-    return ((process.env.NODE_ENV ?? '').trim().toLowerCase() === 'production' &&
-        resolveSpaBrowserRoot() != null);
+    return resolveSpaBrowserRoot() != null;
 }
 function mountSpaFallback(expressApp, spaRoot) {
+    const configPath = (0, node_path_1.join)(spaRoot, 'app-config.json');
+    expressApp.get('/app-config.json', (_req, res) => {
+        res.type('application/json');
+        res.sendFile(configPath, (err) => {
+            if (err) {
+                res.status(404).json({ apiBaseUrl: '/api' });
+            }
+        });
+    });
     expressApp.use((0, express_1.static)(spaRoot, { index: false, maxAge: '1h' }));
     expressApp.get(/^(?!\/api(\/|$)).*/, (_req, res) => {
+        res.setHeader('Cache-Control', 'no-store');
         res.sendFile((0, node_path_1.join)(spaRoot, 'index.html'));
     });
 }
@@ -108,7 +117,11 @@ async function bootstrap() {
     });
     const spaRoot = resolveSpaBrowserRoot();
     if (shouldServeSpaInProduction() && spaRoot) {
+        new common_1.Logger('Bootstrap').log(`Sirviendo SPA Angular desde ${spaRoot}`);
         mountSpaFallback(expressApp, spaRoot);
+    }
+    else {
+        new common_1.Logger('Bootstrap').warn('SPA no montado: falta dist/azenda/browser. Ejecuta npm run build:prod');
     }
     await app.listen(process.env.PORT ?? 3000);
 }
