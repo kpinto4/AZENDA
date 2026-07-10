@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { apiBaseUrl } from '../config/api-base-url';
 
 export interface ApiTenantSaleDto {
   id: string;
@@ -28,10 +28,10 @@ export class ApiTenantSalesService {
   private readonly http = inject(HttpClient);
 
   list(): Observable<ApiTenantSaleDto[]> {
-    return this.http.get<ApiTenantSaleDto[]>(`${environment.apiBaseUrl}/tenant/ventas`);
+    return this.http.get<ApiTenantSaleDto[]>(`${apiBaseUrl()}/tenant/ventas`);
   }
 
   create(body: CreateTenantSaleBody): Observable<ApiTenantSaleDto> {
-    return this.http.post<ApiTenantSaleDto>(`${environment.apiBaseUrl}/tenant/ventas`, body);
+    return this.http.post<ApiTenantSaleDto>(`${apiBaseUrl()}/tenant/ventas`, body);
   }
 }

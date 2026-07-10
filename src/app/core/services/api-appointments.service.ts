@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, of, tap } from 'rxjs';
+import { apiBaseUrl } from '../config/api-base-url';
 import { environment } from '../../../environments/environment';
 import { MockAppointment } from './mock-data.service';
 import { MockSessionService } from './mock-session.service';
@@ -68,7 +69,7 @@ export class ApiAppointmentsService {
 
   list(): Observable<ApiAppointmentDto[]> {
     return this.http
-      .get<ApiAppointmentDto[]>(`${environment.apiBaseUrl}/tenant/appointments`)
+      .get<ApiAppointmentDto[]>(`${apiBaseUrl()}/tenant/appointments`)
       .pipe(tap((list) => this.rows.set(list)));
   }
 
@@ -86,7 +87,7 @@ export class ApiAppointmentsService {
     when: string;
   }): Observable<ApiAppointmentDto> {
     return this.http
-      .post<ApiAppointmentDto>(`${environment.apiBaseUrl}/tenant/appointments`, body)
+      .post<ApiAppointmentDto>(`${apiBaseUrl()}/tenant/appointments`, body)
       .pipe(tap((created) => this.rows.update((cur) => [created, ...cur])));
   }
 
@@ -96,7 +97,7 @@ export class ApiAppointmentsService {
   ): Observable<ApiAppointmentDto> {
     return this.http
       .patch<ApiAppointmentDto>(
-        `${environment.apiBaseUrl}/tenant/appointments/${encodeURIComponent(id)}/status`,
+        `${apiBaseUrl()}/tenant/appointments/${encodeURIComponent(id)}/status`,
         { status },
       )
       .pipe(
@@ -119,7 +120,7 @@ export class ApiAppointmentsService {
     },
   ): Observable<ApiAppointmentDto> {
     return this.http.post<ApiAppointmentDto>(
-      `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/appointments`,
+      `${apiBaseUrl()}/public/${encodeURIComponent(slug)}/appointments`,
       body,
     );
   }
@@ -130,7 +131,7 @@ export class ApiAppointmentsService {
   ): Observable<ApiAppointmentDto> {
     return this.http
       .post<ApiAppointmentDto>(
-        `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/confirmar-asistencia`,
+        `${apiBaseUrl()}/public/${encodeURIComponent(slug)}/confirmar-asistencia`,
         body,
       )
       .pipe(
@@ -146,7 +147,7 @@ export class ApiAppointmentsService {
   ): Observable<ApiAppointmentDto> {
     return this.http
       .post<ApiAppointmentDto>(
-        `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/reprogramar-cita`,
+        `${apiBaseUrl()}/public/${encodeURIComponent(slug)}/reprogramar-cita`,
         body,
       )
       .pipe(
@@ -161,7 +162,7 @@ export class ApiAppointmentsService {
     body: { customer?: string; appointmentId?: string; customerPhone?: string },
   ): Observable<{ appointments: PublicLookupAppointmentDto[] }> {
     return this.http.post<{ appointments: PublicLookupAppointmentDto[] }>(
-      `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/buscar-citas`,
+      `${apiBaseUrl()}/public/${encodeURIComponent(slug)}/buscar-citas`,
       body,
     );
   }
@@ -171,7 +172,7 @@ export class ApiAppointmentsService {
     body: { customer: string; detail: string },
   ): Observable<ApiStoreVisitDto> {
     return this.http.post<ApiStoreVisitDto>(
-      `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/registro-tienda`,
+      `${apiBaseUrl()}/public/${encodeURIComponent(slug)}/registro-tienda`,
       body,
     );
   }
@@ -179,7 +180,7 @@ export class ApiAppointmentsService {
   patchAttendance(id: string, attendance: ApiAppointmentAttendance): Observable<ApiAppointmentDto> {
     return this.http
       .patch<ApiAppointmentDto>(
-        `${environment.apiBaseUrl}/tenant/appointments/${encodeURIComponent(id)}/attendance`,
+        `${apiBaseUrl()}/tenant/appointments/${encodeURIComponent(id)}/attendance`,
         { attendance },
       )
       .pipe(
@@ -192,7 +193,7 @@ export class ApiAppointmentsService {
   patchManualReminderSent(id: string): Observable<ApiAppointmentDto> {
     return this.http
       .patch<ApiAppointmentDto>(
-        `${environment.apiBaseUrl}/tenant/appointments/${encodeURIComponent(id)}/reminder-sent`,
+        `${apiBaseUrl()}/tenant/appointments/${encodeURIComponent(id)}/reminder-sent`,
         {},
       )
       .pipe(
@@ -205,7 +206,7 @@ export class ApiAppointmentsService {
   cancel(id: string): Observable<ApiAppointmentDto> {
     return this.http
       .patch<ApiAppointmentDto>(
-        `${environment.apiBaseUrl}/tenant/appointments/${encodeURIComponent(id)}/cancel`,
+        `${apiBaseUrl()}/tenant/appointments/${encodeURIComponent(id)}/cancel`,
         {},
       )
       .pipe(

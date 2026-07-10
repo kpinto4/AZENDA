@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { apiBaseUrl } from '../config/api-base-url';
 
 export interface ApiStoreVisitDto {
   id: string;
@@ -17,7 +17,7 @@ export class ApiStoreVisitsService {
 
   list(): Observable<ApiStoreVisitDto[]> {
     return this.http.get<ApiStoreVisitDto[]>(
-      `${environment.apiBaseUrl}/tenant/tienda-registros`,
+      `${apiBaseUrl()}/tenant/tienda-registros`,
     );
   }
 }

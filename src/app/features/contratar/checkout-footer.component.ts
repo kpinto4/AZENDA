@@ -7,7 +7,7 @@ import {
   OnInit,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { environment } from '../../../environments/environment';
+import { apiBaseUrl } from '../../core/config/api-base-url';
 import { DEFAULT_API_SITE_CONFIG } from '../../core/services/api-site-config.service';
 
 @Component({
@@ -98,7 +98,7 @@ export class CheckoutFooterComponent implements OnInit {
   ngOnInit(): void {
     this.http
       .get<{ landing?: { navBrand?: string; footerNote?: string } }>(
-        `${environment.apiBaseUrl}/public/site-config`,
+        `${apiBaseUrl()}/public/site-config`,
       )
       .subscribe({
         next: (cfg) => {

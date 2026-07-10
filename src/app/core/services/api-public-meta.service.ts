@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { apiBaseUrl } from '../config/api-base-url';
 import type { CatalogPromoFields } from '../promo-schedule.util';
 
 export interface PublicTenantMetaDto {
@@ -85,13 +85,13 @@ export class ApiPublicMetaService {
 
   getMeta(slug: string): Observable<PublicTenantMetaDto> {
     return this.http.get<PublicTenantMetaDto>(
-      `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/meta`,
+      `${apiBaseUrl()}/public/${encodeURIComponent(slug)}/meta`,
     );
   }
 
   getCatalog(slug: string): Observable<PublicCatalogDto> {
     return this.http.get<PublicCatalogDto>(
-      `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/catalog`,
+      `${apiBaseUrl()}/public/${encodeURIComponent(slug)}/catalog`,
     );
   }
 
@@ -100,7 +100,7 @@ export class ApiPublicMetaService {
     date: string,
     durationMinutes?: number,
   ): Observable<PublicAvailabilityDto> {
-    let url = `${environment.apiBaseUrl}/public/${encodeURIComponent(slug)}/availability?date=${encodeURIComponent(date)}`;
+    let url = `${apiBaseUrl()}/public/${encodeURIComponent(slug)}/availability?date=${encodeURIComponent(date)}`;
     if (durationMinutes != null && durationMinutes > 0) {
       url += `&durationMinutes=${encodeURIComponent(String(durationMinutes))}`;
     }

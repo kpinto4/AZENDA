@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { map, Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { apiBaseUrl } from '../config/api-base-url';
 
 export type ApiTenantStatus = 'ACTIVE' | 'PAUSED' | 'BLOCKED';
 
@@ -101,13 +101,13 @@ export class ApiTenantsAdminService {
 
   list(): Observable<ApiTenantAdminDto[]> {
     return this.http.get<ApiTenantAdminDto[]>(
-      `${environment.apiBaseUrl}/admin/tenants`,
+      `${apiBaseUrl()}/admin/tenants`,
     );
   }
 
   getById(tenantId: string): Observable<ApiTenantAdminDto> {
     return this.http.get<ApiTenantAdminDto>(
-      `${environment.apiBaseUrl}/admin/tenants/${encodeURIComponent(tenantId)}`,
+      `${apiBaseUrl()}/admin/tenants/${encodeURIComponent(tenantId)}`,
     );
   }
 
@@ -116,14 +116,14 @@ export class ApiTenantsAdminService {
     body: { targetPlan: string; targetCycle: 'MONTHLY' | 'YEARLY' },
   ): Observable<ApiAdminUpgradeQuoteDto> {
     return this.http.post<ApiAdminUpgradeQuoteDto>(
-      `${environment.apiBaseUrl}/admin/tenants/${encodeURIComponent(tenantId)}/upgrade-quote`,
+      `${apiBaseUrl()}/admin/tenants/${encodeURIComponent(tenantId)}/upgrade-quote`,
       body,
     );
   }
 
   create(body: ApiCreateTenantBody): Observable<ApiTenantAdminDto> {
     return this.http.post<ApiTenantAdminDto>(
-      `${environment.apiBaseUrl}/admin/tenants`,
+      `${apiBaseUrl()}/admin/tenants`,
       body,
     );
   }
@@ -133,7 +133,7 @@ export class ApiTenantsAdminService {
     body: ApiCreateTenantAdminBody,
   ): Observable<ApiTenantAdminDto> {
     return this.http.post<ApiTenantAdminDto>(
-      `${environment.apiBaseUrl}/admin/tenants/${encodeURIComponent(tenantId)}/admin-access`,
+      `${apiBaseUrl()}/admin/tenants/${encodeURIComponent(tenantId)}/admin-access`,
       body,
     );
   }
@@ -143,14 +143,14 @@ export class ApiTenantsAdminService {
     body: ApiPatchTenantBody,
   ): Observable<ApiTenantAdminDto> {
     return this.http.patch<ApiTenantAdminDto>(
-      `${environment.apiBaseUrl}/admin/tenants/${tenantId}`,
+      `${apiBaseUrl()}/admin/tenants/${tenantId}`,
       body,
     );
   }
 
   activateSubscription(tenantId: string): Observable<ApiTenantAdminDto> {
     return this.http.post<ApiTenantAdminDto>(
-      `${environment.apiBaseUrl}/admin/tenants/${encodeURIComponent(tenantId)}/activate-subscription`,
+      `${apiBaseUrl()}/admin/tenants/${encodeURIComponent(tenantId)}/activate-subscription`,
       {},
     );
   }
@@ -158,7 +158,7 @@ export class ApiTenantsAdminService {
   delete(tenantId: string): Observable<void> {
     // 204 sin cuerpo: evitar parseo JSON vacío de HttpClient
     return this.http
-      .delete(`${environment.apiBaseUrl}/admin/tenants/${encodeURIComponent(tenantId)}`, {
+      .delete(`${apiBaseUrl()}/admin/tenants/${encodeURIComponent(tenantId)}`, {
         observe: 'response',
         responseType: 'text',
       })

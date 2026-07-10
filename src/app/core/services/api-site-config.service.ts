@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { apiBaseUrl } from '../config/api-base-url';
 
 /** Copia del contrato `PlatformSiteConfig` del API (landing + moneda). */
 export interface ApiSiteLandingCopy {
@@ -86,14 +86,14 @@ export class ApiSiteConfigService {
   private readonly http = inject(HttpClient);
 
   getPublic(): Observable<ApiSiteConfig> {
-    return this.http.get<ApiSiteConfig>(`${environment.apiBaseUrl}/public/site-config`);
+    return this.http.get<ApiSiteConfig>(`${apiBaseUrl()}/public/site-config`);
   }
 
   getAdmin(): Observable<ApiSiteConfig> {
-    return this.http.get<ApiSiteConfig>(`${environment.apiBaseUrl}/admin/site-config`);
+    return this.http.get<ApiSiteConfig>(`${apiBaseUrl()}/admin/site-config`);
   }
 
   patch(body: Record<string, unknown>): Observable<ApiSiteConfig> {
-    return this.http.patch<ApiSiteConfig>(`${environment.apiBaseUrl}/admin/site-config`, body);
+    return this.http.patch<ApiSiteConfig>(`${apiBaseUrl()}/admin/site-config`, body);
   }
 }

@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { apiBaseUrl } from '../config/api-base-url';
 
 export type ApiAdminUserRole = 'SUPER_ADMIN' | 'ADMIN' | 'EMPLEADO' | 'CLIENTE_FINAL';
 
@@ -31,14 +31,14 @@ export class ApiAdminUsersService {
   private readonly http = inject(HttpClient);
 
   list(): Observable<ApiAdminUserDto[]> {
-    return this.http.get<ApiAdminUserDto[]>(`${environment.apiBaseUrl}/admin/users`);
+    return this.http.get<ApiAdminUserDto[]>(`${apiBaseUrl()}/admin/users`);
   }
 
   create(body: ApiCreateAdminUserBody): Observable<ApiAdminUserDto> {
-    return this.http.post<ApiAdminUserDto>(`${environment.apiBaseUrl}/admin/users`, body);
+    return this.http.post<ApiAdminUserDto>(`${apiBaseUrl()}/admin/users`, body);
   }
 
   delete(userId: string): Observable<void> {
-    return this.http.delete<void>(`${environment.apiBaseUrl}/admin/users/${encodeURIComponent(userId)}`);
+    return this.http.delete<void>(`${apiBaseUrl()}/admin/users/${encodeURIComponent(userId)}`);
   }
 }

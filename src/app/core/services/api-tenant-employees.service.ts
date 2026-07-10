@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { apiBaseUrl } from '../config/api-base-url';
 
 export interface ApiTenantEmployeeDto {
   id: string;
@@ -17,7 +17,7 @@ export class ApiTenantEmployeesService {
   private readonly http = inject(HttpClient);
 
   list(): Observable<ApiTenantEmployeeDto[]> {
-    return this.http.get<ApiTenantEmployeeDto[]>(`${environment.apiBaseUrl}/tenant/employees`);
+    return this.http.get<ApiTenantEmployeeDto[]>(`${apiBaseUrl()}/tenant/employees`);
   }
 
   create(body: {
@@ -26,7 +26,7 @@ export class ApiTenantEmployeesService {
     password?: string;
     role: 'ADMIN' | 'EMPLEADO';
   }): Observable<ApiTenantEmployeeDto> {
-    return this.http.post<ApiTenantEmployeeDto>(`${environment.apiBaseUrl}/tenant/employees`, body);
+    return this.http.post<ApiTenantEmployeeDto>(`${apiBaseUrl()}/tenant/employees`, body);
   }
 
   patch(
@@ -34,14 +34,14 @@ export class ApiTenantEmployeesService {
     body: Partial<{ name: string; email: string; password: string; role: 'ADMIN' | 'EMPLEADO' }>,
   ): Observable<ApiTenantEmployeeDto> {
     return this.http.patch<ApiTenantEmployeeDto>(
-      `${environment.apiBaseUrl}/tenant/employees/${encodeURIComponent(userId)}`,
+      `${apiBaseUrl()}/tenant/employees/${encodeURIComponent(userId)}`,
       body,
     );
   }
 
   delete(userId: string): Observable<{ ok: true }> {
     return this.http.delete<{ ok: true }>(
-      `${environment.apiBaseUrl}/tenant/employees/${encodeURIComponent(userId)}`,
+      `${apiBaseUrl()}/tenant/employees/${encodeURIComponent(userId)}`,
     );
   }
 }

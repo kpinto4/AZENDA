@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { apiBaseUrl } from '../config/api-base-url';
 
 export type ApiUserRole =
   | 'SUPER_ADMIN'
@@ -66,7 +66,7 @@ export class ApiAuthService {
 
   login(email: string, password: string): Observable<ApiLoginResponse> {
     return this.http.post<ApiLoginResponse>(
-      `${environment.apiBaseUrl}/auth/login`,
+      `${apiBaseUrl()}/auth/login`,
       { email, password },
     );
   }
@@ -81,7 +81,7 @@ export class ApiAuthService {
     },
   ): Observable<ApiLoginResponse> {
     return this.http.post<ApiLoginResponse>(
-      `${environment.apiBaseUrl}/auth/register`,
+      `${apiBaseUrl()}/auth/register`,
       {
         business,
         email,
@@ -94,20 +94,20 @@ export class ApiAuthService {
 
   demoSession(role: 'admin' | 'employee' = 'admin'): Observable<ApiLoginResponse> {
     return this.http.post<ApiLoginResponse>(
-      `${environment.apiBaseUrl}/auth/demo-session`,
+      `${apiBaseUrl()}/auth/demo-session`,
       { role },
     );
   }
 
   tenantContext(): Observable<ApiTenantContextResponse> {
-    const url = `${environment.apiBaseUrl}/tenant/context`;
+    const url = `${apiBaseUrl()}/tenant/context`;
     return this.http.get<ApiTenantContextResponse>(url, {
       params: { _: String(Date.now()) },
     });
   }
 
   me(): Observable<ApiAuthUser> {
-    return this.http.get<ApiAuthUser>(`${environment.apiBaseUrl}/auth/me`, {
+    return this.http.get<ApiAuthUser>(`${apiBaseUrl()}/auth/me`, {
       params: { _: String(Date.now()) },
     });
   }
@@ -116,14 +116,14 @@ export class ApiAuthService {
     manualBookingEnabled?: boolean;
   }): Observable<ApiTenantContextResponse> {
     return this.http.patch<ApiTenantContextResponse>(
-      `${environment.apiBaseUrl}/tenant/settings`,
+      `${apiBaseUrl()}/tenant/settings`,
       body,
     );
   }
 
   tenantBillingStatus(): Observable<ApiTenantBillingStatusResponse> {
     return this.http.get<ApiTenantBillingStatusResponse>(
-      `${environment.apiBaseUrl}/tenant/billing/status`,
+      `${apiBaseUrl()}/tenant/billing/status`,
       { params: { _: String(Date.now()) } },
     );
   }

@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { apiBaseUrl } from '../config/api-base-url';
 
 export interface ApiPlanCatalogEntry {
   planKey: string;
@@ -21,19 +21,19 @@ export class ApiPlanCatalogService {
   /** Catálogo global de precios (fuente de verdad en `plan_catalog`). */
   getPublic(): Observable<ApiPlanCatalogEntry[]> {
     return this.http.get<ApiPlanCatalogEntry[]>(
-      `${environment.apiBaseUrl}/public/plan-catalog`,
+      `${apiBaseUrl()}/public/plan-catalog`,
     );
   }
 
   list(): Observable<ApiPlanCatalogEntry[]> {
     return this.http.get<ApiPlanCatalogEntry[]>(
-      `${environment.apiBaseUrl}/admin/plan-catalog`,
+      `${apiBaseUrl()}/admin/plan-catalog`,
     );
   }
 
   replace(body: ApiReplacePlanCatalogBody): Observable<ApiPlanCatalogEntry[]> {
     return this.http.put<ApiPlanCatalogEntry[]>(
-      `${environment.apiBaseUrl}/admin/plan-catalog`,
+      `${apiBaseUrl()}/admin/plan-catalog`,
       body,
     );
   }

@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { apiBaseUrl } from '../config/api-base-url';
 
 export interface ApiPlatformOverviewDto {
   tenantCount: number;
@@ -22,6 +22,6 @@ export class ApiAdminPlatformStatsService {
   private readonly http = inject(HttpClient);
 
   overview(): Observable<ApiPlatformOverviewDto> {
-    return this.http.get<ApiPlatformOverviewDto>(`${environment.apiBaseUrl}/admin/platform-stats`);
+    return this.http.get<ApiPlatformOverviewDto>(`${apiBaseUrl()}/admin/platform-stats`);
   }
 }

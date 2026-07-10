@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { apiBaseUrl } from '../config/api-base-url';
 import type { CatalogPromoFields } from '../promo-schedule.util';
 
 export interface ApiTenantBrandingDto {
@@ -89,7 +89,7 @@ export class ApiTenantCatalogService {
   private readonly http = inject(HttpClient);
 
   getCatalog(): Observable<ApiTenantCatalogResponse> {
-    return this.http.get<ApiTenantCatalogResponse>(`${environment.apiBaseUrl}/tenant/catalog`);
+    return this.http.get<ApiTenantCatalogResponse>(`${apiBaseUrl()}/tenant/catalog`);
   }
 
   createProduct(body: {
@@ -100,7 +100,7 @@ export class ApiTenantCatalogService {
     stock: number;
     imageUrl?: string | null;
   } & CatalogPromoPayload): Observable<ApiTenantProductDto> {
-    return this.http.post<ApiTenantProductDto>(`${environment.apiBaseUrl}/tenant/catalog/products`, body);
+    return this.http.post<ApiTenantProductDto>(`${apiBaseUrl()}/tenant/catalog/products`, body);
   }
 
   updateProduct(
@@ -115,20 +115,20 @@ export class ApiTenantCatalogService {
     } & CatalogPromoPayload,
   ): Observable<ApiTenantProductDto> {
     return this.http.patch<ApiTenantProductDto>(
-      `${environment.apiBaseUrl}/tenant/catalog/products/${encodeURIComponent(productId)}`,
+      `${apiBaseUrl()}/tenant/catalog/products/${encodeURIComponent(productId)}`,
       body,
     );
   }
 
   deleteProduct(productId: string): Observable<{ ok: true }> {
     return this.http.delete<{ ok: true }>(
-      `${environment.apiBaseUrl}/tenant/catalog/products/${encodeURIComponent(productId)}`,
+      `${apiBaseUrl()}/tenant/catalog/products/${encodeURIComponent(productId)}`,
     );
   }
 
   moveProduct(productId: string, direction: -1 | 1): Observable<{ ok: true }> {
     return this.http.patch<{ ok: true }>(
-      `${environment.apiBaseUrl}/tenant/catalog/products/${encodeURIComponent(productId)}/move`,
+      `${apiBaseUrl()}/tenant/catalog/products/${encodeURIComponent(productId)}/move`,
       { direction },
     );
   }
@@ -139,7 +139,7 @@ export class ApiTenantCatalogService {
     price: number;
     durationMinutes?: number;
   } & CatalogPromoPayload): Observable<ApiTenantServiceDto> {
-    return this.http.post<ApiTenantServiceDto>(`${environment.apiBaseUrl}/tenant/catalog/services`, body);
+    return this.http.post<ApiTenantServiceDto>(`${apiBaseUrl()}/tenant/catalog/services`, body);
   }
 
   updateService(
@@ -152,20 +152,20 @@ export class ApiTenantCatalogService {
     } & CatalogPromoPayload,
   ): Observable<ApiTenantServiceDto> {
     return this.http.patch<ApiTenantServiceDto>(
-      `${environment.apiBaseUrl}/tenant/catalog/services/${encodeURIComponent(serviceId)}`,
+      `${apiBaseUrl()}/tenant/catalog/services/${encodeURIComponent(serviceId)}`,
       body,
     );
   }
 
   deleteService(serviceId: string): Observable<{ ok: true }> {
     return this.http.delete<{ ok: true }>(
-      `${environment.apiBaseUrl}/tenant/catalog/services/${encodeURIComponent(serviceId)}`,
+      `${apiBaseUrl()}/tenant/catalog/services/${encodeURIComponent(serviceId)}`,
     );
   }
 
   moveService(serviceId: string, direction: -1 | 1): Observable<{ ok: true }> {
     return this.http.patch<{ ok: true }>(
-      `${environment.apiBaseUrl}/tenant/catalog/services/${encodeURIComponent(serviceId)}/move`,
+      `${apiBaseUrl()}/tenant/catalog/services/${encodeURIComponent(serviceId)}/move`,
       { direction },
     );
   }
@@ -173,11 +173,11 @@ export class ApiTenantCatalogService {
   patchBranding(
     body: Partial<Omit<ApiTenantBrandingDto, 'tenantId'>>,
   ): Observable<ApiTenantBrandingDto> {
-    return this.http.patch<ApiTenantBrandingDto>(`${environment.apiBaseUrl}/tenant/branding`, body);
+    return this.http.patch<ApiTenantBrandingDto>(`${apiBaseUrl()}/tenant/branding`, body);
   }
 
   listStockMovements(): Observable<ApiTenantStockMovementDto[]> {
-    return this.http.get<ApiTenantStockMovementDto[]>(`${environment.apiBaseUrl}/tenant/inventory/movements`);
+    return this.http.get<ApiTenantStockMovementDto[]>(`${apiBaseUrl()}/tenant/inventory/movements`);
   }
 
   applyStockMovement(body: {
@@ -186,7 +186,7 @@ export class ApiTenantCatalogService {
     reason: string;
   }): Observable<ApiTenantStockMovementDto> {
     return this.http.post<ApiTenantStockMovementDto>(
-      `${environment.apiBaseUrl}/tenant/inventory/movements`,
+      `${apiBaseUrl()}/tenant/inventory/movements`,
       body,
     );
   }
