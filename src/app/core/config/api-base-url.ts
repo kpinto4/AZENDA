@@ -22,8 +22,12 @@ export async function loadAppConfigFromPublicJson(): Promise<void> {
     if (!res.ok) {
       return;
     }
+    const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+    if (contentType.includes('text/html')) {
+      return;
+    }
     const data = (await res.json()) as { apiBaseUrl?: string };
-    if (typeof data.apiBaseUrl === 'string') {
+    if (typeof data.apiBaseUrl === 'string' && !data.apiBaseUrl.includes('tu-dominio')) {
       setApiBaseUrl(data.apiBaseUrl);
     }
   } catch {
