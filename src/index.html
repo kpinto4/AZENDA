@@ -2,6 +2,33 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
+  <script>
+    (function () {
+      function fixApiUrl(url) {
+        if (typeof url !== 'string') return url;
+        return url
+          .replace(/https?:\/\/api\.tu-dominio\.com\/api/gi, '/api')
+          .replace(/https?:\/\/api\.TU-DOMINIO\.com\/api/gi, '/api');
+      }
+      window.__AZENDA_API_BASE__ = '/api';
+      var nativeFetch = window.fetch;
+      if (nativeFetch) {
+        window.fetch = function (input, init) {
+          if (typeof input === 'string') {
+            input = fixApiUrl(input);
+          } else if (input instanceof Request) {
+            input = new Request(fixApiUrl(input.url), input);
+          }
+          return nativeFetch.call(this, input, init);
+        };
+      }
+      var xhrOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function (method, url) {
+        arguments[1] = fixApiUrl(url);
+        return xhrOpen.apply(this, arguments);
+      };
+    })();
+  </script>
   <title>Azenda — Citas, ventas e inventario</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,7 +38,6 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet">
 </head>
 <body>
-  <script>window.__AZENDA_API_BASE__='/api';</script>
   <app-root></app-root>
 </body>
 </html>
