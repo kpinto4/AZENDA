@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_fs_1 = require("node:fs");
-const dotenv_1 = require("dotenv");
 const node_path_1 = require("node:path");
+const dotenv_1 = require("dotenv");
 const core_1 = require("@nestjs/core");
 const app_module_1 = require("./app.module");
 const common_1 = require("@nestjs/common");
@@ -42,10 +42,37 @@ function isLocalDevOrigin(origin) {
         return false;
     }
 }
+function resolveSpaBrowserRoot() {
+    const cwd = process.cwd();
+    const candidates = [
+        (0, node_path_1.resolve)(cwd, '../dist/azenda/browser'),
+        (0, node_path_1.resolve)(cwd, 'dist/azenda/browser'),
+    ];
+    for (const dir of candidates) {
+        if ((0, node_fs_1.existsSync)((0, node_path_1.join)(dir, 'index.html'))) {
+            return dir;
+        }
+    }
+    return null;
+}
+function shouldServeSpaInProduction() {
+    if ((process.env.AZENDA_SERVE_SPA ?? '').trim().toLowerCase() === 'false') {
+        return false;
+    }
+    return ((process.env.NODE_ENV ?? '').trim().toLowerCase() === 'production' &&
+        resolveSpaBrowserRoot() != null);
+}
+function mountSpaFallback(expressApp, spaRoot) {
+    expressApp.use((0, express_1.static)(spaRoot, { index: false, maxAge: '1h' }));
+    expressApp.get(/^(?!\/api(\/|$)).*/, (_req, res) => {
+        res.sendFile((0, node_path_1.join)(spaRoot, 'index.html'));
+    });
+}
 async function bootstrap() {
     assertProductionEnvOrThrow();
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
-    app.use((0, helmet_1.default)());
+    const expressApp = app.getHttpAdapter().getInstance();
+    expressApp.use('/api', (0, helmet_1.default)());
     const extraOrigins = (process.env.CORS_ORIGINS ?? '')
         .split(',')
         .map((s) => s.trim())
@@ -73,13 +100,16 @@ async function bootstrap() {
         transform: true,
         forbidNonWhitelisted: true,
     }));
-    const expressApp = app.getHttpAdapter().getInstance();
-    expressApp.use((_req, res, next) => {
+    expressApp.use('/api', (_req, res, next) => {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Expires', '0');
         next();
     });
+    const spaRoot = resolveSpaBrowserRoot();
+    if (shouldServeSpaInProduction() && spaRoot) {
+        mountSpaFallback(expressApp, spaRoot);
+    }
     await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

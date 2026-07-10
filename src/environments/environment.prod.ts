@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
-  /** API en api.azenda.online; front en azenda.online */
-  apiBaseUrl: 'https://api.azenda.online/api',
+  /** Mismo dominio: Nest sirve el SPA y el API en /api (un solo servidor). */
+  apiBaseUrl: '/api',
   useLiveAuth: true,
   showDemoLoginHints: false,
 };
