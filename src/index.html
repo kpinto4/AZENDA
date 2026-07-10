@@ -4,11 +4,15 @@
   <meta charset="utf-8">
   <script>
     (function () {
+      /** Build viejo en producción apunta a api.tu-dominio.com → reescribe a /api (mismo origen, sin CORS). */
       function fixApiUrl(url) {
-        if (typeof url !== 'string') return url;
-        return url
-          .replace(/https?:\/\/api\.tu-dominio\.com\/api/gi, '/api')
-          .replace(/https?:\/\/api\.TU-DOMINIO\.com\/api/gi, '/api');
+        if (typeof url !== 'string' || !/api\.tu-dominio\.com/i.test(url)) return url;
+        try {
+          var parsed = new URL(url, location.origin);
+          return parsed.pathname + parsed.search + parsed.hash;
+        } catch (e) {
+          return url.replace(/https?:\/\/api\.tu-dominio\.com/i, '');
+        }
       }
       window.__AZENDA_API_BASE__ = '/api';
       var nativeFetch = window.fetch;

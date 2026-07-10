@@ -14,7 +14,7 @@
         <span class="brand-tag">Panel</span>
       </div>
     </div>
-    <nav (pointerdown)="onSidebarPointerDown($event)">
+    <nav (click)="onSidebarNavClick($event)">
       <div class="nav-group">
         <p class="nav-group-title">Principal</p>
         <div class="nav-links-grid">
@@ -73,8 +73,8 @@
             <a
               class="sidebar-booking"
               [routerLink]="['/reservar', session.publicBookingSlug()]"
-              target="_blank"
-              rel="noopener"
+              [attr.target]="openBookingInNewTab() ? '_blank' : null"
+              [attr.rel]="openBookingInNewTab() ? 'noopener' : null"
               ><span class="nav-ico" aria-hidden="true">↗</span> Página de reservas</a
             >
           </div>

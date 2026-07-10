@@ -236,10 +236,17 @@ export class TenantShellComponent {
     this.menuOpen.set(false);
   }
 
-  onSidebarPointerDown(ev: Event): void {
+  /** En escritorio abre la reserva en pestaña nueva; en móvil misma pestaña (evita bloqueo de pop-ups). */
+  openBookingInNewTab(): boolean {
+    return typeof window !== 'undefined' && window.innerWidth > 860;
+  }
+
+  onSidebarNavClick(ev: Event): void {
     const el = ev.target as HTMLElement | null;
-    if (el?.closest('a')) {
-      this.closeMenu();
+    if (!el?.closest('a')) {
+      return;
     }
+    // Diferir el cierre para que el tap en móvil complete la navegación antes de ocultar el drawer.
+    setTimeout(() => this.closeMenu(), 0);
   }
 }
