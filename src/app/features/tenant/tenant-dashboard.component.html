@@ -5,16 +5,34 @@
       <p class="az-page-sub">{{ panelSubtitle() }}</p>
     </div>
     <div class="head-actions">
-      <a
-        class="az-btn az-btn-secondary"
-        [routerLink]="['/reservar', session.publicBookingSlug()]"
-        >Área cliente</a
-      >
+      @if (session.publicBookingSlug()) {
+        <a
+          class="az-btn az-btn-secondary head-booking-link"
+          [href]="bookingPageHref()"
+          (click)="onBookingPageClick($event)"
+          >Página de reservas</a
+        >
+      }
       @if (session.modules().inventory) {
         <a class="az-btn az-btn-secondary" routerLink="/app/inventario">Productos</a>
       }
     </div>
   </div>
+
+  @if (session.publicBookingSlug()) {
+    <div class="dashboard-booking-cta az-card az-section">
+      <div class="dashboard-booking-copy">
+        <h2 class="dashboard-booking-title">Tu página de reservas</h2>
+        <p class="muted">Comparte este enlace con tus clientes para que reserven citas en línea.</p>
+      </div>
+      <a
+        class="az-btn az-btn-primary dashboard-booking-btn"
+        [href]="bookingPageHref()"
+        (click)="onBookingPageClick($event)"
+        >Abrir página de reservas</a
+      >
+    </div>
+  }
 
   <div class="az-grid cols-3 dashboard-kpis az-section" data-tour="panel-kpis">
     <div class="az-card kpi-tile">

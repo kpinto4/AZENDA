@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ApiAppointmentsService, mapApiAppointmentToMock } from '../../core/services/api-appointments.service';
 import { ApiTenantCatalogService, ApiTenantProductDto } from '../../core/services/api-tenant-catalog.service';
@@ -21,6 +21,7 @@ import {
   toYmdLocal,
 } from '../../shared/agenda/agenda-calendar.utils';
 import { AppointmentDetailSheetComponent } from '../../shared/agenda/appointment-detail-sheet.component';
+import { goToPublicBookingPage, publicBookingUrl } from '../../core/public-booking-nav';
 
 interface DashboardDayBar {
   ymd: string;
@@ -64,6 +65,7 @@ export class TenantDashboardComponent {
   private readonly apiSales = inject(ApiTenantSalesService);
   private readonly apiCatalog = inject(ApiTenantCatalogService);
   private readonly apiEmployees = inject(ApiTenantEmployeesService);
+  private readonly router = inject(Router);
 
   readonly dashboardSalesLive = signal<ApiTenantSaleDto[]>([]);
   readonly dashboardProductsLive = signal<ApiTenantProductDto[]>([]);
@@ -360,5 +362,15 @@ export class TenantDashboardComponent {
 
   displayServiceLabel(service: string): string {
     return cleanServiceLabel(service);
+  }
+
+  bookingPageHref(): string {
+    const slug = this.session.publicBookingSlug();
+    return slug ? publicBookingUrl(slug) : '#';
+  }
+
+  onBookingPageClick(ev: Event): void {
+    ev.preventDefault();
+    goToPublicBookingPage(this.router, this.session.publicBookingSlug());
   }
 }

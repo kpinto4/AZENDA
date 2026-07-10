@@ -72,9 +72,8 @@
           <div class="nav-links-grid">
             <a
               class="sidebar-booking"
-              [routerLink]="['/reservar', session.publicBookingSlug()]"
-              [attr.target]="openBookingInNewTab() ? '_blank' : null"
-              [attr.rel]="openBookingInNewTab() ? 'noopener' : null"
+              [href]="bookingPageHref()"
+              (click)="onBookingPageClick($event)"
               ><span class="nav-ico" aria-hidden="true">↗</span> Página de reservas</a
             >
           </div>

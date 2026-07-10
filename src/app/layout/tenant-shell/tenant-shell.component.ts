@@ -12,6 +12,7 @@ import { DemoRoleSwitchComponent } from '../../features/demo/demo-role-switch.co
 import { DemoTourDrawerComponent } from '../../features/demo-tour/demo-tour-drawer.component';
 import { DemoTourStepCardComponent } from '../../features/demo-tour/demo-tour-step-card.component';
 import { DemoTourService } from '../../features/demo-tour/demo-tour.service';
+import { goToPublicBookingPage, publicBookingUrl } from '../../core/public-booking-nav';
 
 @Component({
   selector: 'app-tenant-shell',
@@ -236,17 +237,23 @@ export class TenantShellComponent {
     this.menuOpen.set(false);
   }
 
-  /** En escritorio abre la reserva en pestaña nueva; en móvil misma pestaña (evita bloqueo de pop-ups). */
-  openBookingInNewTab(): boolean {
-    return typeof window !== 'undefined' && window.innerWidth > 860;
+  bookingPageHref(): string {
+    const slug = this.session.publicBookingSlug();
+    return slug ? publicBookingUrl(slug) : '#';
+  }
+
+  onBookingPageClick(ev: Event): void {
+    ev.preventDefault();
+    ev.stopPropagation();
+    goToPublicBookingPage(this.router, this.session.publicBookingSlug());
+    this.closeMenu();
   }
 
   onSidebarNavClick(ev: Event): void {
-    const el = ev.target as HTMLElement | null;
-    if (!el?.closest('a')) {
+    const anchor = (ev.target as HTMLElement | null)?.closest('a');
+    if (!anchor || anchor.classList.contains('sidebar-booking')) {
       return;
     }
-    // Diferir el cierre para que el tap en móvil complete la navegación antes de ocultar el drawer.
     setTimeout(() => this.closeMenu(), 0);
   }
 }
